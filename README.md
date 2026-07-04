@@ -30,9 +30,9 @@ graph TD
     %% Backend Layer
     subgraph Backend [FastAPI Intelligence Engine]
         API[FastAPI Router]
-        Blink[Blink Engine (Fast Track)]
-        Auth[Security & Auth]
-        Cache[Redis / Memory Cache]
+        Blink["Blink Engine (Fast Track)"]
+        Auth["Security & Auth"]
+        Cache["Redis / Memory Cache"]
     end
 
     %% AI & Data Layer
@@ -40,7 +40,7 @@ graph TD
         GEE[Google Earth Engine]
         Gemini[Google Gemini API]
         Groq[Groq Llama 3]
-        DB[(Supabase / PostgreSQL)]
+        DB[("Supabase / PostgreSQL")]
     end
 
     %% Connections
