@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+httpx
+python-dotenv
+groq
+pydantic
+pydantic-settings
+uvloop
+httptools
+twilio
+python-multipart
+mcp
+mangum

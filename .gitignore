@@ -1,0 +1,39 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Tunnel executables
+cloudflared.exe
+localtonet.zip
+localtonet.exe
+node_modules
+*.pkl
+!**/crop_model_v2.pkl
+!**/crop_encoder.pkl
+!**/district_encoder.pkl
+!**/label_encoder.pkl
+!**/scaler.pkl
+*.db
+*.csv
+.vercel
+
+backend/scratch/
+
