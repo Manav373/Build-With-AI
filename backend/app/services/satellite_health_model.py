@@ -7,7 +7,8 @@ import logging
 
 logger = logging.getLogger("KrishiMCP.SatelliteML")
 
-MODEL_DIR = "d:/coding/hackathon prototype/hackathon prototype/krishiai/backend/app/data/models"
+# Dynamic model directory relative to the current file
+MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "models"))
 MODEL_PATH = os.path.join(MODEL_DIR, "satellite_health_v1.pkl")
 SCALER_PATH = os.path.join(MODEL_DIR, "satellite_scaler_v1.pkl")
 LE_PATH = os.path.join(MODEL_DIR, "satellite_le_crop_v1.pkl")

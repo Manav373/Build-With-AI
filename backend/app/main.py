@@ -81,7 +81,8 @@ default_origins = [
     "https://krishiai-bot.vercel.app",
     "https://krishiai.vercel.app",
     "https://dashboard.vapi.ai",
-    "https://vapi.ai"
+    "https://vapi.ai",
+    "https://krishiai-frontend-118806637740.us-central1.run.app"
 ]
 
 for origin in default_origins:

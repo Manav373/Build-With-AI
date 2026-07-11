@@ -45,3 +45,6 @@ ENV/
 
 # Scratch
 scratch/
+
+# Large Model Artifacts
+app/data/models/satellite_health_v1.pkl

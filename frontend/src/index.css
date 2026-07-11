@@ -134,7 +134,8 @@ select option {
   .page-container {
     @apply flex-1 overflow-y-auto w-full;
     background: var(--bg);
-    padding-top: 4rem; /* 64px — clear the mobile menu button */ 
+    padding-top: 4rem;
+    /* 64px — clear the mobile menu button */
   }
 
   @screen md {
@@ -262,8 +263,13 @@ body:has(.chat-bg-trigger) .landing-bg-video {
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 .animate-spin-slow {
@@ -315,13 +321,25 @@ body:has(.chat-bg-trigger) .landing-bg-video {
 }
 
 @keyframes scanline {
-  0% { transform: translateY(-100%) rotate(0deg); }
-  100% { transform: translateY(100%) rotate(0deg); }
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+  }
+
+  100% {
+    transform: translateY(100%) rotate(0deg);
+  }
 }
 
 @keyframes float-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 /* ── Utility classes ── */
@@ -388,20 +406,20 @@ body:has(.chat-bg-trigger) .landing-bg-video {
 }
 
 .floating-input-pill {
-  @apply rounded-[2rem] border border-black/5 bg-white/80 backdrop-blur-3xl shadow-[0_10px_40px_rgba(0,0,0,0.05)];
+  @apply rounded-[2rem] border border-black/5 bg-white/80 backdrop-blur-3xl shadow-[0_10px_40px_rgba(0, 0, 0, 0.05)];
   transition: all 0.3s ease;
 }
 
 .dark .floating-input-pill {
-  @apply border-white/10 bg-[#0d1f11]/80 shadow-[0_10px_40px_rgba(0,0,0,0.5)];
+  @apply border-white/10 bg-[#0d1f11]/80 shadow-[0_10px_40px_rgba(0, 0, 0, 0.5)];
 }
 
 .floating-input-pill:focus-within {
-  @apply border-emerald-400/40 shadow-[0_0_40px_rgba(16,185,129,0.15)];
+  @apply border-emerald-400/40 shadow-[0_0_40px_rgba(16, 185, 129, 0.15)];
 }
 
 .dark .floating-input-pill:focus-within {
-  @apply border-[#4ade80]/40 shadow-[0_0_40px_rgba(74,222,128,0.15)];
+  @apply border-[#4ade80]/40 shadow-[0_0_40px_rgba(74, 222, 128, 0.15)];
 }
 
 .suggestion-chip {
@@ -552,15 +570,15 @@ body:has(.chat-bg-trigger) .landing-bg-video {
 
 /* --- Google Maps InfoWindow Dark Theme Overrides --- */
 .gm-style .gm-style-iw-c {
-  background-color: #0f172a !important; 
+  background-color: #0f172a !important;
   padding: 0 !important;
   border-radius: 0.75rem !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
 }
 
 .gm-style .gm-style-iw-d {
-  overflow: hidden !important; 
+  overflow: hidden !important;
   padding: 0 !important;
 }
 
@@ -574,6 +592,7 @@ body:has(.chat-bg-trigger) .landing-bg-video {
   top: 4px !important;
   right: 4px !important;
 }
+
 .gm-ui-hover-effect:hover {
   opacity: 1 !important;
 }
