@@ -406,20 +406,20 @@ body:has(.chat-bg-trigger) .landing-bg-video {
 }
 
 .floating-input-pill {
-  @apply rounded-[2rem] border border-black/5 bg-white/80 backdrop-blur-3xl shadow-[0_10px_40px_rgba(0, 0, 0, 0.05)];
+  @apply rounded-[2rem] border border-black/5 bg-white/80 backdrop-blur-3xl shadow-[0_10px_40px_rgba(0,0,0,0.05)];
   transition: all 0.3s ease;
 }
 
 .dark .floating-input-pill {
-  @apply border-white/10 bg-[#0d1f11]/80 shadow-[0_10px_40px_rgba(0, 0, 0, 0.5)];
+  @apply border-white/10 bg-[#0d1f11]/80 shadow-[0_10px_40px_rgba(0,0,0,0.5)];
 }
 
 .floating-input-pill:focus-within {
-  @apply border-emerald-400/40 shadow-[0_0_40px_rgba(16, 185, 129, 0.15)];
+  @apply border-emerald-400/40 shadow-[0_0_40px_rgba(16,185,129,0.15)];
 }
 
 .dark .floating-input-pill:focus-within {
-  @apply border-[#4ade80]/40 shadow-[0_0_40px_rgba(74, 222, 128, 0.15)];
+  @apply border-[#4ade80]/40 shadow-[0_0_40px_rgba(74,222,128,0.15)];
 }
 
 .suggestion-chip {
