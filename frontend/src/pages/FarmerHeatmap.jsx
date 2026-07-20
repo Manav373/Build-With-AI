@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { GoogleMap, CircleF, InfoWindowF, MarkerF, useJsApiLoader } from '@react-google-maps/api';
+import Map, { Marker, Popup } from 'react-map-gl/maplibre';
 import { BarChart2, Users, Globe, Activity, RefreshCw, MapPin, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getFarmerLocations, getLiveMandis } from '../services/api';
@@ -13,26 +13,11 @@ import { useTheme } from '../context/ThemeContext';
 import '../styles/Map.css';
 import { Store } from 'lucide-react';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-
-const MAP_OPTIONS = {
-  disableDefaultUI: true,
-  zoomControl: false, // Custom styled zoom controls preferred
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
-  styles: [
-    { elementType: "geometry", stylers: [{ color: "#000000" }] },
-    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
-    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#222222" }] },
-    { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#050505" }] },
-    { featureType: "poi", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#111111" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a110d" }] },
-  ],
+const MAP_STYLES = {
+  roadmap_light: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  roadmap_dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 };
+
 
 
 // ─── Sample fallback — only used when backend is offline ─────────────────────
@@ -86,14 +71,37 @@ function MapLegend({ tHeatmap }) {
 
 export default function FarmerHeatmap() {
   const { theme } = useTheme();
-  const { isLoaded } = useJsApiLoader({ id: 'google-map-script', googleMapsApiKey: GOOGLE_MAPS_API_KEY });
+  const isLoaded = true;
   const [locations, setLocations] = useState([]);
   const [selectedLoc, setSelectedLoc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [backendOnline, setBackendOnline] = useState(null);
   const { location } = useLocation();
-  const [zoom, setZoom] = useState(5);
-  const [mapCenter, setMapCenter] = useState({ lat: 21.0, lng: 78.0 });
+
+  // Controlled viewState for react-map-gl
+  const [viewState, setViewState] = useState({
+    latitude: 21.0,
+    longitude: 78.0,
+    zoom: 5
+  });
+
+  const mapCenter = { lat: viewState.latitude, lng: viewState.longitude };
+  const zoom = viewState.zoom;
+
+  const setMapCenter = (coords) => {
+    setViewState(prev => ({
+      ...prev,
+      latitude: coords.lat,
+      longitude: coords.lng
+    }));
+  };
+
+  const setZoom = (z) => {
+    setViewState(prev => ({
+      ...prev,
+      zoom: z
+    }));
+  };
   const [stats, setStats] = useState({ total: 0, web: 0, whatsapp: 0 });
   const [view, setView] = useState('farmers'); // 'farmers' or 'mandis'
   const [mandis, setMandis] = useState([]);
@@ -279,134 +287,153 @@ export default function FarmerHeatmap() {
         {!loading && (
           <motion.div style={{ height: '100%', width: '100%' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
             {isLoaded ? (
-              <GoogleMap
-                mapContainerStyle={{ height: '100%', width: '100%' }}
-                center={mapCenter}
-                zoom={zoom}
-                options={{
-                  ...MAP_OPTIONS,
-                  styles: theme === 'light' ? [] : MAP_OPTIONS.styles
-                }}
-                onLoad={(map) => (mapRef.current = map)}
-                onZoomChanged={() => {
-                  if (mapRef.current) {
-                    setZoom(mapRef.current.getZoom());
-                  }
-                }}
-                onDragEnd={() => {
-                  if (mapRef.current) {
-                    const newCenter = mapRef.current.getCenter();
-                    setMapCenter({ lat: newCenter.lat(), lng: newCenter.lng() });
+              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                <Map
+                  ref={mapRef}
+                  {...viewState}
+                  onMove={evt => {
+                    setViewState(evt.viewState);
                     if (view === 'mandis') {
                       fetchMandis();
                     }
-                  }
-                }}
-              >
-                {view === 'farmers' && locations.map((loc, i) => (
-                  <React.Fragment key={i}>
-                    <CircleF
-                      center={{ lat: loc.latitude, lng: loc.longitude }}
-                      radius={30 * Math.pow(2, Math.max(0, 15 - zoom))}
-                      onClick={() => setSelectedLoc(loc)}
-                      options={{
-                        fillColor: getMarkerColor(loc.source),
-                        fillOpacity: 0.35,
-                        strokeColor: getMarkerColor(loc.source),
-                        strokeWeight: 1,
-                        strokeOpacity: 0.6,
+                  }}
+                  style={{ width: '100%', height: '100%' }}
+                  mapStyle={theme === 'light' ? MAP_STYLES.roadmap_light : MAP_STYLES.roadmap_dark}
+                >
+                  {view === 'farmers' && locations.map((loc, i) => (
+                    <Marker
+                      key={i}
+                      latitude={loc.latitude}
+                      longitude={loc.longitude}
+                      onClick={(e) => {
+                        e.originalEvent.stopPropagation();
+                        setSelectedLoc(loc);
                       }}
-                    />
-                    {selectedLoc === loc && (
-                      <InfoWindowF
-                        position={{ lat: loc.latitude, lng: loc.longitude }}
-                        onCloseClick={() => setSelectedLoc(null)}
-                      >
-                        <div style={{ fontFamily: "'Inter', sans-serif", minWidth: 160, padding: 4 }}>
-                          <p style={{ fontWeight: 700, marginBottom: '0.3rem', color: '#166534', fontSize: '0.9rem' }}>
-                            📍 {loc.city || loc.state || 'India'}
-                          </p>
-                          {loc.state && (
-                            <p style={{ fontSize: '0.8rem', color: '#555', marginBottom: '0.2rem' }}>{loc.state}</p>
-                          )}
-                          <p style={{ fontSize: '0.8rem', color: '#555', marginBottom: '0.2rem' }}>
-                            Source: {loc.source === 'whatsapp' ? '📱 WhatsApp' : '🌐 Web'}
-                          </p>
-                          <p style={{ fontSize: '0.75rem', color: '#777' }}>
-                            {loc.latitude.toFixed(4)}°N, {loc.longitude.toFixed(4)}°E
-                          </p>
-                        </div>
-                      </InfoWindowF>
-                    )}
-                  </React.Fragment>
-                ))}
+                    >
+                      <div 
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          backgroundColor: getMarkerColor(loc.source),
+                          opacity: 0.8,
+                          border: '2px solid #fff',
+                          cursor: 'pointer',
+                          boxShadow: `0 0 10px ${getMarkerColor(loc.source)}`
+                        }}
+                      />
+                    </Marker>
+                  ))}
 
-                {view === 'mandis' && mandis.map((mandi, i) => (
-                  <React.Fragment key={`mandi-${i}`}>
-                    <MarkerF
-                      position={{ lat: mandi.lat, lng: mandi.lon }}
-                      onClick={() => setSelectedMandi(mandi)}
-                      icon={{
-                        path: google.maps.SymbolPath.CIRCLE,
-                        fillColor: '#4ade80',
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 2,
-                        scale: 7,
+                  {selectedLoc && (
+                    <Popup
+                      latitude={selectedLoc.latitude}
+                      longitude={selectedLoc.longitude}
+                      onClose={() => setSelectedLoc(null)}
+                      closeButton={true}
+                      closeOnClick={false}
+                      anchor="top"
+                    >
+                      <div style={{ fontFamily: "'Inter', sans-serif", minWidth: 160, padding: 4, color: '#000' }}>
+                        <p style={{ fontWeight: 700, marginBottom: '0.3rem', color: '#166534', fontSize: '0.9rem' }}>
+                          📍 {selectedLoc.city || selectedLoc.state || 'India'}
+                        </p>
+                        {selectedLoc.state && (
+                          <p style={{ fontSize: '0.8rem', color: '#555', marginBottom: '0.2rem' }}>{selectedLoc.state}</p>
+                        )}
+                        <p style={{ fontSize: '0.8rem', color: '#555', marginBottom: '0.2rem' }}>
+                          Source: {selectedLoc.source === 'whatsapp' ? '📱 WhatsApp' : '🌐 Web'}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: '#777' }}>
+                          {selectedLoc.latitude.toFixed(4)}°N, {selectedLoc.longitude.toFixed(4)}°E
+                        </p>
+                      </div>
+                    </Popup>
+                  )}
+
+                  {view === 'mandis' && mandis.map((mandi, i) => (
+                    <Marker
+                      key={`mandi-${i}`}
+                      latitude={mandi.lat}
+                      longitude={mandi.lon}
+                      onClick={(e) => {
+                        e.originalEvent.stopPropagation();
+                        setSelectedMandi(mandi);
                       }}
-                    />
-                    {selectedMandi === mandi && (
-                      <InfoWindowF
-                        position={{ lat: mandi.lat, lng: mandi.lon }}
-                        onCloseClick={() => setSelectedMandi(null)}
-                      >
-                        <div style={{ fontFamily: "'Inter', sans-serif", minWidth: 200, padding: 8 }}>
-                          <p style={{ fontWeight: 900, marginBottom: '0.4rem', color: '#166534', fontSize: '1rem' }}>
-                            🏪 {mandi.name}
-                          </p>
+                    >
+                      <div style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        backgroundColor: '#4ade80',
+                        border: '2px solid #ffffff',
+                        cursor: 'pointer',
+                        boxShadow: '0 0 6px rgba(0,0,0,0.3)'
+                      }} />
+                    </Marker>
+                  ))}
+
+                  {selectedMandi && (
+                    <Popup
+                      latitude={selectedMandi.lat}
+                      longitude={selectedMandi.lon}
+                      onClose={() => setSelectedMandi(null)}
+                      closeButton={true}
+                      closeOnClick={false}
+                      anchor="top"
+                    >
+                      <div style={{ fontFamily: "'Inter', sans-serif", minWidth: 200, padding: 8, color: '#000' }}>
+                        <p style={{ fontWeight: 900, marginBottom: '0.4rem', color: '#166534', fontSize: '1rem' }}>
+                          🏪 {selectedMandi.name}
+                        </p>
+                        {selectedMandi.price_note && (
                           <div style={{ background: 'rgba(22,101,52,0.05)', padding: '0.5rem', borderRadius: '0.5rem', marginBottom: '0.5rem' }}>
                             <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#166534', margin: 0 }}>
-                              {mandi.price_note}
+                              {selectedMandi.price_note}
                             </p>
                           </div>
-                          <p style={{ fontSize: '0.8rem', color: '#444', marginBottom: '0.2rem' }}>
-                            <strong>Crops:</strong> {mandi.crops}
-                          </p>
-                          <p style={{ fontSize: '0.75rem', color: '#666' }}>
-                            📍 {mandi.city} | {mandi.type}
-                          </p>
-                        </div>
-                      </InfoWindowF>
-                    )}
-                  </React.Fragment>
-                ))}
+                        )}
+                        <p style={{ fontSize: '0.8rem', color: '#444', marginBottom: '0.2rem' }}>
+                          <strong>Crops:</strong> {selectedMandi.crops}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: '#666' }}>
+                          📍 {selectedMandi.city} | {selectedMandi.type}
+                        </p>
+                      </div>
+                    </Popup>
+                  )}
 
-                {/* User Location Marker */}
-                {location?.lat && location?.lon && (
-                  <MarkerF
-                    position={{ lat: location.lat, lng: location.lon }}
-                    icon={{
-                      url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                      scaledSize: new google.maps.Size(40, 40)
-                    }}
-                    title="You"
-                  />
-                )}
-                <MapLegend tHeatmap={d} />
+                  {/* User Location Marker */}
+                  {location?.lat && location?.lon && (
+                    <Marker
+                      latitude={location.lat}
+                      longitude={location.lon}
+                    >
+                      <div style={{ cursor: 'pointer', transform: 'translate(-50%, -100%)' }}>
+                        <img 
+                          src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
+                          alt="user-pin"
+                          style={{ width: '36px', height: '36px' }}
+                        />
+                      </div>
+                    </Marker>
+                  )}
+                  <MapLegend tHeatmap={d} />
+                </Map>
 
                 {/* Custom Zoom Controls */}
                 <div style={{
                   position: 'absolute', bottom: '1.5rem', left: '1rem', zIndex: 1000,
                   display: 'flex', flexDirection: 'column', gap: '0.5rem'
                 }}>
-                  <button onClick={() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) + 1)}
+                  <button onClick={() => setViewState(prev => ({ ...prev, zoom: Math.min(20, prev.zoom + 1) }))}
                     style={{
                       width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem',
                       background: 'rgba(6,18,10,0.9)', border: '1px solid rgba(74,222,128,0.2)',
                       color: '#4ade80', fontSize: '1.5rem', fontWeight: 600, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)'
                     }}>+</button>
-                  <button onClick={() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) - 1)}
+                  <button onClick={() => setViewState(prev => ({ ...prev, zoom: Math.max(1, prev.zoom - 1) }))}
                     style={{
                       width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem',
                       background: 'rgba(6,18,10,0.9)', border: '1px solid rgba(74,222,128,0.2)',
@@ -414,7 +441,7 @@ export default function FarmerHeatmap() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)'
                     }}>−</button>
                 </div>
-              </GoogleMap>
+              </div>
             ) : (
               <div style={{ height: '100%', width: '100%', background: '#030905', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <p style={{ color: 'rgba(134,239,172,0.4)', fontSize: '0.9rem' }}>{d.loadingMap}</p>

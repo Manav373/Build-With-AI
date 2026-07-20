@@ -1,14 +1,62 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { GoogleMap, MarkerF, InfoWindowF, CircleF, useJsApiLoader, StreetViewPanorama } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Satellite, MapPin, Info, RefreshCw, Layers, Navigation, Droplets, Leaf, AlertTriangle, CheckCircle, Crosshair, Sprout, Sun, CloudRain, CloudLightning, Map as MapIcon, Eye, Mountain, Globe, ExternalLink, Zap, Wind, Thermometer, Waves, Compass, Activity, Maximize2, Minimize2, Clock, Loader2, Menu, ChevronRight } from 'lucide-react';
+import { Satellite, MapPin, Info, RefreshCw, Layers, Navigation, Droplets, Leaf, AlertTriangle, CheckCircle, Crosshair, Sprout, Sun, CloudRain, CloudLightning, Map as MapIcon, Eye, Mountain, Globe, ExternalLink, Zap, Wind, Thermometer, Waves, Compass, Activity, Maximize2, Minimize2, Clock, Loader2, Menu, ChevronRight, X, ChevronDown } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { translations } from '../utils/translations/index';
 import { useMobileMenu } from '../context/MobileMenuContext';
 import { useTheme } from '../context/ThemeContext';
 import WeatherAnalysisModal from '../components/feature/WeatherAnalysisModal';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const TILE_LAYERS = {
+  roadmap_light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  roadmap_dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  labels: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+};
+
+const redIcon = L.divIcon({
+  html: `<img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" style="width: 32px; height: 32px; display: block;" />`,
+  className: 'custom-marker-pin-red',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+const blueIcon = L.divIcon({
+  html: `<img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" style="width: 32px; height: 32px; display: block;" />`,
+  className: 'custom-marker-pin-blue',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+function MapController({ center, zoom, onClick, onViewStateChange, recenterCount }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center && center.lat && center.lng) {
+      map.setView([center.lat, center.lng], zoom);
+    }
+  }, [recenterCount]);
+
+  useMapEvents({
+    click(e) {
+      onClick?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+    moveend() {
+      const currentCenter = map.getCenter();
+      onViewStateChange?.({
+        latitude: currentCenter.lat,
+        longitude: currentCenter.lng,
+        zoom: map.getZoom()
+      });
+    }
+  });
+
+  return null;
+}
+
 
 const INDIA_CENTER = { lat: 21.7679, lng: 78.8718 };
 const NOTABLE_LOCATIONS = [
@@ -185,7 +233,7 @@ function LiveMapViewer({ center, zoom, overlay = 'satellite', lat, lon, isTheate
 }
 
 export default function SatellitePage() {
-  const { isLoaded: isGoogleLoaded } = useJsApiLoader({ id: 'google-map-script', googleMapsApiKey: GOOGLE_MAPS_API_KEY });
+  const isGoogleLoaded = true;
   const { theme } = useTheme();
   const { language, userLocation, setUserLocation } = useChat();
   const { setMobileMenuOpen } = useMobileMenu();
@@ -195,11 +243,40 @@ export default function SatellitePage() {
   const [ndviData, setNdviData] = useState([]);
   const [satelliteData, setSatelliteData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [center, setCenter] = useState(INDIA_CENTER);
-  const [zoom, setZoom] = useState(5);
+
+  // Controlled viewState for react-map-gl
+  const [viewState, setViewState] = useState({
+    latitude: userLocation?.lat && userLocation?.lon ? userLocation.lat : INDIA_CENTER.lat,
+    longitude: userLocation?.lat && userLocation?.lon ? userLocation.lon : INDIA_CENTER.lng,
+    zoom: userLocation?.lat && userLocation?.lon ? 10 : 5
+  });
+
+  const [recenterCount, setRecenterCount] = useState(0);
+
+  const center = { lat: viewState.latitude, lng: viewState.longitude };
+  const zoom = viewState.zoom;
+
+  const setCenter = (coords) => {
+    setViewState(prev => ({
+      ...prev,
+      latitude: coords.lat,
+      longitude: coords.lng
+    }));
+    setRecenterCount(prev => prev + 1);
+  };
+
+  const setZoom = (z) => {
+    setViewState(prev => ({
+      ...prev,
+      zoom: z
+    }));
+    setRecenterCount(prev => prev + 1);
+  };
+
   const [locating, setLocating] = useState(false);
+  const [showLayerDropdown, setShowLayerDropdown] = useState(false);
   const [locationName, setLocationName] = useState('');
-  const [activeLayer, setActiveLayer] = useState('satellite');
+  const [activeLayer, setActiveLayer] = useState('hybrid');
   const [mapMode, setMapMode] = useState('agri-health');
   const [activeOverlay, setActiveOverlay] = useState('satellite');
   const [showBioOverlay, setShowBioOverlay] = useState(true);
@@ -208,7 +285,6 @@ export default function SatellitePage() {
   const [showHud, setShowHud] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(400);
   const [userCoords, setUserCoords] = useState(userLocation?.lat && userLocation?.lon ? { lat: userLocation.lat, lng: userLocation.lon } : null);
-  const mapRef = useRef(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
 
@@ -237,7 +313,7 @@ export default function SatellitePage() {
       // Zoom 18 gives high-precision land-use data (building, natural, landuse)
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`);
       const data = await res.json();
-      
+
       const parts = [];
       if (data.address?.village || data.address?.town || data.address?.city) parts.push(data.address.village || data.address.town || data.address.city);
       if (data.address?.county || data.address?.state_district) parts.push(data.address.county || data.address.state_district);
@@ -256,10 +332,10 @@ export default function SatellitePage() {
       // Priority 1: Water
       if (natural.includes('water') || cat.includes('water') || type_tag.includes('water')) {
         type = 'water';
-      } 
+      }
       // Priority 2: Urban (Aggressive detection for city centers)
       else if (
-        addr.building || addr.industrial || addr.residential || addr.suburb || 
+        addr.building || addr.industrial || addr.residential || addr.suburb ||
         addr.neighbourhood || addr.city_district || landuse.includes('residential') ||
         landuse.includes('commercial') || type_tag === 'house' || type_tag === 'apartments'
       ) {
@@ -269,7 +345,7 @@ export default function SatellitePage() {
       else if (landuse.includes('forest') || natural.includes('wood') || leisure.includes('park') || natural.includes('scrub')) {
         type = 'forest';
       }
-      
+
       return type;
     } catch {
       setLocationName(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
@@ -284,7 +360,7 @@ export default function SatellitePage() {
     setLoading(true);
     setSatelliteData(null);
     setIsOffline(false);
-    
+
     // 1. Get high-precision land type first
     const detectedLandType = await reverseGeocode(coords.lat, coords.lng);
 
@@ -389,33 +465,16 @@ export default function SatellitePage() {
     evapotranspiration: satelliteData.evapotranspiration
   } : null;
 
-  // NDVI Tile Layer Implementation for Google Maps
-  useEffect(() => {
-    if (mapRef.current && isGoogleLoaded && mapMode === 'agri-health' && showBioOverlay) {
-      const ndviTileOptions = {
-        getTileUrl: (coord, zoom) => {
-          return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/${NDVI_DATE}/GoogleMapsCompatible_Level9/${zoom}/${coord.y}/${coord.x}.png`;
-        },
-        tileSize: new window.google.maps.Size(256, 256),
-        name: "NASA NDVI",
-        maxZoom: 9,
-        minZoom: 0,
-        opacity: 0.6
-      };
-      const ndviMapType = new window.google.maps.ImageMapType(ndviTileOptions);
-      mapRef.current.overlayMapTypes.setAt(0, ndviMapType);
-    } else if (mapRef.current && isGoogleLoaded) {
-      mapRef.current.overlayMapTypes.removeAt(0);
-    }
-  }, [isGoogleLoaded, mapMode, showBioOverlay]);
+  // Leaflet handles tile layers reactively.
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[var(--page-bg)]">
-      {/* Global Radar Animation when locating */}
+
+   <div className="flex-1 overflow-hidden flex flex-col bg-[var(--page-bg)]">
+      {/* Global Radar Animation when locating or loading satellite data */}
       <AnimatePresence>
-        {locating && (
+        {(locating || loading) && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md">
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md">
             <div className="relative flex flex-col items-center gap-6">
               <div className="relative w-32 h-32">
                 <motion.div className="absolute inset-0 rounded-full border-2 border-blue-500/40" animate={{ scale: [1, 2.5], opacity: [1, 0] }} transition={{ duration: 2, repeat: Infinity }} />
@@ -425,8 +484,12 @@ export default function SatellitePage() {
                 </div>
               </div>
               <div className={`px-6 py-3 rounded-2xl border font-bold text-xs shadow-2xl flex flex-col items-center gap-1 ${theme === 'light' ? 'bg-white border-blue-100 text-blue-600' : 'bg-black/80 border-blue-500/30 text-blue-400'}`}>
-                <span className="animate-pulse">Analyzing Map Textures...</span>
-                <span className="text-[0.6rem] opacity-60 font-normal">KrishiAI Vision-Scan Active</span>
+                <span className="animate-pulse">
+                  {locating ? 'Detecting GPS Coordinates...' : 'Analyzing Crop Health...'}
+                </span>
+                <span className="text-[0.6rem] opacity-60 font-normal">
+                  {locating ? 'KrishiAI GPS Sync Active' : 'KrishiAI Vision-Scan Active'}
+                </span>
               </div>
             </div>
           </motion.div>
@@ -491,114 +554,183 @@ export default function SatellitePage() {
           {mapMode === 'weather-hud' ? (
             <LiveMapViewer center={center} zoom={zoom} overlay={activeOverlay} lat={center.lat} lon={center.lng} isTheaterMode={isTheaterMode} setIsTheaterMode={setIsTheaterMode} />
           ) : (
-            <div className="w-full h-full">
-              {isGoogleLoaded ? (
-                <GoogleMap
-                  mapContainerStyle={{ width: '100%', height: '100%' }}
+            <div className="w-full h-full relative">
+              <MapContainer
+                center={[center.lat, center.lng]}
+                zoom={zoom}
+                zoomControl={false}
+                style={{ width: '100%', height: '100%', background: '#020704' }}
+              >
+                <MapController
                   center={center}
                   zoom={zoom}
-                  onLoad={map => mapRef.current = map}
-                  onClick={(e) => handleSelect({ lat: e.latLng.lat(), lng: e.latLng.lng() })}
-                  options={{
-                    disableDefaultUI: true,
-                    streetViewControl: true,
-                    mapTypeId: activeLayer === 'streetview' ? 'roadmap' : activeLayer,
-                    styles: (activeLayer === 'satellite' || activeLayer === 'hybrid') ? [] : [
-                      { elementType: "geometry", stylers: [{ color: "#000000" }] },
-                      { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-                      { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-                      { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
-                      { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#222222" }] },
-                      { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#050505" }] },
-                      { featureType: "poi", stylers: [{ visibility: "off" }] },
-                      { featureType: "road", elementType: "geometry", stylers: [{ color: "#111111" }] },
-                      { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a110d" }] },
-                    ]
-                  }}
-                >
-                  {activeLayer === 'streetview' && (
-                    <StreetViewPanorama
-                      position={selected || userCoords || center}
-                      visible={true}
-                      options={{ disableDefaultUI: false }}
-                    />
-                  )}
+                  onClick={handleSelect}
+                  onViewStateChange={setViewState}
+                  recenterCount={recenterCount}
+                />
+                
+                <TileLayer
+                  url={
+                    activeLayer === 'satellite' || activeLayer === 'hybrid'
+                      ? TILE_LAYERS.satellite
+                      : theme === 'light'
+                        ? TILE_LAYERS.roadmap_light
+                        : TILE_LAYERS.roadmap_dark
+                  }
+                  attribution='&copy; ESRI, CartoDB'
+                />
+                
+                {activeLayer === 'hybrid' && (
+                  <TileLayer
+                    url={TILE_LAYERS.labels}
+                    attribution='&copy; CartoDB'
+                  />
+                )}
 
-                  {/* Persistent User Location (Red) */}
-                  {userCoords && (
-                    <MarkerF
-                      position={userCoords}
-                      title="Your Location"
-                      zIndex={1000}
-                      icon={{
-                        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                {/* NASA NDVI GIBS Layer (Only visible when zoomed out to preserve local satellite clarity) */}
+                {showBioOverlay && mapMode === 'agri-health' && zoom < 10 && (
+                  <TileLayer
+                    url={`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/${NDVI_DATE}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`}
+                    opacity={0.6}
+                    maxZoom={9}
+                  />
+                )}
+
+                {/* NDVI Circle Layer (Scales dynamically with map zoom to cover fields) */}
+                {showBioOverlay && mapMode === 'agri-health' && ndviData.map((pt, i) => (
+                  <Circle
+                    key={i}
+                    center={[pt.lat, pt.lng]}
+                    radius={250}
+                    pathOptions={{
+                      fillColor: getNDVIColor(pt.ndvi),
+                      fillOpacity: 0.4,
+                      color: '#ffffff',
+                      weight: 1
+                    }}
+                  />
+                ))}
+
+                {/* Persistent User Location (Red) */}
+                {userCoords && (
+                  <Marker
+                    position={[userCoords.lat, userCoords.lng]}
+                    icon={redIcon}
+                  />
+                )}
+
+                {/* Selected Location Marker */}
+                {selected && (
+                  <Marker
+                    position={[selected.lat, selected.lng]}
+                    icon={selected.lat === userCoords?.lat && selected.lng === userCoords?.lng ? redIcon : blueIcon}
+                  />
+                )}
+
+                {/* Street View Fallback Warning Overlay */}
+                {activeLayer === 'streetview' && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 16,
+                    zIndex: 1000,
+                    padding: 24,
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3rem' }}>🌐</div>
+                    <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 900 }}>Interactive Street View</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', maxWidth: 320 }}>
+                      Street View is opened externally to protect your API quota. Click the button below to view 360° panorama.
+                    </p>
+                    <button
+                      onClick={() => window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${center.lat},${center.lng}`, '_blank')}
+                      style={{
+                        padding: '12px 24px',
+                        backgroundColor: '#10b981',
+                        color: '#fff',
+                        borderRadius: 12,
+                        fontWeight: 'bold',
+                        border: 'none',
+                        cursor: 'pointer'
                       }}
-                    />
-                  )}
-
-                  {selected && (
-                    <MarkerF
-                      position={selected}
-                      icon={selected.lat === userCoords?.lat && selected.lng === userCoords?.lng
-                        ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                        : 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                      }
-                    />
-                  )}
-                  {showBioOverlay && ndviData.map((pt, i) => (
-                    <CircleF
-                      key={i}
-                      center={pt}
-                      radius={500}
-                      options={{ fillColor: getNDVIColor(pt.ndvi), fillOpacity: 0.5, strokeOpacity: 0 }}
-                    />
-                  ))}
-                  {selected && (
-                    <InfoWindowF position={selected} onCloseClick={() => setSelected(null)}>
-                      <div className="min-w-[180px] p-3">
-                        <div className="flex items-start gap-2 border-b border-slate-700/50 pb-2 mb-2">
-                          <MapPin size={14} className="text-blue-400 shrink-0 mt-0.5" />
-                          <div>
-                            <strong className={`text-xs font-bold block leading-tight ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{locationName || "Selected Area"}</strong>
-                            <span className="text-[0.6rem] font-bold text-slate-500 mt-0.5 block">Satellite link</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[0.75rem] text-slate-400 font-medium">NDVI Index</span>
-                          <b className="text-emerald-400 text-sm">{(pointNDVI !== null && pointNDVI !== undefined) ? pointNDVI : '--'}</b>
-                        </div>
-                        <div className="text-[0.65rem] text-slate-500 font-medium mt-1 leading-tight">{ndviInfo?.label || 'No Data'}</div>
-                      </div>
-                    </InfoWindowF>
-                  )}
-
-                  {/* Custom Zoom & Expand Controls */}
-                  <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1.5">
-                    <button onClick={() => setIsMapExpanded(!isMapExpanded)}
-                      className={`w-10 h-10 rounded-xl backdrop-blur-xl border flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 lg:hidden ${theme === 'light' ? 'bg-white border-gray-200 text-slate-400 hover:text-slate-900' : 'bg-black/60 border-white/10 text-white/60 hover:text-white'
-                        }`} title="Toggle Fullscreen">
-                      {isMapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    >
+                      Open Street View 🚀
                     </button>
-                    <button onClick={() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) + 1)}
-                      className={`w-10 h-10 rounded-xl backdrop-blur-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg text-xl font-bold ${theme === 'light' ? 'bg-white border-gray-200 text-slate-400 hover:text-slate-900' : 'bg-black/60 border-white/10 text-white/60 hover:text-white'
-                        }`}>+</button>
-                    <button onClick={() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) - 1)}
-                      className={`w-10 h-10 rounded-xl backdrop-blur-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg text-xl font-bold ${theme === 'light' ? 'bg-white border-gray-200 text-slate-400 hover:text-slate-900' : 'bg-black/60 border-white/10 text-white/60 hover:text-white'
-                        }`}>-</button>
                   </div>
-                </GoogleMap>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-[#020704]">
-                  <Loader2 className="animate-spin text-blue-500 mb-4" size={32} />
-                  <p className="text-white/40 font-bold text-xs">Loading Google Maps...</p>
-                </div>
-              )}
+                )}
+              </MapContainer>
+
+              {/* Selected Area Info Card Overlay */}
+              <AnimatePresence>
+                {selected && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`absolute bottom-4 left-4 z-[9999] p-4 rounded-2xl shadow-2xl backdrop-blur-xl border w-64 transition-all ${
+                      theme === 'light'
+                        ? 'bg-white/95 border-gray-200 text-slate-950 shadow-gray-200/50'
+                        : 'bg-[#0b130e]/90 border-emerald-950/30 text-white shadow-black/80'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 border-b pb-2 mb-2 border-slate-200/10">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <MapPin size={16} className="text-emerald-500 shrink-0 mt-0.5 animate-bounce" />
+                        <div className="min-w-0">
+                          <strong className="text-xs font-black block leading-tight truncate">{locationName || "Selected Area"}</strong>
+                          <span className="text-[0.6rem] font-bold text-slate-400 mt-0.5 block">Farm Satellite Link</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setSelected(null)} className="text-white/40 hover:text-white/80 transition-colors p-1 hover:bg-white/10 rounded-lg">
+                        <X size={14} className={theme === 'light' ? 'text-slate-400 hover:text-slate-900' : 'text-white/40 hover:text-white'} />
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-xs opacity-75 font-bold">NDVI Index</span>
+                      <b className="text-emerald-400 text-sm">{(pointNDVI !== null && pointNDVI !== undefined) ? pointNDVI : '--'}</b>
+                    </div>
+                    
+                    {ndviInfo && (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        <div className={`text-[0.65rem] font-black px-2.5 py-2 rounded-xl border text-center flex items-center justify-center gap-1.5 ${ndviInfo.style}`}>
+                          <span>{ndviInfo.emoji}</span>
+                          <span>{ndviInfo.label}</span>
+                        </div>
+                        <div className="text-[0.6rem] opacity-60 text-center leading-normal">
+                          Grade: <span className="font-extrabold text-emerald-400">{ndviInfo.grade}</span> ({ndviInfo.pct}% crop health)
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Custom Zoom & Expand Controls */}
+              <div className="absolute bottom-4 right-4 z-[9999] flex flex-col gap-1.5">
+                <button onClick={() => setIsMapExpanded(!isMapExpanded)}
+                  className={`w-10 h-10 rounded-xl backdrop-blur-xl border flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 lg:hidden ${theme === 'light' ? 'bg-white border-gray-200 text-slate-400 hover:text-slate-900' : 'bg-black/60 border-white/10 text-white/60 hover:text-white'
+                    }`} title="Toggle Fullscreen">
+                  {isMapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+                <button onClick={() => setViewState(prev => ({ ...prev, zoom: Math.min(20, prev.zoom + 1) }))}
+                  className={`w-10 h-10 rounded-xl backdrop-blur-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg text-xl font-bold ${theme === 'light' ? 'bg-white border-gray-200 text-slate-400 hover:text-slate-900' : 'bg-black/60 border-white/10 text-white/60 hover:text-white'
+                    }`}>+</button>
+                <button onClick={() => setViewState(prev => ({ ...prev, zoom: Math.max(1, prev.zoom - 1) }))}
+                  className={`w-10 h-10 rounded-xl backdrop-blur-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg text-xl font-bold ${theme === 'light' ? 'bg-white border-gray-200 text-slate-400 hover:text-slate-900' : 'bg-black/60 border-white/10 text-white/60 hover:text-white'
+                    }`}>-</button>
+              </div>
             </div>
           )}
 
           {/* ═══ MAP LAYER SWITCHER / HUD ═══ */}
           {!isTheaterMode && (
-            <div className={`absolute top-4 left-4 z-10 flex flex-col gap-3 origin-top-left transition-transform duration-300 ${isMapExpanded ? 'scale-100' : 'scale-[0.85] sm:scale-95 md:scale-100'}`}>
+            <div className={`absolute top-4 left-4 z-[9999] flex flex-col gap-3 origin-top-left transition-transform duration-300 ${isMapExpanded ? 'scale-100' : 'scale-[0.85] sm:scale-95 md:scale-100'}`}>
 
               {/* Mobile Toggle Button */}
               <button onClick={() => setShowHud(!showHud)}
@@ -624,15 +756,59 @@ export default function SatellitePage() {
                   <div className="flex flex-col gap-1">
                     {mapMode === 'agri-health' ? (
                       <>
-                        {MAP_LAYERS.map(layer => (
-                          <button key={layer.id} onClick={() => setActiveLayer(layer.id)}
-                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${activeLayer === layer.id
-                              ? (theme === 'light' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-blue-500/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/10')
-                              : (theme === 'light' ? 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100' : 'bg-black/40 border-transparent text-white/40 hover:text-white hover:bg-white/5')
-                              }`}>
-                            <span className={activeLayer === layer.id ? 'text-white' : 'text-blue-500'}>{layer.icon}</span> <span>{layer.name}</span>
+                        <div className="relative">
+                          {/* Dropdown Trigger */}
+                          <button
+                            onClick={() => setShowLayerDropdown(!showLayerDropdown)}
+                            className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${
+                              theme === 'light'
+                                ? 'bg-white border-gray-200 text-slate-700 hover:bg-gray-50'
+                                : 'bg-black/40 border-white/10 text-white/80 hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-blue-500">
+                                {MAP_LAYERS.find(l => l.id === activeLayer)?.icon}
+                              </span>
+                              <span>{MAP_LAYERS.find(l => l.id === activeLayer)?.name || 'Select View'}</span>
+                            </div>
+                            <ChevronDown size={14} className={`transition-transform duration-300 ${showLayerDropdown ? 'rotate-180' : ''}`} />
                           </button>
-                        ))}
+
+                          {/* Dropdown List */}
+                          <AnimatePresence>
+                            {showLayerDropdown && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 5 }}
+                                className={`absolute left-0 right-0 mt-1.5 z-[100] p-1 rounded-xl border flex flex-col gap-0.5 shadow-2xl backdrop-blur-xl ${
+                                  theme === 'light' ? 'bg-white border-gray-200' : 'bg-slate-950/95 border-white/10'
+                                }`}
+                              >
+                                {MAP_LAYERS.map(layer => (
+                                  <button
+                                    key={layer.id}
+                                    onClick={() => {
+                                      setActiveLayer(layer.id);
+                                      setShowLayerDropdown(false);
+                                    }}
+                                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[0.65rem] font-bold transition-all ${
+                                      activeLayer === layer.id
+                                        ? (theme === 'light' ? 'bg-blue-600 text-white' : 'bg-blue-500/20 text-blue-300 border border-blue-500/20')
+                                        : (theme === 'light' ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/5 text-white/50 hover:text-white')
+                                    }`}
+                                  >
+                                    <span className={activeLayer === layer.id ? 'text-white' : 'text-blue-500'}>
+                                      {layer.icon}
+                                    </span>
+                                    <span>{layer.name}</span>
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                         <div className="h-px bg-white/5 my-1" />
                         <button onClick={() => setShowBioOverlay(!showBioOverlay)}
                           className={`flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${showBioOverlay
@@ -651,7 +827,7 @@ export default function SatellitePage() {
                         {userCoords && (
                           <button onClick={() => {
                             setCenter(userCoords);
-                            mapRef.current?.panTo(userCoords);
+                            setZoom(16);
                           }}
                             className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${theme === 'light' ? 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100' : 'bg-white/5 border border-white/5 text-white/40 hover:text-white'
                               }`}>
@@ -922,7 +1098,7 @@ export default function SatellitePage() {
         data={satelliteData}
         locationName={locationName}
       />
-    </div>
+    </div >
   );
 }
 

@@ -11,6 +11,8 @@ import { MobileMenuProvider } from './context/MobileMenuContext'
 import { VoiceAssistantProvider } from './context/VoiceAssistantContext'
 import { ThemeProvider } from './context/ThemeContext'
 import './index.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
+
 
 // Shared Components
 import CustomCursor from './components/common/CustomCursor.jsx'

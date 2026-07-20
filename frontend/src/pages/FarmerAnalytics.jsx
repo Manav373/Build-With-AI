@@ -4,8 +4,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { Users, Smartphone, Globe, Activity, TrendingUp, Map, RefreshCw, MapPin, Store, CheckCircle, Menu } from 'lucide-react';
-import { GoogleMap, MarkerF, InfoWindowF, CircleF, useJsApiLoader } from '@react-google-maps/api';
+import { Users, Smartphone, Globe, Activity, TrendingUp, Map as MapIcon, RefreshCw, MapPin, Store, CheckCircle, Menu } from 'lucide-react';
+import Map, { Marker, Popup } from 'react-map-gl/maplibre';
+
 import { useNavigate } from 'react-router-dom';
 import { getAnalytics, getFarmerLocations, getLiveMandis, getAllMarketPrices } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -113,122 +114,15 @@ const EmptyChart = ({ message }) => {
   );
 };
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-
-const MAP_OPTIONS_DARK = {
-  disableDefaultUI: true,
-  zoomControl: false,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
-  styles: [
-    { elementType: "geometry", stylers: [{ color: "#000000" }] },
-    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
-    {
-      featureType: "administrative",
-      elementType: "geometry",
-      stylers: [{ color: "#222222" }, { visibility: "on" }],
-    },
-    {
-      featureType: "administrative.country",
-      elementType: "geometry.stroke",
-      stylers: [{ color: "#333333" }],
-    },
-    {
-      featureType: "landscape",
-      elementType: "geometry",
-      stylers: [{ color: "#050505" }],
-    },
-    {
-      featureType: "poi",
-      stylers: [{ visibility: "off" }],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry",
-      stylers: [{ color: "#111111" }],
-    },
-    {
-      featureType: "road",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#333333" }],
-    },
-    {
-      featureType: "road.highway",
-      elementType: "geometry",
-      stylers: [{ color: "#1a1a1a" }],
-    },
-    {
-      featureType: "transit",
-      stylers: [{ visibility: "off" }],
-    },
-    {
-      featureType: "water",
-      elementType: "geometry",
-      stylers: [{ color: "#0a110d" }],
-    },
-  ],
-};
-
-const MAP_OPTIONS_LIGHT = {
-  disableDefaultUI: true,
-  zoomControl: false,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
-  styles: [
-    { elementType: "geometry", stylers: [{ color: "#ebe3cd" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#523735" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#f5f1e6" }] },
-    {
-      featureType: "administrative",
-      elementType: "geometry.stroke",
-      stylers: [{ color: "#c9b2a6" }],
-    },
-    {
-      featureType: "landscape.natural",
-      elementType: "geometry",
-      stylers: [{ color: "#dfd2ae" }],
-    },
-    {
-      featureType: "poi",
-      elementType: "geometry",
-      stylers: [{ color: "#dfd2ae" }],
-    },
-    {
-      featureType: "poi",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#93817c" }],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry",
-      stylers: [{ color: "#f5f1e6" }],
-    },
-    {
-      featureType: "road.arterial",
-      elementType: "geometry",
-      stylers: [{ color: "#fdfcf8" }],
-    },
-    {
-      featureType: "road.highway",
-      elementType: "geometry",
-      stylers: [{ color: "#f8c967" }],
-    },
-    {
-      featureType: "water",
-      elementType: "geometry.fill",
-      stylers: [{ color: "#b9d3c2" }],
-    },
-  ],
+const MAP_STYLES = {
+  roadmap_light: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  roadmap_dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 };
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function FarmerAnalytics() {
   const { theme } = useTheme();
-  const { isLoaded } = useJsApiLoader({ id: 'google-map-script', googleMapsApiKey: GOOGLE_MAPS_API_KEY });
+  const isLoaded = true;
   const [data, setData] = useState(null);
   const [locations, setLocations] = useState([]);
   const [mandis, setMandis] = useState([]);
@@ -242,6 +136,23 @@ export default function FarmerAnalytics() {
   const navigate = useNavigate();
   const { getToken } = useAuth();
   const { location: userLoc } = useLocation();
+
+  // Controlled viewState for react-map-gl
+  const [viewState, setViewState] = useState({
+    latitude: 21.5,
+    longitude: 78.5,
+    zoom: 4.8
+  });
+
+  useEffect(() => {
+    if (mapMode === 'mandis-all') {
+      setViewState(prev => ({ ...prev, latitude: 22.5, longitude: 78.5, zoom: 4.5 }));
+    } else if (userLoc?.lat && userLoc?.lon) {
+      setViewState(prev => ({ ...prev, latitude: userLoc.lat, longitude: userLoc.lon, zoom: 9 }));
+    } else {
+      setViewState(prev => ({ ...prev, latitude: 21.5, longitude: 78.5, zoom: 4.8 }));
+    }
+  }, [mapMode, userLoc]);
 
   const { language } = useLanguage();
   const { setMobileMenuOpen } = useMobileMenu();
@@ -584,91 +495,115 @@ export default function FarmerAnalytics() {
                   </div>
                 )}
                 {isLoaded ? (
-                  <GoogleMap
-                    mapContainerStyle={{ width: '100%', height: '100%' }}
-                    center={
-                      mapMode === 'mandis-all' 
-                        ? { lat: 22.5, lng: 78.5 } 
-                        : (userLoc?.lat && userLoc?.lon ? { lat: userLoc.lat, lng: userLoc.lon } : { lat: 21.5, lng: 78.5 })
-                    }
-                    zoom={mapMode === 'mandis-all' ? 4.5 : (userLoc?.lat ? 9 : 4.8)}
-                    options={{
-                      ...(theme === 'dark' ? MAP_OPTIONS_DARK : MAP_OPTIONS_LIGHT),
-                    }}
+                  <Map
+                    {...viewState}
+                    onMove={evt => setViewState(evt.viewState)}
+                    style={{ width: '100%', height: '100%' }}
+                    mapStyle={theme === 'light' ? MAP_STYLES.roadmap_light : MAP_STYLES.roadmap_dark}
                   >
                     {mapMode === 'farmers' && locations.map((loc, i) => (
-                      <React.Fragment key={i}>
-                        <CircleF
-                          center={{ lat: loc.latitude, lng: loc.longitude }}
-                          radius={150}
-                          onClick={() => setSelectedItem({ ...loc, type: 'farmer' })}
-                          options={{
-                            strokeColor: loc.source === 'whatsapp' ? '#facc15' : '#4ade80',
-                            strokeOpacity: 0.8,
-                            strokeWeight: 1.5,
-                            fillColor: loc.source === 'whatsapp' ? '#facc15' : '#4ade80',
-                            fillOpacity: 0.35,
+                      <Marker
+                        key={i}
+                        latitude={loc.latitude}
+                        longitude={loc.longitude}
+                        onClick={(e) => {
+                          e.originalEvent.stopPropagation();
+                          setSelectedItem({ ...loc, type: 'farmer' });
+                        }}
+                      >
+                        <div 
+                          style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            backgroundColor: loc.source === 'whatsapp' ? '#facc15' : '#4ade80',
+                            opacity: 0.8,
+                            border: '2px solid #fff',
+                            cursor: 'pointer',
+                            boxShadow: `0 0 10px ${loc.source === 'whatsapp' ? '#facc15' : '#4ade80'}`
                           }}
                         />
-                        {selectedItem?.type === 'farmer' && selectedItem.latitude === loc.latitude && (
-                          <InfoWindowF
-                            position={{ lat: loc.latitude, lng: loc.longitude }}
-                            onCloseClick={() => setSelectedItem(null)}
-                          >
-                            <div style={{ fontFamily: 'Inter,sans-serif', fontSize: '0.82rem', color: '#166534', minWidth: 150, padding: 4 }}>
-                              <b style={{ fontSize: '0.9rem' }}>📍 {loc.city || loc.state || 'India'}</b><br />
-                              {loc.state && <span style={{ color: '#555', fontSize: '0.75rem' }}>{loc.state}<br /></span>}
-                              <span style={{ color: loc.source === 'whatsapp' ? '#b45309' : '#166534', fontWeight: 600, fontSize: '0.7rem' }}>
-                                {loc.source === 'whatsapp' ? '📱 WhatsApp' : '🌐 Web'} User
-                              </span>
-                            </div>
-                          </InfoWindowF>
-                        )}
-                      </React.Fragment>
+                      </Marker>
                     ))}
+
+                    {selectedItem?.type === 'farmer' && (
+                      <Popup
+                        latitude={selectedItem.latitude}
+                        longitude={selectedItem.longitude}
+                        onClose={() => setSelectedItem(null)}
+                        closeButton={true}
+                        closeOnClick={false}
+                        anchor="top"
+                      >
+                        <div style={{ fontFamily: 'Inter,sans-serif', fontSize: '0.82rem', color: '#166534', minWidth: 150, padding: 4 }}>
+                          <b style={{ fontSize: '0.9rem' }}>📍 {selectedItem.city || selectedItem.state || 'India'}</b><br />
+                          {selectedItem.state && <span style={{ color: '#555', fontSize: '0.75rem' }}>{selectedItem.state}<br /></span>}
+                          <span style={{ color: selectedItem.source === 'whatsapp' ? '#b45309' : '#166534', fontWeight: 600, fontSize: '0.7rem' }}>
+                            {selectedItem.source === 'whatsapp' ? '📱 WhatsApp' : '🌐 Web'} User
+                          </span>
+                        </div>
+                      </Popup>
+                    )}
 
                     {mapMode.startsWith('mandis') && mandis.map((m, i) => (
-                      <React.Fragment key={i}>
-                        <MarkerF
-                          position={{ lat: m.lat, lng: m.lon }}
-                          onClick={() => setSelectedItem({ ...m, type: 'mandi' })}
-                          icon={{
-                            url: m.type === 'terminal' ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                          }}
-                        />
-                        {selectedItem?.type === 'mandi' && selectedItem.lat === m.lat && (
-                          <InfoWindowF
-                            position={{ lat: m.lat, lng: m.lon }}
-                            onCloseClick={() => setSelectedItem(null)}
-                          >
-                            <div style={{ fontFamily: 'Inter,sans-serif', minWidth: 180, padding: 4 }}>
-                              <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#166534' }}>🏪 {m.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '4px' }}>📍 {m.city}</div>
-                              <div style={{ fontSize: '0.7rem', color: '#555' }}>🌾 {m.crops}</div>
-                              {m.is_accurate && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', color: '#2563eb' }}>
-                                  <CheckCircle size={10} />
-                                  <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>Geocoded Accurate</span>
-                                </div>
-                              )}
-                            </div>
-                          </InfoWindowF>
-                        )}
-                      </React.Fragment>
+                      <Marker
+                        key={i}
+                        latitude={m.lat}
+                        longitude={m.lon}
+                        onClick={(e) => {
+                          e.originalEvent.stopPropagation();
+                          setSelectedItem({ ...m, type: 'mandi' });
+                        }}
+                      >
+                        <div style={{ cursor: 'pointer', transform: 'translate(-50%, -50%)' }}>
+                          <img 
+                            src={m.type === 'terminal' ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'} 
+                            alt="mandi-pin"
+                            style={{ width: '32px', height: '32px' }}
+                          />
+                        </div>
+                      </Marker>
                     ))}
 
-                    {/* User Location Marker */}
-                    {userLoc && (
-                      <MarkerF
-                        position={{ lat: userLoc.lat, lng: userLoc.lng }}
-                        icon={{
-                          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                          scaledSize: new google.maps.Size(40, 40)
-                        }}
-                        title="You"
-                      />
+                    {selectedItem?.type === 'mandi' && (
+                      <Popup
+                        latitude={selectedItem.lat}
+                        longitude={selectedItem.lon}
+                        onClose={() => setSelectedItem(null)}
+                        closeButton={true}
+                        closeOnClick={false}
+                        anchor="top"
+                      >
+                        <div style={{ fontFamily: 'Inter,sans-serif', minWidth: 180, padding: 4, color: '#000' }}>
+                          <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#166534' }}>🏪 {selectedItem.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '4px' }}>📍 {selectedItem.city}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#555' }}>🌾 {selectedItem.crops}</div>
+                          {selectedItem.is_accurate && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', color: '#2563eb' }}>
+                              <CheckCircle size={10} />
+                              <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>Geocoded Accurate</span>
+                            </div>
+                          )}
+                        </div>
+                      </Popup>
                     )}
-                  </GoogleMap>
+
+                    {/* User Location Marker */}
+                    {userLoc?.lat && userLoc?.lon && (
+                      <Marker
+                        latitude={userLoc.lat}
+                        longitude={userLoc.lon}
+                      >
+                        <div style={{ cursor: 'pointer', transform: 'translate(-50%, -100%)' }}>
+                          <img 
+                            src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" 
+                            alt="user-pin"
+                            style={{ width: '36px', height: '36px' }}
+                          />
+                        </div>
+                      </Marker>
+                    )}
+                  </Map>
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--dk3)', gap: '1rem' }}>
                     <RefreshCw className="animate-spin" style={{ color: 'var(--g)/50' }} size={32} />

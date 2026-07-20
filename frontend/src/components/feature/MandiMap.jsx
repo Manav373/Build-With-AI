@@ -1,47 +1,71 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, X, Navigation, Loader2, Search, RefreshCw, Info, ExternalLink, ChevronRight, CheckCircle, Satellite, Layers, Mountain, Map as MapIcon, Eye, Menu, Maximize2, Minimize2, ArrowUpRight, Clock, Milestone, List, ChevronDown } from 'lucide-react';
 import { useAuth } from '@clerk/clerk-react';
 import { getLiveMandis, getNearbyMarkets } from '../../services/api';
-import { GoogleMap, MarkerF, InfoWindowF, useJsApiLoader, StreetViewPanorama, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useMobileMenu } from '../../context/MobileMenuContext';
 import { useTheme } from '../../context/ThemeContext';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const TILE_LAYERS = {
+  roadmap_light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  roadmap_dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  labels: 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+};
 
-const DARK_MAP_STYLES = [
-  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
-];
-
-const LIGHT_MAP_STYLES = [
-  { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#e9e9e9" }] },
-];
-
-const GET_MAP_OPTIONS = (theme) => ({
-  disableDefaultUI: true,
-  zoomControl: false,
-  mapTypeControl: false,
-  streetViewControl: true,
-  fullscreenControl: false,
-  styles: theme === 'light' ? LIGHT_MAP_STYLES : DARK_MAP_STYLES,
+const redIcon = L.divIcon({
+  html: `<img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" style="width: 32px; height: 32px; display: block;" />`,
+  className: 'custom-marker-pin-red',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
 });
+
+const blueIcon = L.divIcon({
+  html: `<img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" style="width: 32px; height: 32px; display: block;" />`,
+  className: 'custom-marker-pin-blue',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+const orangeIcon = L.divIcon({
+  html: `<img src="https://maps.google.com/mapfiles/ms/icons/orange-dot.png" style="width: 32px; height: 32px; display: block;" />`,
+  className: 'custom-marker-pin-orange',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+const greenIcon = L.divIcon({
+  html: `<img src="https://maps.google.com/mapfiles/ms/icons/green-dot.png" style="width: 32px; height: 32px; display: block;" />`,
+  className: 'custom-marker-pin-green',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+function MapController({ center, zoom, onViewStateChange, recenterCount }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (center && center.lat && center.lng) {
+      map.setView([center.lat, center.lng], zoom);
+    }
+  }, [recenterCount]);
+
+  useMapEvents({
+    moveend() {
+      const currentCenter = map.getCenter();
+      onViewStateChange?.({
+        latitude: currentCenter.lat,
+        longitude: currentCenter.lng,
+        zoom: map.getZoom()
+      });
+    }
+  });
+
+  return null;
+}
 
 /* ═══ MAP TILE LAYERS ═══ */
 const MAP_LAYERS = [
@@ -54,93 +78,68 @@ const MAP_LAYERS = [
 
 
 /* ─── Sub-component: handles marker selection and popup ─── */
-function MandiMarker({ m, isSelected, onClick, onInfoWindowClose, onGetDirections }) {
+function MandiMarker({ m, isSelected, onClick }) {
   if (!m || typeof m.lat !== 'number' || typeof m.lon !== 'number' || isNaN(m.lat) || isNaN(m.lon)) return null;
 
   return (
-    <MarkerF
-      position={{ lat: m.lat, lng: m.lon }}
-      onClick={() => onClick()}
-      icon={{
-        url: m.type === 'terminal' ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' : 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+    <Marker
+      position={[m.lat, m.lon]}
+      icon={m.type === 'terminal' ? orangeIcon : greenIcon}
+      eventHandlers={{
+        click: (e) => {
+          onClick();
+        }
       }}
-    >
-      {isSelected && (
-        <InfoWindowF position={{ lat: m.lat, lng: m.lon }} onCloseClick={onInfoWindowClose}>
-          <div style={{ minWidth: 220, padding: 8 }}>
-            <strong style={{ color: '#166534', fontSize: '0.95rem', display: 'block', marginBottom: 4 }}>🏪 {m.name}</strong>
-            <span style={{ opacity: 0.8, fontSize: '0.8rem', color: '#166534' }}>📍 {m.city}</span><br />
-            <span style={{ opacity: 0.7, fontSize: '0.75rem', color: '#166534' }}>🌾 {m.crops}</span>
-            {m.price_note && <div className="mandi-price-note" style={{ marginTop: 6, color: '#059669', fontSize: '0.75rem', fontWeight: 'bold' }}>📊 {m.price_note}</div>}
-            
-            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span className={`mandi-type-badge ${m.type === 'terminal' ? 'mandi-type-terminal' : 'mandi-type-wholesale'}`} style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', textAlign: 'center' }}>
-                {m.type === 'terminal' ? '⭐ Terminal Market' : '🏢 Wholesale Market'}
-              </span>
-              
-              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onGetDirections(); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    borderRadius: '8px',
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Navigation size={12} /> Road Route
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lon}&travelmode=driving`, '_blank'); }}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title="Open in Google Maps App"
-                >
-                  <ExternalLink size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </InfoWindowF>
-      )}
-    </MarkerF>
+    />
   );
 }
 
+
 export default function MandiMap({ onClose, userLat, userLon, isPage = false }) {
   const { setMobileMenuOpen } = useMobileMenu();
-  const { isLoaded } = useJsApiLoader({ id: 'google-map-script', googleMapsApiKey: GOOGLE_MAPS_API_KEY });
+  const isLoaded = true;
   const { getToken } = useAuth();
   const { theme } = useTheme();
   
   const [mandis, setMandis] = useState([]);
   const [loadingMandis, setLoadingMandis] = useState(true);
-  const [mapCenter, setMapCenter] = useState(userLat && userLon ? { lat: userLat, lng: userLon } : { lat: 22.5937, lng: 78.9629 });
+  
+  // Controlled viewState for react-map-gl
+  const [viewState, setViewState] = useState({
+    latitude: userLat && userLon ? userLat : 22.5937,
+    longitude: userLat && userLon ? userLon : 78.9629,
+    zoom: userLat && userLon ? 10 : 5
+  });
+
+  const [recenterCount, setRecenterCount] = useState(0);
+
+  const mapCenter = { lat: viewState.latitude, lng: viewState.longitude };
+  const zoom = viewState.zoom;
+
+  const setMapCenter = (coords) => {
+    setViewState(prev => ({
+      ...prev,
+      latitude: coords.lat,
+      longitude: coords.lng
+    }));
+    setRecenterCount(prev => prev + 1);
+  };
+
+  const setZoom = (z) => {
+    setViewState(prev => ({
+      ...prev,
+      zoom: z
+    }));
+    setRecenterCount(prev => prev + 1);
+  };
+
   const [userCoords, setUserCoords] = useState(userLat && userLon ? { lat: userLat, lng: userLon } : null);
   const [hasLocation, setHasLocation] = useState(!!(userLat && userLon));
   const [selectedMandi, setSelectedMandi] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [allIndiaMode, setAllIndiaMode] = useState(false);
-  const [activeLayer, setActiveLayer] = useState('satellite');
+  const [activeLayer, setActiveLayer] = useState('hybrid');
+  const [showLayerDropdown, setShowLayerDropdown] = useState(false);
   const [showDiscovered, setShowDiscovered] = useState(true);
   const [nearbyMarkets, setNearbyMarkets] = useState([]);
   const [loadingNearby, setLoadingNearby] = useState(false);
@@ -154,8 +153,11 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
   const [showDirections, setShowDirections] = useState(false);
   const [isComputingRoute, setIsComputingRoute] = useState(false);
   const [navError, setNavError] = useState(null);
-  
-  const mapRef = useRef(null);
+
+  const routeCoordinates = useMemo(() => {
+    if (!response || !response.coordinates) return [];
+    return response.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lon]
+  }, [response]);
 
   const handleDragStart = (e) => {
     const target = e.currentTarget;
@@ -177,31 +179,6 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
     target.addEventListener('pointerup', handlePointerUp);
   };
 
-  const directionsCallback = (res) => {
-    if (res !== null) {
-      if (res.status === 'OK') {
-        setResponse(res);
-        setNavError(null);
-        const route = res.routes[0].legs[0];
-        setTravelInfo({
-          distance: route.distance.text,
-          duration: route.duration.text,
-          steps: route.steps
-        });
-        setIsComputingRoute(false);
-      } else {
-        console.error('Directions request failed due to ' + res.status);
-        setIsComputingRoute(res.status);
-        if (res.status === 'REQUEST_DENIED') {
-          setNavError("Directions API not enabled in Cloud Console. Using External Fallback.");
-        } else {
-          setNavError(`Routing Error: ${res.status}`);
-        }
-        setIsComputingRoute(false);
-      }
-    }
-  };
-
   const openInExternalMaps = (mandi) => {
     const target = mandi || selectedMandi;
     if (!target) return;
@@ -209,7 +186,7 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
     window.open(url, '_blank');
   };
 
-  const handleGetDirections = (mandi) => {
+  const handleGetDirections = async (mandi) => {
     if (!userCoords) {
       alert("Please enable location to get directions.");
       return;
@@ -221,6 +198,39 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
     setIsComputingRoute(true);
     setShowDirections(true);
     setSelectedMandi(target);
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${userCoords.lng},${userCoords.lat};${target.lon},${target.lat}?overview=full&geometries=geojson&steps=true`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("OSRM routing request failed");
+      const data = await res.json();
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        setResponse(route.geometry); // GeoJSON format
+        
+        // Map OSRM steps format to match the state format used by the UI
+        const steps = route.legs[0].steps.map(step => ({
+          instructions: step.maneuver.type === 'depart' 
+            ? `Depart from starting point on ${step.name || 'road'}`
+            : `${step.maneuver.type} ${step.maneuver.modifier || ''} onto ${step.name || 'road'}`,
+          distance: { text: `${(step.distance).toFixed(0)} m` },
+          duration: { text: `${Math.round(step.duration / 60)} min` }
+        }));
+
+        setTravelInfo({
+          distance: `${(route.distance / 1000).toFixed(1)} km`,
+          duration: `${Math.round(route.duration / 60)} mins`,
+          steps: steps
+        });
+      } else {
+        throw new Error("No route found");
+      }
+    } catch (error) {
+      console.error("OSRM Route Error:", error);
+      setNavError("Failed to fetch free route. Using External Fallback.");
+    } finally {
+      setIsComputingRoute(false);
+    }
   };
 
   // Fetch Discovery data
@@ -285,10 +295,12 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
     setResponse(null);
     if (newVal) {
       setMapCenter({ lat: 20.5937, lng: 78.9629 });
+      setZoom(4.5);
       fetchGovData(null, null, true);
     } else {
       if (userCoords) {
         setMapCenter(userCoords);
+        setZoom(10);
         fetchGovData(userCoords.lat, userCoords.lng, false);
       }
     }
@@ -318,15 +330,9 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
     } else setLoadingMandis(false);
   }, [userLat, userLon]);
 
-  const onMapLoad = (map) => {
-    mapRef.current = map;
+  const onMapLoad = (evt) => {
+    mapRef.current = evt.target;
   };
-
-  useEffect(() => {
-    if (mapRef.current && mapCenter && !showDirections) {
-      mapRef.current.panTo(mapCenter);
-    }
-  }, [mapCenter, showDirections]);
 
   const handleMandiClick = (m) => {
     setSelectedMandi(m);
@@ -337,6 +343,7 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
       setIsComputingRoute(true);
     }
   };
+
 
   const Wrapper = isPage ? 'div' : motion.div;
   const wrapperProps = isPage
@@ -416,7 +423,7 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
           )}
 
           {/* ═══ MAP HUD ═══ */}
-          <div className={`absolute top-4 left-4 z-10 flex flex-col gap-3 origin-top-left transition-transform duration-300 ${isExpanded ? 'scale-100' : 'scale-[0.85] sm:scale-95 md:scale-100'}`}>
+          <div className={`absolute top-4 left-4 z-[9999] flex flex-col gap-3 origin-top-left transition-transform duration-300 ${isExpanded ? 'scale-100' : 'scale-[0.85] sm:scale-95 md:scale-100'}`}>
 
             <button onClick={() => setShowHud(!showHud)}
               className="lg:hidden flex items-center gap-2 px-3 py-2.5 bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl text-emerald-400 font-bold text-[0.75rem] shadow-2xl hover:bg-black transition-all">
@@ -426,27 +433,69 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
             </button>
 
             <div className={`flex-col gap-3 ${showHud ? 'flex' : 'hidden lg:flex'}`}>
-              <div className={`backdrop-blur-xl border rounded-2xl p-2.5 flex flex-col gap-1.5 shadow-2xl ${
+              <div className={`backdrop-blur-xl border rounded-2xl p-2.5 flex flex-col gap-1.5 shadow-2xl relative z-20 ${
                 theme === 'light' ? 'bg-white/90 border-gray-200' : 'bg-black/80 border-white/10'
               }`}>
                 <div className={`flex items-center gap-2 px-2 pb-1.5 border-b ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
                   <Layers size={12} className={theme === 'light' ? 'text-gray-400' : 'text-white/30'} />
                   <span className={`text-[0.55rem] font-black ${theme === 'light' ? 'text-gray-400' : 'text-white/30'}`}>Orbital mode</span>
                 </div>
-                <div className="flex flex-col gap-1">
-                  {MAP_LAYERS.map(layer => (
-                    <button key={layer.id} onClick={() => setActiveLayer(layer.id)}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${activeLayer === layer.id
-                        ? (theme === 'light' ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-blue-500/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/10')
-                        : (theme === 'light' ? 'bg-gray-50 border-gray-100 text-gray-400 hover:bg-gray-100' : 'bg-black/40 border-transparent text-white/40 hover:text-white hover:bg-white/5')
-                        }`}>
-                      <span className={theme === 'light' && activeLayer === layer.id ? 'text-white' : 'text-blue-500'}>{layer.icon}</span> <span>{layer.name}</span>
-                    </button>
-                  ))}
+                <div className="relative">
+                  {/* Dropdown Trigger */}
+                  <button
+                    onClick={() => setShowLayerDropdown(!showLayerDropdown)}
+                    className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-[0.65rem] font-bold border transition-all ${
+                      theme === 'light'
+                        ? 'bg-white border-gray-200 text-slate-700 hover:bg-gray-50'
+                        : 'bg-black/40 border-white/10 text-white/80 hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-500">
+                        {MAP_LAYERS.find(l => l.id === activeLayer)?.icon}
+                      </span>
+                      <span>{MAP_LAYERS.find(l => l.id === activeLayer)?.name || 'Select View'}</span>
+                    </div>
+                    <ChevronDown size={14} className={`transition-transform duration-300 ${showLayerDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown List */}
+                  <AnimatePresence>
+                    {showLayerDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className={`absolute left-0 right-0 mt-1.5 z-[100] p-1 rounded-xl border flex flex-col gap-0.5 shadow-2xl backdrop-blur-xl ${
+                          theme === 'light' ? 'bg-white border-gray-200' : 'bg-slate-950/95 border-white/10'
+                        }`}
+                      >
+                        {MAP_LAYERS.map(layer => (
+                          <button
+                            key={layer.id}
+                            onClick={() => {
+                              setActiveLayer(layer.id);
+                              setShowLayerDropdown(false);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[0.65rem] font-bold transition-all ${
+                              activeLayer === layer.id
+                                ? (theme === 'light' ? 'bg-blue-600 text-white' : 'bg-blue-500/20 text-blue-300 border border-blue-500/20')
+                                : (theme === 'light' ? 'hover:bg-gray-100 text-gray-600' : 'hover:bg-white/5 text-white/50 hover:text-white')
+                            }`}
+                          >
+                            <span className={activeLayer === layer.id ? 'text-white' : 'text-blue-500'}>
+                              {layer.icon}
+                            </span>
+                            <span>{layer.name}</span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
-              <div className={`backdrop-blur-xl border rounded-2xl p-2 flex flex-col gap-1 shadow-2xl ${
+              <div className={`backdrop-blur-xl border rounded-2xl p-2 flex flex-col gap-1 shadow-2xl relative z-10 ${
                 theme === 'light' ? 'bg-white/90 border-gray-200' : 'bg-black/80 border-white/10'
               }`}>
                 <button onClick={toggleAllIndiaMode}
@@ -501,7 +550,7 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="absolute top-4 right-4 z-20 flex flex-col gap-2 w-72"
+                className="absolute top-4 right-4 z-[9999] flex flex-col gap-2 w-72"
               >
                 <div className="bg-black/80 backdrop-blur-2xl border border-white/20 rounded-2xl p-4 shadow-2xl overflow-hidden relative">
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
@@ -590,105 +639,213 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
           </AnimatePresence>
 
           {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ height: '100%', width: '100%' }}
-              center={mapCenter}
-              zoom={allIndiaMode ? 5 : hasLocation ? 10 : 5}
-              onLoad={onMapLoad}
-              options={{
-                ...GET_MAP_OPTIONS(theme),
-                mapTypeId: activeLayer === 'streetview' ? 'roadmap' : activeLayer,
-                clickableIcons: false
-              }}
-            >
-              {showDirections && userCoords && selectedMandi && !response && !navError && (
-                <DirectionsService
-                  options={{
-                    origin: userCoords,
-                    destination: { lat: selectedMandi.lat, lng: selectedMandi.lon },
-                    travelMode: 'DRIVING'
-                  }}
-                  callback={directionsCallback}
+            <div className="w-full h-full relative">
+              <MapContainer
+                center={[mapCenter.lat, mapCenter.lng]}
+                zoom={zoom}
+                zoomControl={false}
+                style={{ width: '100%', height: '100%', background: '#020704' }}
+              >
+                <MapController
+                  center={mapCenter}
+                  zoom={zoom}
+                  onViewStateChange={setViewState}
+                  recenterCount={recenterCount}
                 />
-              )}
-
-              {response && !navError && (
-                <DirectionsRenderer
-                  options={{
-                    directions: response,
-                    polylineOptions: {
-                      strokeColor: '#3b82f6',
-                      strokeWeight: 6,
-                      strokeOpacity: 0.8
-                    },
-                    suppressMarkers: false // Keep markers for origin/destination
-                  }}
+                
+                <TileLayer
+                  url={
+                    activeLayer === 'satellite' || activeLayer === 'hybrid'
+                      ? TILE_LAYERS.satellite
+                      : theme === 'light'
+                        ? TILE_LAYERS.roadmap_light
+                        : TILE_LAYERS.roadmap_dark
+                  }
+                  attribution='&copy; ESRI, CartoDB'
                 />
-              )}
+                
+                {activeLayer === 'hybrid' && (
+                  <TileLayer
+                    url={TILE_LAYERS.labels}
+                    attribution='&copy; CartoDB'
+                  />
+                )}
 
-              {activeLayer === 'streetview' && (
-                <StreetViewPanorama
-                  position={selectedMandi ? { lat: selectedMandi.lat, lng: selectedMandi.lon } : userCoords}
-                  visible={true}
-                />
-              )}
+                {/* User Coords Marker */}
+                {userCoords && typeof userCoords.lat === 'number' && !isNaN(userCoords.lat) && typeof userCoords.lng === 'number' && !isNaN(userCoords.lng) && (
+                  <Marker
+                    position={[userCoords.lat, userCoords.lng]}
+                    icon={redIcon}
+                  />
+                )}
 
-              {userCoords && typeof userCoords.lat === 'number' && !isNaN(userCoords.lat) && typeof userCoords.lng === 'number' && !isNaN(userCoords.lng) && (
-                <MarkerF
-                  key="user-location-marker"
-                  position={userCoords}
-                  title="Your Location"
-                  zIndex={1000}
-                  icon={{
-                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                  }}
-                />
-              )}
+                {/* Mandi Markers */}
+                {!showDirections && mandis.map((m, i) => (
+                  <MandiMarker 
+                    key={`gov-${i}`} 
+                    m={m}
+                    isSelected={selectedMandi === m}
+                    onClick={() => handleMandiClick(m)}
+                  />
+                ))}
 
-              {!showDirections && mandis.map((m, i) => (
-                <MandiMarker key={`gov-${i}`} m={m}
-                  isSelected={selectedMandi === m}
-                  onClick={() => handleMandiClick(m)}
-                  onInfoWindowClose={() => setSelectedMandi(null)}
-                  onGetDirections={() => handleGetDirections(m)}
-                />
-              ))}
+                {/* Nearby Markets (Discovered) Markers */}
+                {!showDirections && showDiscovered && nearbyMarkets.map((m, i) => {
+                  if (typeof m.lat !== 'number' || typeof m.lon !== 'number' || isNaN(m.lat) || isNaN(m.lon)) return null;
+                  return (
+                    <Marker
+                      key={`disco-${i}`}
+                      position={[m.lat, m.lon]}
+                      icon={blueIcon}
+                      eventHandlers={{
+                        click: (e) => {
+                          setSelectedMandi({
+                            name: m.name,
+                            city: m.vicinity || "Discovered",
+                            lat: m.lat,
+                            lon: m.lon,
+                            type: 'discovered',
+                            crops: 'Search results near this location'
+                          });
+                        }
+                      }}
+                    />
+                  );
+                })}
 
-              {!showDirections && showDiscovered && nearbyMarkets.map((m, i) => {
-                if (typeof m.lat !== 'number' || typeof m.lon !== 'number' || isNaN(m.lat) || isNaN(m.lon)) return null;
-                return (
-                  <MarkerF
-                    key={`disco-${i}`}
-                    position={{ lat: m.lat, lng: m.lon }}
-                    title={m.name}
-                    icon={{
-                      url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                    }}
-                    onClick={() => {
-                      setSelectedMandi({
-                        name: m.name,
-                        city: m.vicinity || "Discovered",
-                        lat: m.lat,
-                        lon: m.lon,
-                        type: 'discovered',
-                        crops: 'Search results near this location'
-                      });
+                {/* Directions Route Layer */}
+                {showDirections && routeCoordinates.length > 0 && (
+                  <Polyline
+                    positions={routeCoordinates}
+                    pathOptions={{
+                      color: '#3b82f6',
+                      weight: 6,
+                      opacity: 0.8
                     }}
                   />
-                );
-              })}
+                )}
 
-              <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1.5">
+
+
+                {/* Street View Fallback Warning Overlay */}
+                {activeLayer === 'streetview' && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 16,
+                    zIndex: 1000,
+                    padding: 24,
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '3rem' }}>🌐</div>
+                    <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 900 }}>Interactive Street View</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', maxWidth: 320 }}>
+                      Street View is opened externally to protect your API quota. Click the button below to view 360° panorama.
+                    </p>
+                    <button
+                      onClick={() => window.open(`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${mapCenter.lat},${mapCenter.lng}`, '_blank')}
+                      style={{
+                        padding: '12px 24px',
+                        backgroundColor: '#10b981',
+                        color: '#fff',
+                        borderRadius: 12,
+                        fontWeight: 'bold',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Open Street View 🚀
+                    </button>
+                  </div>
+                )}
+              </MapContainer>
+
+              {/* Selected Mandi Info Card Overlay */}
+              <AnimatePresence>
+                {selectedMandi && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`absolute bottom-16 left-4 z-[9999] p-4 rounded-2xl shadow-2xl backdrop-blur-xl border w-72 transition-all ${
+                      theme === 'light'
+                        ? 'bg-white/95 border-gray-200 text-slate-950 shadow-gray-200/50'
+                        : 'bg-[#080d0a]/95 border-emerald-950/30 text-white shadow-black/80'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 border-b pb-2 mb-2 border-slate-200/10">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-base shrink-0 mt-0.5">🏪</div>
+                        <div className="min-w-0">
+                          <strong className="text-xs font-black block leading-tight truncate">{selectedMandi.name}</strong>
+                          <span className="text-[0.6rem] font-bold text-slate-400 mt-0.5 block truncate">📍 {selectedMandi.city}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => { setSelectedMandi(null); setShowDirections(false); setResponse(null); }} className="text-white/40 hover:text-white/80 transition-colors p-1 hover:bg-white/10 rounded-lg">
+                        <X size={14} className={theme === 'light' ? 'text-slate-400 hover:text-slate-900' : 'text-white/40 hover:text-white'} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 py-1">
+                      <div className="flex items-start justify-between text-[0.7rem] font-bold leading-normal">
+                        <span className="opacity-75">Crops:</span>
+                        <span className="text-right text-emerald-400">{selectedMandi.crops}</span>
+                      </div>
+                      
+                      {selectedMandi.price_note && (
+                        <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[0.7rem] font-black text-emerald-400 text-center">
+                          📊 {selectedMandi.price_note}
+                        </div>
+                      )}
+                      
+                      <div className={`text-[0.6rem] font-black py-1 rounded-lg text-center ${
+                        selectedMandi.type === 'terminal' 
+                          ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400' 
+                          : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                      }`}>
+                        {selectedMandi.type === 'terminal' ? '⭐ Terminal Market' : '🏢 Wholesale Market'}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 mt-3 pt-2 border-t border-slate-200/10">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleGetDirections(selectedMandi); }}
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-[0.7rem] font-bold transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20"
+                      >
+                        <Navigation size={12} /> Road Route
+                      </button>
+                      
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedMandi.lat},${selectedMandi.lon}&travelmode=driving`, '_blank'); }}
+                        className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all hover:scale-105 active:scale-95 shrink-0 ${
+                          theme === 'light' ? 'bg-gray-100 border-gray-200 text-slate-700' : 'bg-white/5 border-white/10 text-white/70 hover:text-white'
+                        }`}
+                        title="Open in Google Maps App"
+                      >
+                        <ExternalLink size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Custom Zoom Controls */}
+              <div className="absolute bottom-4 right-4 z-[9999] flex flex-col gap-1.5">
                 <button onClick={() => setIsExpanded(!isExpanded)}
                   className="w-10 h-10 rounded-xl bg-black/60 backdrop-blur-xl border border-white/10 text-white/60 hover:text-white text-xl font-bold flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg lg:hidden" title="Toggle Fullscreen">
                   {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                 </button>
-                <button onClick={() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) + 1)}
+                <button onClick={() => setViewState(prev => ({ ...prev, zoom: Math.min(20, prev.zoom + 1) }))}
                   className="w-10 h-10 rounded-xl bg-black/60 backdrop-blur-xl border border-white/10 text-white/60 hover:text-white text-xl font-bold flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg">+</button>
-                <button onClick={() => mapRef.current?.setZoom((mapRef.current?.getZoom() || 10) - 1)}
+                <button onClick={() => setViewState(prev => ({ ...prev, zoom: Math.max(1, prev.zoom - 1) }))}
                   className="w-10 h-10 rounded-xl bg-black/60 backdrop-blur-xl border border-white/10 text-white/60 hover:text-white text-xl font-bold flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg">−</button>
               </div>
-            </GoogleMap>
+            </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-900">
               <Loader2 className="animate-spin text-emerald-500" size={40} />
@@ -698,7 +855,7 @@ export default function MandiMap({ onClose, userLat, userLon, isPage = false }) 
 
 
           {hasLocation && (
-            <div className={`absolute bottom-5 left-5 z-10 backdrop-blur-xl border rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg transition-colors ${
+            <div className={`absolute bottom-5 left-5 z-[9999] backdrop-blur-xl border rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg transition-colors ${
               theme === 'light' ? 'bg-white/90 border-gray-200' : 'bg-black/60 border-white/10'
             }`}>
               <Navigation size={12} className="text-emerald-500" />
