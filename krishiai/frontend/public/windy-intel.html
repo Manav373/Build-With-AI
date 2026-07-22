@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>KrishiAI Weather Intelligence HUD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css" />
+    <style>
+        :root {
+            --accent: #10b981;
+            --accent-blue: #3b82f6;
+            --bg-dark: rgba(10, 15, 12, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --glass: blur(12px) saturate(180%);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #030905;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            color: white;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #windy {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Tactical HUD Interface (Hiding for React Parent to take over) */
+        .hud-container {
+            display: none !important;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px;
+        }
+
+        /* Hide artifacts */
+        .windy-logo,
+        .controls-pane {
+            display: none !important;
+        }
+
+        /* Grid Overlay */
+        .grid-bg {
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="windy"></div>
+    <div class="grid-bg"></div>
+
+    <!-- This internal HUD is kept in DOM but hidden via CSS so we can still use its IDs if needed for logic -->
+    <div class="hud-container">
+        <div class="hud-top">
+            <div class="data-hud">
+                <div class="data-item">
+                    <span class="data-label">Atmosphere</span>
+                    <span class="data-value" id="val-temp">--<span class="data-unit">°C</span></span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Wind Logic</span>
+                    <span class="data-value" id="val-wind">--<span class="data-unit">m/s</span></span>
+                </div>
+                <div class="pill-controls" id="model-picker">
+                    <button class="btn-model active" data-model="ecmwf">EURO</button>
+                    <button class="btn-model" data-model="gfs">GLOBAL</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-bottom">
+            <div class="timeline-box">
+                <div class="timeline-info">
+                    <div class="timeline-status">
+                        <div class="status-dot"></div>
+                        <span class="status-text">Predictive Feed</span>
+                    </div>
+                    <span class="current-time" id="timestamp-label">LOADING ENGINE...</span>
+                </div>
+                <input type="range" id="time-slider" min="0" max="100" value="0">
+            </div>
+        </div>
+    </div>
+
+    <script src="https://api.windy.com/assets/map-forecast/libBoot.js"></script>
+    <script>
+        let W_API = null;
+        const timeSlider = document.getElementById('time-slider');
+        const timeLabel = document.getElementById('timestamp-label');
+        const modelButtons = document.querySelectorAll('.btn-model');
+        const valTemp = document.getElementById('val-temp');
+        const valWind = document.getElementById('val-wind');
+
+        const params = new URLSearchParams(window.location.search);
+        const options = {
+            key: params.get('key') || 'PLACEHOLDER',
+            lat: parseFloat(params.get('lat')) || 20.5937,
+            lon: parseFloat(params.get('lon')) || 78.9629,
+            zoom: parseInt(params.get('zoom')) || 5,
+            overlay: params.get('overlay') || 'satellite',
+        };
+
+        windyInit(options, (windyAPI) => {
+            W_API = windyAPI;
+            const { map, store, broadcast, picker } = windyAPI;
+
+            window.parent.postMessage({ type: 'WINDY_READY' }, '*');
+
+            // Set Initial Product (Only if not observational)
+            const observationalLayers = ['satellite', 'radar'];
+            if (!observationalLayers.includes(options.overlay)) {
+                try {
+                    store.set('product', 'ecmwf');
+                } catch (e) {
+                    console.error("Windy Pro Model Error:", e);
+                    window.parent.postMessage({ type: 'WINDY_ERROR', reason: 'MODEL_UNAVAILABLE' }, '*');
+                }
+            }
+
+            // Check Overlay Availability
+            if (!store.get('availOverlays')?.includes(options.overlay)) {
+                 console.warn(`Overlay ${options.overlay} potentially unavailable on this license.`);
+            }
+
+            // Timeline Sync (To Parent)
+            const updateLabel = (ts) => {
+                const date = new Date(ts);
+                const timeStr = date.toLocaleString('en-IN', {
+                    weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }).toUpperCase();
+
+                window.parent.postMessage({ 
+                    type: 'WINDY_TIME', 
+                    value: ts, 
+                    label: timeStr,
+                    index: store.get('availTimestamps').indexOf(ts),
+                    max: (store.get('availTimestamps').length - 1)
+                }, '*');
+                
+                if (timeLabel) timeLabel.innerText = timeStr;
+            };
+
+            store.on('timestamp', (ts) => {
+                updateLabel(ts);
+                const tsList = store.get('availTimestamps');
+                if (tsList && timeSlider) timeSlider.value = tsList.indexOf(ts);
+            });
+
+            // Playback Control Handlers
+            window.addEventListener('message', (event) => {
+                const { type, value } = event.data;
+                
+                if (type === 'SET_OVERLAY') {
+                    store.set('overlay', value);
+                }
+                
+                if (type === 'PLAY_MAP') {
+                     try {
+                        const player = W.model.player;
+                        if (player) player.play();
+                        else broadcast.fire('player:play');
+                     } catch(e) { console.warn("Play Fallback:", e); }
+                }
+                
+                if (type === 'PAUSE_MAP') {
+                     try {
+                        const player = W.model.player;
+                        if (player) player.pause();
+                        else broadcast.fire('player:pause');
+                     } catch(e) { console.warn("Pause Fallback:", e); }
+                }
+
+                if (type === 'SEEK_MAP') {
+                     const tsList = store.get('availTimestamps');
+                     if (tsList && tsList[value]) {
+                        store.set('timestamp', tsList[value]);
+                     }
+                }
+
+                if (type === 'SET_PRODUCT') {
+                    store.set('product', value);
+                    modelButtons.forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.model === value);
+                    });
+                }
+            });
+
+            // Data Readout Logic (To Parent)
+            picker.on('pickerMoved', (latLon) => {
+                const data = picker.getParams();
+                if (data) {
+                    window.parent.postMessage({
+                        type: 'WINDY_DATA',
+                        temp: Math.round(data.temp),
+                        wind: Math.round(data.wind)
+                    }, '*');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
