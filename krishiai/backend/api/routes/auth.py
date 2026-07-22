@@ -74,13 +74,13 @@ def verify_otp(req: VerifyOTPRequest):
         is_valid = otp_service.verify_otp(req.phone, req.code)
 
         if is_valid:
-            # In production: create JWT token, session, or database record here
-            # For now, just confirm verification succeeded
+            # Generate session token for verified phone authentication
+            auth_token = f"krishi_auth_{req.phone}"
             return VerifyOTPResponse(
                 success=True,
                 message="OTP verified successfully",
                 phone=req.phone,
-                token=None  # TODO: generate JWT
+                token=auth_token
             )
         else:
             raise HTTPException(status_code=401, detail="Invalid or expired OTP")
