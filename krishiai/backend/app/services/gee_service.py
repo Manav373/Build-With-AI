@@ -1,4 +1,9 @@
-import ee
+import logging
+try:
+    import ee
+except ImportError:
+    ee = None
+
 import os
 import json
 import time
@@ -7,12 +12,15 @@ from datetime import datetime, timedelta
 
 class GEEService:
     _initialized = False
-
     _initialization_error = False
 
     @classmethod
     def initialize(cls):
         if cls._initialized:
+            return
+        if ee is None:
+            logging.getLogger("KrishiMCP").warning("[GEE] Earth Engine API (ee) package not present. GEE satellite features disabled.")
+            cls._initialization_error = True
             return
         
         # Priority:

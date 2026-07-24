@@ -41,6 +41,18 @@ const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage.jsx'))
 const CallHistoryPage = lazy(() => import('./pages/CallHistoryPage.jsx'))
 const VoiceAssistantPage = lazy(() => import('./pages/VoiceAssistantPage.jsx'))
 const CommunityPage = lazy(() => import('./pages/CommunityPage.jsx'))
+const VendorProfilePage = lazy(() => import('./pages/VendorProfilePage.jsx'))
+const VendorMarketplacePage = lazy(() => import('./pages/VendorMarketplacePage.jsx'))
+const VendorSignUpPage = lazy(() => import('./pages/VendorSignUpPage.jsx'))
+const VendorTypeSelectionPage = lazy(() => import('./pages/VendorTypeSelectionPage.jsx'))
+const VendorOnboardingPage = lazy(() => import('./pages/VendorOnboardingPage.jsx'))
+const VendorDashboardLayout = lazy(() => import('./pages/VendorDashboardLayout.jsx'))
+const VendorDashboardHome = lazy(() => import('./pages/VendorDashboardHome.jsx'))
+const VendorDashboardPlaceholder = lazy(() => import('./pages/VendorDashboardPlaceholder.jsx'))
+const VendorProductsPage = lazy(() => import('./pages/VendorProductsPage.jsx'))
+const VendorRequirementsPage = lazy(() => import('./pages/VendorRequirementsPage.jsx'))
+const VendorApplicationsPage = lazy(() => import('./pages/VendorApplicationsPage.jsx'))
+const FarmerBrowseRequirementsPage = lazy(() => import('./pages/FarmerBrowseRequirementsPage.jsx'))
 
 const PageLoader = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center z-50" style={{ background: 'var(--bg)' }}>
@@ -90,10 +102,42 @@ const AppContent = () => (
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/privacy" element={<PrivacyPage />} />
                     <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/vendors" element={<VendorMarketplacePage />} />
+                    <Route path="/vendor/:vendorId" element={<VendorProfilePage />} />
+                    <Route path="/vendor/sample" element={<VendorProfilePage />} />
+                    <Route path="/vendor-type-select" element={<VendorTypeSelectionPage />} />
+                    <Route path="/vendor-onboarding" element={<VendorOnboardingPage />} />
+                    <Route path="/sell-crops" element={<FarmerBrowseRequirementsPage />} />
+
+                    {/* Vendor Dashboard (Nested Layout) */}
+                    <Route path="/vendor-dashboard" element={<VendorDashboardLayout />}>
+                      <Route index element={<VendorDashboardHome />} />
+                      <Route path="company-profile" element={<VendorDashboardPlaceholder />} />
+                      <Route path="store-profile" element={<VendorDashboardPlaceholder />} />
+                      <Route path="requirements" element={<VendorRequirementsPage />} />
+                      <Route path="applications" element={<VendorApplicationsPage />} />
+                      <Route path="negotiation" element={<VendorDashboardPlaceholder />} />
+                      <Route path="procurement-orders" element={<VendorDashboardPlaceholder />} />
+                      <Route path="warehouse" element={<VendorDashboardPlaceholder />} />
+                      <Route path="pickup" element={<VendorDashboardPlaceholder />} />
+                      <Route path="logistics" element={<VendorDashboardPlaceholder />} />
+                      <Route path="products" element={<VendorProductsPage />} />
+                      <Route path="inventory" element={<VendorDashboardPlaceholder />} />
+                      <Route path="orders" element={<VendorDashboardPlaceholder />} />
+                      <Route path="customers" element={<VendorDashboardPlaceholder />} />
+                      <Route path="promotions" element={<VendorDashboardPlaceholder />} />
+                      <Route path="reviews" element={<VendorDashboardPlaceholder />} />
+                      <Route path="payments" element={<VendorDashboardPlaceholder />} />
+                      <Route path="analytics" element={<VendorDashboardPlaceholder />} />
+                      <Route path="notifications" element={<VendorDashboardPlaceholder />} />
+                      <Route path="documents" element={<VendorDashboardPlaceholder />} />
+                      <Route path="settings" element={<VendorDashboardPlaceholder />} />
+                    </Route>
 
                     {/* Auth Routes */}
                     <Route path="/sign-in/*" element={isClerkEnabled ? <SignInPage /> : <Navigate to="/" />} />
                     <Route path="/sign-up/*" element={isClerkEnabled ? <SignUpPage /> : <Navigate to="/" />} />
+                    <Route path="/vendor-sign-up/*" element={isClerkEnabled ? <VendorSignUpPage /> : <Navigate to="/" />} />
 
                     {/* Dashboard Module (Shared Layout) */}
                     <Route element={isClerkEnabled ? <ProtectedRoute><MainLayout /></ProtectedRoute> : <MainLayout />}>

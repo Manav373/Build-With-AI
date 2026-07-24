@@ -20,12 +20,14 @@ from api.routes.ml import router as ml_router
 from api.routes.schemes import router as schemes_router
 from api.routes.community import router as community_router
 from api.routes.auth import router as auth_router
+from api.routes.vendor import router as vendor_router
 from app.db.database import engine, Base
 from app.services.gee_service import gee_service
 import app.models.location  # noqa
 import app.models.market    # noqa – registers ORM models
 import app.models.vapi_model # noqa
 import app.models.community_model # noqa
+import app.models.vendor  # noqa – registers vendor ecosystem ORM models
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -34,7 +36,12 @@ logger = logging.getLogger("KrishiMCP")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-create DB tables on startup
-    Base.metadata.create_all(bind=engine)
+    try:
+        from scripts.sync_db import sync_database
+        sync_database()
+    except Exception as e:
+        logger.warning(f"[DB Sync] Startup sync warning: {e}")
+        Base.metadata.create_all(bind=engine)
     logger.info("[DB] Tables created / verified.")
     
     # Seed initial market benchmarks
@@ -65,10 +72,15 @@ app = FastAPI(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled error: {exc}", exc_info=True)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=500,
         content={"error": "An internal server error occurred. Our engineers are investigating."},
     )
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Add middleware to bypass ngrok browser warning and restrict origins
 raw_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
@@ -78,6 +90,16 @@ allowed_origins = [o.strip() for o in raw_origins if o.strip()]
 default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "http://localhost:5176",
+    "http://127.0.0.1:5176",
+    "http://localhost:5177",
+    "http://127.0.0.1:5177",
+    "http://localhost:5178",
+    "http://127.0.0.1:5178",
     "http://localhost:3000",
     "http://localhost:8081",
     "http://127.0.0.1:8081",
@@ -95,6 +117,7 @@ for origin in default_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -116,7 +139,7 @@ async def add_security_and_ngrok_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://clerk.needed-mastodon-98.accounts.dev; "
-        "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 https://clerk.needed-mastodon-98.accounts.dev https://nominatim.openstreetmap.org; "
+        "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 http://127.0.0.1:8000 https://clerk.needed-mastodon-98.accounts.dev https://nominatim.openstreetmap.org; "
         "img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com;"
@@ -153,6 +176,9 @@ app.include_router(community_router, prefix="/api")
 
 # Include Auth (OTP) endpoints
 app.include_router(auth_router)
+
+# Include Vendor Marketplace endpoints
+app.include_router(vendor_router)
 
 logger.info("KrishiAI MCP Server starting up...")
 

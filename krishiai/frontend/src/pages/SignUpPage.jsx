@@ -1,8 +1,12 @@
 import React from 'react';
 import { SignUp } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 export default function SignUpPage() {
+  const navigate = useNavigate();
+
   return (
     <div
       style={{
@@ -16,6 +20,38 @@ export default function SignUpPage() {
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
+      {/* Back button */}
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+        onClick={() => navigate(-1)}
+        style={{
+          position: 'fixed',
+          top: '1.5rem',
+          left: '1.5rem',
+          zIndex: 100,
+          background: 'rgba(22,101,52,0.18)',
+          border: '1px solid rgba(74,222,128,0.22)',
+          borderRadius: '50px',
+          padding: '0.5rem 1rem',
+          color: 'rgba(74,222,128,0.8)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          fontSize: '0.82rem',
+          fontWeight: 600,
+          backdropFilter: 'blur(10px)',
+        }}
+        id="signup-back-btn"
+        aria-label="Go back"
+      >
+        <ArrowLeft size={15} />
+        Back
+      </motion.button>
+
       {/* Background video */}
       <div className="landing-bg-container">
         <video className="landing-bg-video" autoPlay loop muted playsInline preload="auto">
@@ -42,7 +78,18 @@ export default function SignUpPage() {
             Krishi<span style={{ color: '#4ade80' }}>AI</span>
           </h1>
           <p style={{ color: 'rgba(134,239,172,0.6)', fontSize: '0.88rem', marginTop: '0.4rem', fontWeight: 500 }}>
-            Join thousands of farmers using AI
+            Join KrishiAI as a Customer
+          </p>
+          <p style={{ color: 'rgba(134,239,172,0.35)', fontSize: '0.76rem', marginTop: '0.2rem' }}>
+            Selling products?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/vendor-type-select')}
+              style={{ color: '#facc15', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 'inherit', padding: 0, textDecoration: 'underline', textUnderlineOffset: '2px' }}
+              id="signup-switch-vendor"
+            >
+              Sign up as Vendor
+            </button>
           </p>
         </div>
 

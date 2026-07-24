@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/clerk-react';
+import { useSafeAuth } from './useSafeAuth';
 import axios from 'axios';
 
 // Get the base URL with multiple fallback options (same as api.js)
@@ -17,7 +17,7 @@ if (BASE_URL.endsWith('/')) {
  * and authenticated versions of the API functions.
  */
 export const useAuthenticatedApi = () => {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
 
   const getAuthenticatedClient = async () => {
     const token = await getToken();

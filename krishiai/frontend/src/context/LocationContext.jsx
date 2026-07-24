@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@clerk/clerk-react';
+import { useSafeAuth } from '../hooks/useSafeAuth';
 import { resolveLocationBackend } from '../services/api';
 
 const LocationContext = createContext();
@@ -9,7 +9,7 @@ const LocationContext = createContext();
  * Handles background location detection once per session.
  */
 export const LocationProvider = ({ children }) => {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [location, setLocation] = useState({
     village: null,
     taluka: null,

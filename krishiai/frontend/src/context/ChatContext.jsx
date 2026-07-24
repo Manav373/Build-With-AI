@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { translations } from '../utils/translations/index';
 import { sendChatQuery, sendImageQuery, sendVoiceQuery } from '../services/api';
-import { useAuth } from '@clerk/clerk-react';
+import { useSafeAuth } from '../hooks/useSafeAuth';
 import { useLanguage } from './LanguageContext';
 
 const ChatContext = createContext();
@@ -37,7 +37,7 @@ function createNewChat(language = 'en') {
 }
 
 export const ChatProvider = ({ children }) => {
-  const { getToken } = useAuth();
+  const { getToken } = useSafeAuth();
   const [chatSessions, setChatSessions] = useState(() => {
     try {
       const data = JSON.parse(localStorage.getItem(STORAGE_KEY));

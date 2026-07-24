@@ -1,16 +1,19 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Smartphone, Languages } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { translations } from '../../utils/translations/index';
+import RoleSelectionModal from '../common/RoleSelectionModal';
 
 export default function CTA() {
     const navigate = useNavigate();
+    const [roleModalOpen, setRoleModalOpen] = useState(false);
     const { language } = useLanguage();
     const t = translations[language].cta;
 
     return (
+        <>
         <section style={{ position: 'relative', zIndex: 1, padding: '4rem 5% 6rem' }}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.92 }}
@@ -64,7 +67,8 @@ export default function CTA() {
                                 className="glow-btn"
                                 whileHover={{ scale: 1.08, boxShadow: '0 0 60px rgba(134,239,172,0.5)' }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => navigate('/chat')}
+                                onClick={() => setRoleModalOpen(true)}
+                                id="cta-launch-app-btn"
                                 style={{ background: 'linear-gradient(135deg,#166534,#15803d)', color: '#fff', border: 'none', cursor: 'pointer', padding: '1.1rem 2.4rem', borderRadius: '100px', fontSize: '1.1rem', fontWeight: 800, boxShadow: '0 8px 30px rgba(22,101,52,0.5)', letterSpacing: '-0.01em' }}>
                                 🚀 {t.btnLaunch}
                             </motion.button>
@@ -101,7 +105,7 @@ export default function CTA() {
                                         hidden: { opacity: 0, y: 10 },
                                         visible: { opacity: 1, y: 0 }
                                     }}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#86efac', fontWeight: 600, fontSize: '0.85rem' }}
+                                    style={{ display: 'flex', items: 'center', gap: '0.5rem', color: '#86efac', fontWeight: 600, fontSize: '0.85rem' }}
                                 >
                                     <item.icon size={14} />
                                     {item.text}
@@ -112,5 +116,9 @@ export default function CTA() {
                 </div>
             </motion.div>
         </section>
+
+        {/* Role Selection Modal */}
+        <RoleSelectionModal isOpen={roleModalOpen} onClose={() => setRoleModalOpen(false)} />
+        </>
     );
 }

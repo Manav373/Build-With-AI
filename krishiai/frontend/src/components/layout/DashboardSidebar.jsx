@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Map, TrendingUp, Sparkles, HelpCircle, Settings, Plus, MessageSquare, Trash2, Edit2, Check, Home, BarChart2, Satellite, Phone, Mic, Users, Globe, ChevronDown, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Map, TrendingUp, Sparkles, HelpCircle, Settings, Plus, MessageSquare, Trash2, Edit2, Check, Home, BarChart2, Satellite, Phone, Mic, Users, Globe, ChevronDown, Sun, Moon, ShoppingBag } from 'lucide-react';
 import { LANGUAGES } from '../../utils/translations/index';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
@@ -69,6 +69,7 @@ export default function DashboardSidebar({ currentPath = '/chat', onAction, onCl
   ];
 
   const toolsItems = [
+    { id: 'vendors', icon: <ShoppingBag size={18} />, label: 'Vendor Marketplace', path: '/vendors', active: currentPath === '/vendors' },
     { id: 'market_prices', icon: <BarChart2 size={18} />, label: t.marketPrices, path: '/market-prices', active: currentPath === '/market-prices' },
     { id: 'analytics', icon: <LayoutDashboard size={18} />, label: t.analytics, path: '/analytics', active: currentPath === '/analytics' },
     { id: 'schemes', icon: <Sparkles size={18} />, label: t.schemes, path: '/schemes', active: currentPath === '/schemes' },

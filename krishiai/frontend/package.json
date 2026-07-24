@@ -24,6 +24,7 @@
     "maplibre-gl": "^5.24.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-is": "^19.2.8",
     "react-leaflet": "^5.0.0",
     "react-map-gl": "^8.1.1",
     "react-markdown": "^10.1.0",

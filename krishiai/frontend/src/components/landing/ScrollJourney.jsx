@@ -305,7 +305,7 @@ export default function ScrollJourney() {
             </div>
 
             {localizedFeatures.map((feat, i) => (
-            <div className="feature-scroll-item glass-panel p-8 rounded-[2rem] flex flex-col items-start gap-6 border border-gray-200/10 dark:border-[#86efac]/10 hover:border-gray-300/30 dark:hover:border-[#86efac]/30 transition-colors shadow-2xl backdrop-blur-xl bg-white/60 dark:bg-[#050e07]/40">
+              <div key={feat.title || i} className="feature-scroll-item glass-panel p-8 rounded-[2rem] flex flex-col items-start gap-6 border border-gray-200/10 dark:border-[#86efac]/10 hover:border-gray-300/30 dark:hover:border-[#86efac]/30 transition-colors shadow-2xl backdrop-blur-xl bg-white/60 dark:bg-[#050e07]/40">
                 <div className={`p-4 rounded-2xl ${feat.bg} ${feat.color} shadow-inner`}>
                   {feat.icon}
                 </div>
