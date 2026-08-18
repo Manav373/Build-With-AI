@@ -1,5 +1,6 @@
 # Environments
 .env
+frontend/env
 .venv
 env/
 venv/
@@ -24,7 +25,10 @@ Thumbs.db
 cloudflared.exe
 localtonet.zip
 localtonet.exe
-node_modules
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
 *.pkl
 !**/crop_model_v2.pkl
 !**/crop_encoder.pkl
