@@ -34,39 +34,40 @@ hackathon prototype/
 ├── IMPLEMENTATION_GUIDE.md     <-- Step-by-step dev & deployment guide
 ├── build_full_deck.py          <-- Script generating 20+ slide hackathon PowerPoint deck
 │
-├── backend/                    <-- FastAPI Python Backend (REST + MCP Server)
-│   ├── app/
-│   │   ├── main.py             <-- FastAPI entrypoint, lifespan, CORS & routers
-│   │   ├── core/               <-- Config, security, logging
-│   │   ├── db/                 <-- SQLAlchemy database models & connection
-│   │   ├── models/             <-- Database ORM & Pydantic schemas (location, market, vendor, etc.)
-│   │   ├── services/           <-- Core business logic: GEE, Gemini AI, Weather, Market, Voice
-│   │   └── utils/              <-- Helper utilities & formatters
-│   ├── api/routes/             <-- All API Route Handlers:
-│   │   ├── auth.py             <-- Authentication & Farmer/Vendor profiles
-│   │   ├── community.py        <-- P2P Farmer community discussions & tips
-│   │   ├── location.py         <-- GPS, District, Weather & Soil lookup
-│   │   ├── mcp.py              <-- Model Context Protocol (MCP) tool server
-│   │   ├── ml.py               <-- Crop disease diagnosis & recommendation engine
-│   │   ├── schemes.py          <-- Government subsidy & welfare scheme matching
-│   │   ├── sms.py              <-- Twilio/Gupshup SMS advisory gateway
-│   │   ├── vapi.py             <-- Vapi voice assistant webhooks
-│   │   ├── vendor.py           <-- Vendor marketplace, B2B requirements & bids
-│   │   ├── web.py              <-- General web telemetry & analytics
-│   │   └── whatsapp.py         <-- WhatsApp bot webhook (Twilio WhatsApp API)
-│   ├── scripts/
-│   │   ├── seed_vendor_data.py <-- Seed script for comprehensive vendor ecosystem
-│   │   └── sync_db.py          <-- Database migration & schema sync
-│   └── requirements.txt
-│
-├── frontend/                   <-- React 18 + Vite Web Application
-│   ├── src/
-│   │   ├── pages/              <-- Farmer dashboard, AI diagnosis, Satellite, Mandi, Multi-Vendor Pages
-│   │   ├── components/         <-- UI components, layout, landing, and vendor modules
-│   │   ├── context/            <-- React context providers (Language, Location, Auth, Chat, Voice, Role)
-│   │   └── utils/              <-- Translations (EN, HI, MR, GU) and helpers
-│   ├── package.json
-│   └── vite.config.js
+├── krishiai/                   <-- Main Fullstack Web & Backend Service
+│   ├── backend/                <-- FastAPI Python Backend (REST + MCP Server)
+│   │   ├── app/
+│   │   │   ├── main.py         <-- FastAPI entrypoint, lifespan, CORS & routers
+│   │   │   ├── core/           <-- Config, security, logging
+│   │   │   ├── db/             <-- SQLAlchemy database models & connection
+│   │   │   ├── models/         <-- Database ORM & Pydantic schemas (location, market, vendor, etc.)
+│   │   │   ├── services/       <-- Core business logic: GEE, Gemini AI, Weather, Market, Voice
+│   │   │   └── utils/          <-- Helper utilities & formatters
+│   │   ├── api/routes/         <-- All API Route Handlers:
+│   │   │   ├── auth.py         <-- Authentication & Farmer/Vendor profiles
+│   │   │   ├── community.py    <-- P2P Farmer community discussions & tips
+│   │   │   ├── location.py     <-- GPS, District, Weather & Soil lookup
+│   │   │   ├── mcp.py          <-- Model Context Protocol (MCP) tool server
+│   │   │   ├── ml.py           <-- Crop disease diagnosis & recommendation engine
+│   │   │   ├── schemes.py      <-- Government subsidy & welfare scheme matching
+│   │   │   ├── sms.py          <-- Twilio/Gupshup SMS advisory gateway
+│   │   │   ├── vapi.py         <-- Vapi voice assistant webhooks
+│   │   │   ├── vendor.py       <-- Vendor marketplace, B2B requirements & bids
+│   │   │   ├── web.py          <-- General web telemetry & analytics
+│   │   │   └── whatsapp.py     <-- WhatsApp bot webhook (Twilio WhatsApp API)
+│   │   ├── scripts/
+│   │   │   ├── seed_vendor_data.py <-- Seed script for comprehensive vendor ecosystem
+│   │   │   └── sync_db.py      <-- Database migration & schema sync
+│   │   └── requirements.txt
+│   │
+│   └── frontend/               <-- React 18 + Vite Web Application
+│       ├── src/
+│       │   ├── pages/          <-- Farmer dashboard, AI diagnosis, Satellite, Mandi, Multi-Vendor Pages
+│       │   ├── components/     <-- UI components, layout, landing, and vendor modules
+│       │   ├── context/        <-- React context providers (Language, Location, Auth, Chat, Voice, Role)
+│       │   └── utils/          <-- Translations (EN, HI, MR, GU) and helpers
+│       ├── package.json
+│       └── vite.config.js
 │
 └── krishi-mobile/              <-- React Native + Expo Mobile Application (Offline-first)
 │       │   ├── components/     <-- Modular UI: Navbar, AudioRecorder, SatelliteMap, Charts

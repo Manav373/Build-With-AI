@@ -4,8 +4,8 @@
 
 ## Repository Overview
 - **Name:** KrishiAI (AI Agronomist & Agricultural Intelligence Platform)
-- **Backend:** `backend` (FastAPI, Google Gemini, Google Earth Engine, Vapi, Twilio, SQLAlchemy)
-- **Web App:** `frontend` (React 18, Vite, TailwindCSS, Leaflet)
+- **Backend:** `krishiai/backend` (FastAPI, Google Gemini, Google Earth Engine, Vapi, Twilio, SQLAlchemy)
+- **Web App:** `krishiai/frontend` (React 18, Vite, TailwindCSS, Leaflet)
 - **Mobile App:** `krishi-mobile` (React Native, Expo Router, Offline Storage)
 
 Always check `PROJECT_MEMORY.md` to get full context on APIs, data models, feature matrix, and deployment instructions.
