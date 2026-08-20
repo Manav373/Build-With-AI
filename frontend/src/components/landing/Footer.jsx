@@ -32,11 +32,12 @@ export default function Footer() {
 
   const navLinks = {
     [ft.product]: [
-      { label: t.navbar.features, href: '#features' },
-      { label: t.navbar.howItWorks, href: '#howitworks' },
-      { label: t.navbar.testimonials, href: '#testimonials' },
-      { label: t.impact.badge, href: '#stats' },
-      { label: t.faq.badge, href: '#faq' },
+      { label: 'Agri Marketplace', href: '/vendors', isRoute: true },
+      { label: 'Sell Crops Direct', href: '/sell-crops', isRoute: true },
+      { label: 'AI Voice Assistant', href: '/voice-assistant', isRoute: true },
+      { label: 'Farmer Community', href: '/community', isRoute: true },
+      { label: 'Satellite NDVI Health', href: '/satellite', isRoute: true },
+      { label: 'Live Mandi Prices', href: '/market-prices', isRoute: true },
     ],
     [ft.company]: [
       { label: t.navbar.about, href: '#footer' },

@@ -81,7 +81,7 @@ function LayoutInner() {
       </div>
 
       {/* Main Content Area — no left padding needed, burger lives inside page headers */}
-      <main id="main-content" className="flex-1 flex flex-col min-w-0 relative z-10 w-full h-full">
+      <main id="main-content" className="flex-1 flex flex-col min-w-0 min-h-0 relative z-10 w-full h-full overflow-hidden">
         <Outlet />
       </main>
     </div>

@@ -68,25 +68,27 @@ export default function Navbar() {
           </div>
 
           {/* LOGO */}
-          <div className="flex items-center gap-2 group cursor-pointer z-50">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#166534] to-[#15803d] flex items-center justify-center shadow-lg shadow-[#166534]/40 border border-[#86efac]/30 group-hover:scale-105 transition-transform duration-300">
+          <div className="flex items-center gap-2 group cursor-pointer z-50 flex-shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#166534] to-[#15803d] flex items-center justify-center shadow-lg shadow-[#166534]/40 border border-[#86efac]/30 group-hover:scale-105 transition-transform duration-300">
               <span className="text-xl">🌾</span>
             </div>
-            <span className="font-outfit font-bold text-2xl text-gray-800 dark:text-white group-hover:text-[#86efac] transition-colors">
+            <span className="font-outfit font-bold text-2xl text-gray-800 dark:text-white group-hover:text-[#86efac] transition-colors whitespace-nowrap">
               Krishi<span className="text-[#facc15]">AI</span>
             </span>
           </div>
 
           {/* DESKTOP NAV */}
-          <nav className="hidden lg:flex items-center gap-8 px-10 py-3 rounded-full bg-gray-100/40 dark:bg-[#0a1a0d]/40 backdrop-blur-xl border border-gray-200/20 dark:border-[#86efac]/10 text-[0.95rem] font-black text-gray-700 dark:text-[#e2f0e4]/80 shadow-[0_0_20px_rgba(0,0,0,0.4)]">
-            <a href="#features" className="hover:text-[#4ade80] transition-all hover:scale-105">{t.features}</a>
-            <a href="#howitworks" className="hover:text-[#4ade80] transition-all hover:scale-105">{t.howItWorks}</a>
-            <a href="#testimonials" className="hover:text-[#4ade80] transition-all hover:scale-105">{t.testimonials}</a>
-            <a href="#footer" className="hover:text-[#4ade80] transition-all hover:scale-105">{t.about}</a>
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6 px-6 py-2.5 rounded-full bg-gray-100/40 dark:bg-[#0a1a0d]/60 backdrop-blur-xl border border-gray-200/20 dark:border-[#86efac]/15 text-[0.84rem] xl:text-[0.92rem] font-bold text-gray-700 dark:text-[#e2f0e4]/90 shadow-[0_0_20px_rgba(0,0,0,0.4)] whitespace-nowrap flex-shrink-0">
+            <a href="#features" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.features}</a>
+            <a href="/vendors" className="hover:text-[#facc15] transition-all hover:scale-105 flex items-center gap-1.5 whitespace-nowrap">🏪 Vendors</a>
+            <a href="/community" className="hover:text-[#38bdf8] transition-all hover:scale-105 flex items-center gap-1.5 whitespace-nowrap">💬 Community</a>
+            <a href="/voice-assistant" className="hover:text-[#4ade80] transition-all hover:scale-105 flex items-center gap-1.5 whitespace-nowrap">🎙️ Voice AI</a>
+            <a href="#howitworks" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.howItWorks}</a>
+            <a href="#footer" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.about}</a>
           </nav>
 
           {/* Desktop CTA & Lang */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-3.5 xl:gap-5 flex-shrink-0 whitespace-nowrap">
             <button
               type="button"
               onClick={toggleTheme}

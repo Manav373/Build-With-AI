@@ -9,7 +9,7 @@ export const en = {
     features: 'Features',
     howItWorks: 'How It Works',
     testimonials: 'Testimonials',
-    about: 'About Info',
+    about: 'About',
     login: 'Login',
     tryFree: 'Try For Free',
     dashboard: 'Go to Dashboard',
@@ -99,6 +99,38 @@ export const en = {
       messages: [
         { type: 'user', content: "नमस्ते! मुझे अपनी मिट्टी का परीक्षण कैसे करवाना चाहिए?" },
         { type: 'bot', content: "नमस्ते! आप अपने नज़दीकी कृषि विज्ञान केंद्र (KVK) में मिट्टी का नमूना दे सकते हैं। मैं आपको सबसे नज़दीकी KVK का पता भेज रहा हूँ।" }
+      ]
+    },
+    vendorMarketplace: {
+      title: 'Agri Marketplace & Crop Sales',
+      desc: 'Connect directly with certified seed, fertilizer & machinery suppliers or sell your harvest directly to verified buyers.',
+      messages: [
+        { type: 'user', content: "Where can I buy organic bio-fertilizers nearby or sell my wheat harvest?" },
+        { type: 'bot', content: "🏪 Verified Agri Marketplace! 4 local vendors nearby sell organic NPK. Plus 3 verified grain buyers posted wheat requirement @ ₹2,350/qtl. Click to connect!" }
+      ]
+    },
+    voiceAssistant: {
+      title: 'AI Voice Assistant',
+      desc: 'Hands-free, real-time voice guidance in your regional language. Just talk and listen.',
+      messages: [
+        { type: 'user', content: "🎙️ [Voice Call] Namaste KrishiAI, my paddy crop has brown spots, what should I do?" },
+        { type: 'bot', content: "🎙️ [Voice Response] Namaste Kisan Ji! Brown spots on paddy usually indicate Brown Spot fungus. Spray Hexaconazole 5% EC @ 2ml per liter of water." }
+      ]
+    },
+    community: {
+      title: 'Farmer Community Network',
+      desc: 'Join discussions with 10,000+ farmers across India. Share insights and solve farming issues together.',
+      messages: [
+        { type: 'user', content: "Has anyone tried zero-tillage wheat sowing in Punjab this year?" },
+        { type: 'bot', content: "💬 14 farmers in Ludhiana & Sangrur shared updates! Overall 12% savings on diesel and better germination reported. Join the discussion thread!" }
+      ]
+    },
+    recommend: {
+      title: 'Soil & Crop Recommendation',
+      desc: 'AI N-P-K recommendation engine matching soil chemistry and weather to peak-yield crops.',
+      messages: [
+        { type: 'user', content: "My soil pH is 6.8 with high Nitrogen. Which crop will give maximum profit?" },
+        { type: 'bot', content: "🌱 Soil Analysis Match: Maize or Cotton is optimal for your soil N-P-K profile with expected yield of 4.5 tons/ha. View full fertilizer schedule?" }
       ]
     }
   },
@@ -711,29 +743,65 @@ export const en = {
     titleAccent: 'AI Toolkit',
     subtitle: 'From pre-sowing soil prep to post-harvest sales, KrishiAI provides 360-degree support right in your pocket.',
     items: {
+      vendors: {
+        title: 'Agri Marketplace & Crop Sale',
+        desc: 'Direct B2B/B2C marketplace for seeds, fertilizers, machinery & direct farmer crop selling without middlemen.',
+        badge: 'Marketplace',
+        route: '/vendors'
+      },
+      voice: {
+        title: 'Hands-Free Voice AI',
+        desc: 'Real-time AI voice assistant for farmers speaking in 15+ regional Indian dialects.',
+        badge: 'Voice AI',
+        route: '/voice-assistant'
+      },
+      community: {
+        title: 'Farmer Community',
+        desc: 'Collaborative network for farmers across India to share field experience, Q&A, and live discussions.',
+        badge: 'Community',
+        route: '/community'
+      },
       satellite: {
-        title: 'Satellite NDVI',
-        desc: 'Real-time crop health monitoring using satellite imagery. Track plant vigor and moisture levels dynamically.'
+        title: 'Satellite NDVI Health',
+        desc: 'Real-time crop health monitoring using multispectral satellite imagery. Track plant vigor and moisture levels dynamically.',
+        badge: 'Orbital Tech',
+        route: '/satellite'
       },
       pest: {
-        title: 'Pest Detection',
-        desc: 'Scan infested leaves with AI to get instant treatment prescriptions.'
+        title: 'AI Disease & Pest Detection',
+        desc: 'Scan infested leaves with Vision AI to get instant disease identification and remedy prescriptions.',
+        badge: 'Vision AI',
+        route: '/predict'
+      },
+      recommend: {
+        title: 'Soil & Crop Recommendation',
+        desc: 'Smart N-P-K soil analysis and crop suitability recommendation engine for maximum harvest yield.',
+        badge: 'Smart Advisor',
+        route: '/recommend'
       },
       mandi: {
-        title: 'Mandi Discovery',
-        desc: 'Interactive geo-map showing real-time rates at every local mandi.'
+        title: 'Live Mandi Rates & Map',
+        desc: 'Interactive geo-map and live rate tracker for all APMC mandis across India.',
+        badge: 'Live Prices',
+        route: '/market-prices'
       },
       weather: {
-        title: 'Eco-Weather',
-        desc: 'Hyper-local forecasts with precision down to 500m of your coordinates.'
+        title: 'Hyper-Local Eco-Weather',
+        desc: 'Hyper-local weather forecasts and agricultural spraying alerts with precision down to 500m.',
+        badge: 'Weather AI',
+        route: '/chat'
       },
       subsidies: {
-        title: 'Govt Subsidies',
-        desc: 'Smart eligibility tracker for PM-KISAN, seeds, and fertilizer subsidies.'
+        title: 'Govt Schemes & Subsidies',
+        desc: 'Smart eligibility tracker for PM-KISAN, crop insurance (PMFBY), seeds, and equipment subsidies.',
+        badge: 'Subsidies',
+        route: '/schemes'
       },
       multilingual: {
-        title: 'Multilingual AI',
-        desc: 'Communicate in 15+ Indian dialects including Marathi, Gujarati, and Hindi via Voice chat.'
+        title: 'WhatsApp AI Bot',
+        desc: 'Instant 24/7 farming advisory on WhatsApp in 15+ Indian dialects with voice, image & location support.',
+        badge: 'WhatsApp Bot',
+        route: '/whatsapp'
       }
     }
   }

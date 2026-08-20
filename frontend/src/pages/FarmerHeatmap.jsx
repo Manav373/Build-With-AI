@@ -252,6 +252,19 @@ export default function FarmerHeatmap() {
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> {da.refresh}
           </button>
+
+          <button
+            onClick={() => navigate('/analytics')}
+            style={{
+              padding: '0.5rem 0.9rem',
+              background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: '0.6rem', color: '#fca5a5', fontSize: '0.75rem', fontWeight: 800,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            ✕ Exit Full Screen
+          </button>
         </div>
       </div>
 

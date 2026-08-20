@@ -1,20 +1,48 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { CloudRain, Sprout, TrendingUp, Bug, ShieldCheck, MessageSquare, Satellite, MapPin, Radar } from 'lucide-react';
+import { 
+  CloudRain, Sprout, Bug, ShieldCheck, MessageSquare, Satellite, 
+  MapPin, Radar, Store, Mic, Users, ArrowUpRight 
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { translations } from '../../utils/translations';
 
 const FEATURE_METADATA = [
   { 
+    id: 'vendors',
+    icon: <Store size={28} />, 
+    color: "text-amber-400", bg: "bg-amber-500/10",
+    colSpan: "lg:col-span-2", rowSpan: "row-span-1"
+  },
+  { 
+    id: 'voice',
+    icon: <Mic size={28} />, 
+    color: "text-emerald-400", bg: "bg-emerald-500/10",
+    colSpan: "lg:col-span-1", rowSpan: "row-span-1"
+  },
+  { 
+    id: 'community',
+    icon: <Users size={28} />, 
+    color: "text-sky-400", bg: "bg-sky-500/10",
+    colSpan: "lg:col-span-1", rowSpan: "row-span-1"
+  },
+  { 
     id: 'satellite',
     icon: <Satellite size={28} />, 
-    color: "text-emerald-400", bg: "bg-emerald-500/10",
+    color: "text-teal-400", bg: "bg-teal-500/10",
     colSpan: "lg:col-span-2", rowSpan: "row-span-1"
   },
   { 
     id: 'pest',
     icon: <Bug size={28} />, 
     color: "text-red-400", bg: "bg-red-500/10",
+    colSpan: "lg:col-span-1", rowSpan: "row-span-1"
+  },
+  { 
+    id: 'recommend',
+    icon: <Sprout size={28} />, 
+    color: "text-green-400", bg: "bg-green-500/10",
     colSpan: "lg:col-span-1", rowSpan: "row-span-1"
   },
   { 
@@ -39,10 +67,9 @@ const FEATURE_METADATA = [
     id: 'multilingual',
     icon: <MessageSquare size={28} />, 
     color: "text-[#86efac]", bg: "bg-[#166534]/30",
-    colSpan: "lg:col-span-2", rowSpan: "row-span-1"
+    colSpan: "lg:col-span-1", rowSpan: "row-span-1"
   }
 ];
-
 
 function BentoCard({ feat, index }) {
   const cardRef = useRef(null);
@@ -72,7 +99,7 @@ function BentoCard({ feat, index }) {
           transition: { type: "spring", stiffness: 80, delay: index * 0.05 }
         }
       }}
-      className={`glass-panel p-7 lg:p-9 rounded-[2.5rem] flex flex-col items-start gap-6 group hover:border-[#86efac]/50 transition-all duration-500 cursor-default relative overflow-hidden backdrop-blur-2xl ${feat.colSpan} ${feat.rowSpan}`}
+      className={`glass-panel p-7 lg:p-9 rounded-[2.5rem] flex flex-col justify-between items-start gap-6 group hover:border-[#86efac]/50 transition-all duration-500 relative overflow-hidden backdrop-blur-2xl ${feat.colSpan} ${feat.rowSpan}`}
       style={{
         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)'
       }}
@@ -85,14 +112,33 @@ function BentoCard({ feat, index }) {
         }}
       />
 
-      <div className={`p-4 rounded-2xl ${feat.bg} flex-shrink-0 ${feat.color} shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 relative z-10`}>
-        {feat.icon}
+      <div className="w-full flex items-center justify-between relative z-10">
+        <div className={`p-4 rounded-2xl ${feat.bg} flex-shrink-0 ${feat.color} shadow-inner group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
+          {feat.icon}
+        </div>
+        {feat.badge && (
+          <span className="text-[0.7rem] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/10 dark:bg-white/5 border border-white/20 text-slate-700 dark:text-emerald-300">
+            {feat.badge}
+          </span>
+        )}
       </div>
-      <div className="relative z-10 flex flex-col justify-end h-full">
-        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 font-outfit leading-none">{feat.title}</h3>
-        <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm lg:text-base">
+
+      <div className="relative z-10 flex flex-col justify-end h-full w-full">
+        <h3 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white mb-2 font-outfit leading-tight group-hover:text-[#4ade80] transition-colors">
+          {feat.title}
+        </h3>
+        <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm lg:text-base mb-4">
           {feat.desc}
         </p>
+
+        {feat.route && (
+          <Link
+            to={feat.route}
+            className="inline-flex items-center gap-1 text-xs font-extrabold text-[#166534] dark:text-[#86efac] group-hover:translate-x-1 transition-transform"
+          >
+            Explore Tool <ArrowUpRight size={14} />
+          </Link>
+        )}
       </div>
     </motion.div>
   );
@@ -104,8 +150,10 @@ export default function Features() {
 
   const LOCALIZED_FEATURES = FEATURE_METADATA.map(item => ({
     ...item,
-    title: t.items[item.id].title,
-    desc: t.items[item.id].desc
+    title: t.items[item.id]?.title || item.id,
+    desc: t.items[item.id]?.desc || '',
+    badge: t.items[item.id]?.badge || null,
+    route: t.items[item.id]?.route || '/chat'
   }));
 
   return (
