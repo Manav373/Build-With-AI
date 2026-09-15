@@ -526,7 +526,7 @@ def predict(data: dict) -> dict:
                 nutrient_mult = 0.75 + 0.4 * (nutri_fit / 100.0)
                 predicted_yield *= nutrient_mult
 
-                predicted_yield = round(max(0.2, predicted_yield), 2)
+                predicted_yield = float(round(max(0.2, float(predicted_yield)), 2))
 
                 # Confidence degrades for far-future predictions
                 if req_year <= CURRENT_YEAR:

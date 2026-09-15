@@ -389,9 +389,9 @@ async def process_query_base(
     messages = _truncate_history(messages, max_tokens=4000)
 
     async def _groq_chat_completion_with_fallback(**kwargs):
-        """Helper to try a high-end model and fallback to a smaller one on 429."""
-        primary_model = kwargs.get("model", "llama-3.3-70b-versatile")
-        fallback_model = "llama-3.1-8b-instant"
+        """Helper to call Groq model."""
+        primary_model = kwargs.get("model", "openai/gpt-oss-20b")
+        fallback_model = "openai/gpt-oss-20b"
         
         try:
             return await client.chat.completions.create(**kwargs)
@@ -399,8 +399,6 @@ async def process_query_base(
             if "429" in str(e) or "rate_limit" in str(e).lower():
                 logger.warning(f"Rate limit hit for {primary_model}. Falling back to {fallback_model}.")
                 kwargs["model"] = fallback_model
-                # Remove tools for fallback if they might be problematic or just to be safe/compact
-                # though 8b supports tools, sometimes it's better to stay simple on fallback
                 return await client.chat.completions.create(**kwargs)
             raise
 
@@ -411,7 +409,7 @@ async def process_query_base(
             {"role": "user", "content": f"Tool '{tool_name}' returned: {json.dumps(tool_result)}. Summarize in friendly, simple language for the farmer."}
         ]
         r = await _groq_chat_completion_with_fallback(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-20b",
             messages=narrate_msgs
         )
         return r.choices[0].message.content
@@ -419,7 +417,7 @@ async def process_query_base(
     # --- Groq call with fallback for tool_use_failed ---
     try:
         response = await _groq_chat_completion_with_fallback(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-20b",
             messages=messages,
             tools=selected_tools if selected_tools else None,
             tool_choice="auto" if selected_tools else None
@@ -481,7 +479,7 @@ async def process_query_base(
                 })
 
         final_res = await _groq_chat_completion_with_fallback(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-20b",
             messages=messages
         )
         return final_res.choices[0].message.content

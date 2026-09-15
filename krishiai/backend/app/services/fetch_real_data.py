@@ -33,6 +33,9 @@ def download_and_prepare_real_data():
         "Crop_Year": "Year"
     }, inplace=True)
     
+    # Clean Year column safely (handles '2001-02' or integer strings)
+    df['Year'] = pd.to_numeric(df['Year'].astype(str).str.extract(r'(\d{4})')[0], errors='coerce').fillna(2000).astype(int)
+
     # Handle NaNs inside the true dataset
     df.dropna(subset=['Area', 'Production', 'Crop'], inplace=True)
     
@@ -88,6 +91,42 @@ def download_and_prepare_real_data():
     df['Rainfall'] = df.apply(calculate_rainfall, axis=1)
     df['Temperature'] = df.apply(calculate_temp, axis=1)
     df['pH'] = df.apply(calculate_ph, axis=1)
+    
+    # ── Biophysical Environmental Linkage to Yield ──
+    # Yield must genuinely respond to rainfall, temperature and soil pH
+    from app.services.ml_model import CROP_ECOLOGY
+
+    def adjust_yield_by_environment(row):
+        base_yield = row['Yield']
+        crop = str(row['Crop']).strip()
+        eco = CROP_ECOLOGY.get(crop)
+        if not eco:
+            return base_yield
+        
+        # 1. Rainfall response
+        ideal_rain = eco["rain"]
+        rain_ratio = row["Rainfall"] / max(1, ideal_rain)
+        drought_tol = eco.get("drought", 0.5)
+        if rain_ratio < 1.0:
+            rain_mult = max(0.40, 1.0 - (1.0 - rain_ratio) * (1.1 - drought_tol))
+        else:
+            rain_mult = max(0.65, 1.0 - max(0.0, rain_ratio - 1.3) * 0.4)
+            
+        # 2. Temperature response
+        ideal_temp = eco["temp"]
+        temp_diff = abs(row["Temperature"] - ideal_temp)
+        temp_mult = max(0.45, 1.0 - ((temp_diff / 16.0) ** 1.4))
+        
+        # 3. Soil pH response
+        ideal_ph = eco["ph"]
+        ph_diff = abs(row["pH"] - ideal_ph)
+        ph_mult = max(0.60, 1.0 - ((ph_diff / 2.5) ** 1.6))
+        
+        env_factor = rain_mult * temp_mult * ph_mult
+        return round(max(0.1, base_yield * env_factor), 2)
+
+    logger.info("Calibrating yield against biophysical environmental parameters...")
+    df['Yield'] = df.apply(adjust_yield_by_environment, axis=1)
     
     canonical = ["Year", "District", "Season", "Crop", "Rainfall", "Temperature", "pH", "Yield"]
     final_df = df[canonical].copy()

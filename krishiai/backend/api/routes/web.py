@@ -24,9 +24,9 @@ router = APIRouter(prefix="/api/web", tags=["Frontend REST APIs"])
 WEATHER_KEYWORDS = ["weather", "forecast", "temperature", "rain", "humidity", "climate", "barish", "mausam"]
 
 async def _groq_chat_completion_with_fallback(client, **kwargs):
-    """Helper to try a high-end model and fallback to a smaller one on 429."""
-    primary_model = kwargs.get("model", "llama-3.3-70b-versatile")
-    fallback_model = "llama-3.1-8b-instant"
+    """Helper to try a model and fallback to a working model."""
+    primary_model = kwargs.get("model", "openai/gpt-oss-20b")
+    fallback_model = "openai/gpt-oss-20b"
     try:
         return await client.chat.completions.create(**kwargs)
     except Exception as e:
@@ -156,7 +156,7 @@ async def vision_endpoint(
             )
             resp = await _groq_chat_completion_with_fallback(
                 client,
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-20b",
                 messages=[{"role": "user", "content": narrate_prompt}]
             )
             

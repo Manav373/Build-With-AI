@@ -5,7 +5,7 @@ from groq import AsyncGroq
 
 logger = logging.getLogger("KrishiAI.AIUtils")
 
-async def fetch_structured_agri_data(prompt: str, model: str = "llama-3.3-70b-versatile") -> dict:
+async def fetch_structured_agri_data(prompt: str, model: str = "openai/gpt-oss-20b") -> dict:
     """
     Sends a prompt to the LLM expecting a structured JSON response.
     Used to replace hardcoded data lookups with dynamic AI knowledge.
@@ -36,7 +36,7 @@ async def fetch_structured_agri_data(prompt: str, model: str = "llama-3.3-70b-ve
         return json.loads(content)
     except Exception as e:
         if "429" in str(e) or "rate_limit" in str(e).lower():
-            fallback_model = "llama-3.1-8b-instant"
+            fallback_model = "openai/gpt-oss-20b"
             logger.warning(f"Rate limit hit for {model}. Falling back to {fallback_model}.")
             try:
                 response = await client.chat.completions.create(
@@ -54,7 +54,7 @@ async def fetch_structured_agri_data(prompt: str, model: str = "llama-3.3-70b-ve
         logger.error(f"Error fetching structured AI data: {e}")
         return {"error": "Failed to retrieve AI data"}
 
-async def fetch_agri_text(prompt: str, model: str = "llama-3.1-8b-instant") -> str:
+async def fetch_agri_text(prompt: str, model: str = "openai/gpt-oss-20b") -> str:
     """
     Fetch a simple text response from the LLM.
     """

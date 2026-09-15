@@ -128,7 +128,7 @@ async def _get_menu(lang: str) -> str:
             + MENU_TEMPLATE_EN
         )
         resp = await client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=800,
@@ -408,7 +408,7 @@ async def _append_ai_advice(base_report: str, phone: str, advice_prompt: str) ->
         client = AsyncGroq(api_key=groq_api_key)
         lang = USER_PREFERENCES.get(phone, "English")
         resp = await client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[{"role": "user", "content": f"{advice_prompt}\nReply ONLY in {lang}. Use WhatsApp *bold* formatting."}]
         )
         return f"{base_report}\n\n💡 *Farming Advice:*\n{resp.choices[0].message.content}"
@@ -427,7 +427,7 @@ async def _format_with_ai(phone: str, user_msg: str, format_prompt: str) -> str:
         client = AsyncGroq(api_key=groq_api_key)
         lang = USER_PREFERENCES.get(phone, "English")
         resp = await client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {"role": "system", "content": f"You are KrishiAI WhatsApp bot. Reply ONLY in {lang}. Use *bold* and emojis. Keep concise (max 1500 chars)."},
                 {"role": "user", "content": f"Farmer asked: '{user_msg}'\n\n{format_prompt}"}
