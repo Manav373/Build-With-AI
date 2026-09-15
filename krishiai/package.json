@@ -2,10 +2,27 @@
   "name": "krishiai-monorepo",
   "private": true,
   "workspaces": [
-    "frontend",
-    "backend"
+    "frontend/farmer",
+    "frontend/vendor",
+    "frontend/admin",
+    "SHARED/ui",
+    "SHARED/api-client",
+    "SHARED/auth",
+    "SHARED/types",
+    "SHARED/utilities",
+    "SHARED/config"
   ],
   "scripts": {
-    "build": "npm run build --workspace=frontend"
+    "dev": "node SCRIPTS/dev-all.js",
+    "dev:all": "node SCRIPTS/dev-all.js",
+    "dev:farmer": "npm run dev --workspace=@krishiai/farmer",
+    "dev:vendor": "npm run dev --workspace=@krishiai/vendor",
+    "dev:admin": "npm run dev --workspace=@krishiai/admin",
+    "build:farmer": "npm run build --workspace=@krishiai/farmer",
+    "build:vendor": "npm run build --workspace=@krishiai/vendor",
+    "build:admin": "npm run build --workspace=@krishiai/admin",
+    "build:all": "node SCRIPTS/build-all.js",
+    "build": "npm run build:all",
+    "audit": "node SCRIPTS/audit-connectivity.js"
   }
 }

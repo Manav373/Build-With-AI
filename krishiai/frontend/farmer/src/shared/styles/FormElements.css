@@ -1,0 +1,71 @@
+/* ── Premium Range Sliders ── */
+
+/* Webkit (Chrome / Edge / Safari) */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 20px;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4ade80, #10b981);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  margin-top: -7px;
+  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4), 0 0 0 3px rgba(74, 222, 128, 0.1);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 2px 12px rgba(74, 222, 128, 0.6), 0 0 0 5px rgba(74, 222, 128, 0.15);
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 2px 16px rgba(74, 222, 128, 0.8), 0 0 0 6px rgba(74, 222, 128, 0.2);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4ade80, #10b981);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4);
+  cursor: pointer;
+}
+
+/* Skeleton animation */
+@keyframes skeletonPulse {
+  0% { opacity: 0.06; }
+  50% { opacity: 0.12; }
+  100% { opacity: 0.06; }
+}
+
+.skeleton-pulse {
+  animation: skeletonPulse 1.8s ease-in-out infinite;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}

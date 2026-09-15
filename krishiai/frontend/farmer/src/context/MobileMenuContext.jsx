@@ -1,0 +1,18 @@
+import React, { createContext, useContext, useState } from 'react';
+
+const MobileMenuContext = createContext(null);
+
+export function MobileMenuProvider({ children }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  return (
+    <MobileMenuContext.Provider value={{ mobileMenuOpen, setMobileMenuOpen }}>
+      {children}
+    </MobileMenuContext.Provider>
+  );
+}
+
+export function useMobileMenu() {
+  const ctx = useContext(MobileMenuContext);
+  if (!ctx) return { mobileMenuOpen: false, setMobileMenuOpen: () => {} };
+  return ctx;
+}

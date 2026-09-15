@@ -1,0 +1,23 @@
+{
+  "name": "@krishiai/connectivity-functionalities",
+  "version": "1.0.0",
+  "description": "Comprehensive Connectivity & Real-Time Dynamic Synchronization Engine for KrishiAI",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "audit": "node cli/audit-connectivity.js",
+    "monitor": "node cli/live-connectivity-daemon.js",
+    "test": "node cli/audit-connectivity.js"
+  },
+  "keywords": [
+    "connectivity",
+    "realtime",
+    "websocket",
+    "cross-domain",
+    "offline-sync",
+    "krishiai",
+    "dynamic-monitoring"
+  ],
+  "author": "KrishiAI Team",
+  "license": "ISC"
+}

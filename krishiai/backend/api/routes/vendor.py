@@ -509,6 +509,7 @@ async def get_vendor_public_profile(vendor_id: int, db: Session = Depends(get_db
 # ══════════════════════════════════════════════════════════════
 
 @router.get("/list")
+@router.get("/marketplace")
 async def list_vendors(
     vendor_type: Optional[str] = None,
     category: Optional[str] = None,

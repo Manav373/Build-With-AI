@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    container_name: krishiai_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://krishi_user:krishi_pass@postgres:5432/krishiai_master
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,https://*.krishiai.com
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: krishiai_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: krishi_user
+      POSTGRES_PASSWORD: krishi_pass
+      POSTGRES_DB: krishiai_master
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

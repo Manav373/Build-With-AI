@@ -1,95 +1,190 @@
-# Local Testing Guide: OTP Integration
+# KrishiAI Local Development & Testing Guide
 
-## Step 1: Update .env with your 2Factor.in API Key
-
-Edit `.env` and replace:
-```
-TWO_FACTOR_API_KEY=paste_your_api_key_here
-```
-
-with your actual API key from https://2factor.in/dashboard
-
-Your dashboard → Settings/API → API Key
+This guide explains how to start and test the KrishiAI project locally (Backend, Frontend Web App, and Mobile App).
 
 ---
 
-## Step 2: Start the Backend
+## ⚡ Quick Start Summary
 
-**Option A: Direct Python (if venv exists)**
+Open two terminal windows in the project root (`krishiai`):
+
+### Terminal 1: Backend (Port 8000)
+```powershell
+# In PowerShell (from krishiai root):
+cd backend
+.\venv\Scripts\Activate.ps1
+python server.py
+
+# OR directly in one line without activation:
+.\backend\venv\Scripts\python.exe backend\server.py
+```
+> **Backend URL:** http://localhost:8000  
+> **Interactive API Docs (Swagger):** http://localhost:8000/docs
+
+---
+
+### Terminal 2: Frontend Domain Applications
+
+You can run individual domains or all domains according to your workflow:
+
+#### Option A: Run Specific Domain Portal
+```powershell
+# From the krishiai root directory:
+npm run dev:farmer   # 🌾 Farmer Portal (Port 5173)
+npm run dev:vendor   # 🏪 Vendor Portal (Port 5174)
+npm run dev:admin    # 🛡️ Admin Governance Portal (Port 5175)
+
+# OR directly inside the domain folder:
+cd frontend/farmer; npm run dev   # Port 5173
+cd frontend/vendor; npm run dev   # Port 5174
+cd frontend/admin;  npm run dev   # Port 5175
+```
+
+#### Option B: Run All Portals Together
+```powershell
+# From the krishiai root directory:
+npm run dev:all
+```
+
+> **Farmer App URL:** http://localhost:5173  
+> **Vendor App URL:** http://localhost:5174  
+> **Admin App URL:** http://localhost:5175  
+
+---
+
+## 📋 Step-by-Step Setup
+
+### Step 1: Environment Variables
+
+1. **Backend Environment (`backend/.env`)**
+   Make sure `backend/.env` exists. If using 2Factor.in SMS OTP:
+   ```env
+   TWO_FACTOR_API_KEY=your_actual_api_key_here
+   ```
+   > *Note:* If `TWO_FACTOR_API_KEY` is omitted or empty, the backend runs in **Test Mode** and outputs the OTP directly to the terminal console!
+
+2. **Frontend Environment (`frontend/.env`)**
+   Ensure `VITE_API_BASE_URL` points to your local backend:
+   ```env
+   VITE_API_BASE_URL="http://127.0.0.1:8000/"
+   ```
+
+---
+
+## 🚀 Starting the Services
+
+### 1. Backend Service
+
+The Python virtual environment is located inside `krishiai/backend/venv` (Python 3.11).
+
+#### Option A: PowerShell (Windows)
+```powershell
+# From the krishiai root directory:
+cd backend
+.\venv\Scripts\Activate.ps1
+python server.py
+```
+*(If PowerShell displays an execution policy error, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` first).*
+
+#### Option B: Direct Python Execution (No activation needed)
+```powershell
+# From the krishiai root directory:
+.\backend\venv\Scripts\python.exe backend\server.py
+```
+
+#### Option C: Windows Command Prompt (cmd.exe)
+```cmd
+cd backend
+venv\Scripts\activate.bat
+python server.py
+```
+
+#### Option D: Linux / macOS
 ```bash
-cd krishiai
-# Activate venv (Windows)
-venv\Scripts\activate
-
-# Or (macOS/Linux)
+cd backend
 source venv/bin/activate
-
-# Install/update deps
-pip install -r backend/requirements.txt
-
-# Run backend
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python server.py
 ```
 
-**Option B: Docker**
-```bash
-cd krishiai
-docker build -t krishiai-backend .
-docker run -p 8000:8000 -e TWO_FACTOR_API_KEY=your_key krishiai-backend
-```
-
-The backend should start at `http://localhost:8000`
-
-Check health:
-```bash
-curl http://localhost:8000/
-```
-
-Should return:
-```json
-{
-  "message": "Welcome to KrishiAI MCP Server. Go to /docs to see the REST tools or connect via MCP SDK."
-}
-```
+#### Verification:
+Verify the backend is running:
+- **Browser:** Open http://localhost:8000/
+  - Response: `{"message": "Welcome to KrishiAI MCP Server. Go to /docs to see the REST tools or connect via MCP SDK."}`
+- **PowerShell:**
+  ```powershell
+  Invoke-RestMethod -Uri http://localhost:8000/
+  ```
 
 ---
 
-## Step 3: Test OTP Endpoints Directly (curl)
+### 2. Frontend Web Application
 
-### Send OTP
+The frontend is a Vite + React application.
+
+```powershell
+# From the krishiai root directory:
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173 in your browser to access the farmer advisory, mandi prices, satellite dashboard, and vendor marketplace.
+
+---
+
+### 3. Mobile App (Expo / React Native)
+
+If testing `krishi-mobile`:
+
+1. **Update mobile backend URL** (if testing on a physical phone):
+   - Edit `krishi-mobile/constants/Config.ts`
+   - Use your PC's local Wi-Fi IP (e.g., `http://192.168.1.XX:8000`) instead of `localhost`.
+2. **Start Expo**:
+   ```bash
+   cd krishi-mobile
+   npm start
+   ```
+3. Scan the QR code using the Expo Go app on your phone.
+
+---
+
+## 🧪 Testing OTP Endpoints (cURL / PowerShell)
+
+### 1. Send OTP
+```powershell
+# PowerShell:
+Invoke-RestMethod -Uri http://localhost:8000/api/auth/send-otp -Method Post -ContentType "application/json" -Body '{"phone": "9876543210"}'
+```
+
 ```bash
+# cURL:
 curl -X POST http://localhost:8000/api/auth/send-otp \
   -H "Content-Type: application/json" \
   -d '{"phone": "9876543210"}'
 ```
 
-Response (success):
+**Expected Response (Test Mode):**
 ```json
 {
   "success": true,
-  "message": "OTP sent successfully",
-  "phone": "9876543210",
-  "session_id": "..."
-}
-```
-
-Or (test mode if API key missing):
-```json
-{
-  "success": true,
-  "message": "Test OTP: 482913",
+  "message": "Test OTP: 123456",
   "phone": "9876543210"
 }
 ```
 
-### Verify OTP
-```bash
-curl -X POST http://localhost:8000/api/auth/verify-otp \
-  -H "Content-Type: application/json" \
-  -d '{"phone": "9876543210", "code": "482913"}'
+### 2. Verify OTP
+```powershell
+# PowerShell:
+Invoke-RestMethod -Uri http://localhost:8000/api/auth/verify-otp -Method Post -ContentType "application/json" -Body '{"phone": "9876543210", "code": "123456"}'
 ```
 
-Response:
+```bash
+# cURL:
+curl -X POST http://localhost:8000/api/auth/verify-otp \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "9876543210", "code": "123456"}'
+```
+
+**Expected Response:**
 ```json
 {
   "success": true,
@@ -101,65 +196,13 @@ Response:
 
 ---
 
-## Step 4: Test on Mobile App
+## 🛠️ Troubleshooting Common Errors
 
-1. **Update mobile backend URL** (if needed)
-   - Edit `krishi-mobile/constants/Config.ts`
-   - Should already be set to `http://localhost:8000`
-   - If running Expo on a different machine: use `http://192.168.x.x:8000` (your PC's IP)
-
-2. **Start Expo**
-   ```bash
-   cd krishi-mobile
-   npm start
-   ```
-
-3. **Test the flow**
-   - Language → Welcome → "Sign Up"
-   - Skip Features/Permissions (or go through)
-   - Enter phone: `9876543210`
-   - Tap "Send OTP" → should trigger backend call
-   - **Check backend logs** — you should see:
-     ```
-     [OTP] Stored for 9876543210, valid for 10 min
-     [2Factor] OTP sent to 9876543210
-     ```
-   - **Check your phone** — real SMS should arrive with the OTP
-   - Enter the OTP in the app → verify → next step ✓
-
----
-
-## Troubleshooting
-
-**"Failed to send OTP" on app:**
-- Check backend logs for errors
-- Make sure `TWO_FACTOR_API_KEY` is in `.env` and loaded
-- Try the curl test above first
-
-**Backend won't start:**
-- Check Python version: `python --version` (3.8+)
-- Install deps: `pip install -r backend/requirements.txt`
-- Check port 8000 is free: `netstat -ano | findstr :8000`
-
-**Mobile app can't reach backend:**
-- Mobile device must be on same network as PC
-- Use PC's IP address: `http://192.168.1.x:8000`
-- Check firewall allows port 8000
-
-**Test mode (no SMS):**
-- If `TWO_FACTOR_API_KEY` is missing, backend logs OTP to console
-- Copy the OTP and enter it manually in the app for testing
-- Great for UI/UX validation without burning credits
-
----
-
-## What to Share with Me
-
-Once you've tested locally, tell me:
-1. ✅ Backend starts successfully
-2. ✅ Send OTP endpoint works (curl test)
-3. ✅ Mobile app shows OTP input screen
-4. ✅ OTP arrives on your phone (or console in test mode)
-5. ✅ App verifies and moves to next step
-
-Then we'll deploy online.
+| Error | Reason & Fix |
+|---|---|
+| `Cannot find path '...krishiai\venv\Scripts\activate'` | The `venv` is located inside `backend/venv`, not the root. Run `cd backend` first, or run `.\backend\venv\Scripts\Activate.ps1`. |
+| `cd venv\Scripts\activate` fails | `activate` is a script, not a folder. Do not use `cd`. Call `.\backend\venv\Scripts\Activate.ps1`. |
+| `The module 'venv' could not be loaded` | PowerShell requires the script prefix `.\venv\Scripts\Activate.ps1`. |
+| `Execution of scripts is disabled on this system` | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in your PowerShell window. |
+| `Python was not found...` | Use the project's virtual environment binary directly: `.\backend\venv\Scripts\python.exe`. |
+| `Port 8000 or 5173 already in use` | Check listening processes: `Get-NetTCPConnection -LocalPort 8000,5173` and terminate conflicting processes. |

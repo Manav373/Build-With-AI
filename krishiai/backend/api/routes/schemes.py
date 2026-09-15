@@ -109,6 +109,8 @@ SCHEMES_DB = [
     }
 ]
 
+@router.get("", response_model=List[Scheme])
+@router.get("/list", response_model=List[Scheme])
 @router.get("/all", response_model=List[Scheme])
 async def get_all_schemes(user_data: dict = Depends(verify_clerk_token)):
     return SCHEMES_DB
