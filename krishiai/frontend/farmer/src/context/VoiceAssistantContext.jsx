@@ -90,47 +90,49 @@ export const VoiceAssistantProvider = ({ children }) => {
     }
   }, []);
 
+  const stopAnySpeaking = () => {
+    if (speechCooldownTimerRef.current) {
+      clearTimeout(speechCooldownTimerRef.current);
+      speechCooldownTimerRef.current = null;
+    }
+    if (audioPlayerRef.current) {
+      try {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.src = '';
+      } catch (e) {}
+      audioPlayerRef.current = null;
+    }
+    if (window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
+    currentUtteranceRef.current = null;
+    if (typeof window !== 'undefined') window.__activeUtterance = null;
+    if (speakingAnimRef.current) {
+      clearInterval(speakingAnimRef.current);
+      speakingAnimRef.current = null;
+    }
+  };
+
   const cleanupAudioAndSpeech = () => {
+    stopAnySpeaking();
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.onend = null;
         recognitionRef.current.onerror = null;
         recognitionRef.current.onresult = null;
-        recognitionRef.current.stop();
+        recognitionRef.current.abort();
       } catch (e) {
         // ignore
       }
       recognitionRef.current = null;
     }
 
-    if (audioPlayerRef.current) {
-      try {
-        audioPlayerRef.current.pause();
-        audioPlayerRef.current.src = '';
-      } catch (e) {
-        // ignore
-      }
-      audioPlayerRef.current = null;
-    }
-
-    if (window.speechSynthesis) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch (e) {
-        // ignore
-      }
-    }
-    currentUtteranceRef.current = null;
-    if (typeof window !== 'undefined') window.__activeUtterance = null;
-
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
-    }
-
-    if (speakingAnimRef.current) {
-      clearInterval(speakingAnimRef.current);
-      speakingAnimRef.current = null;
     }
 
     if (micStreamRef.current) {
@@ -149,13 +151,44 @@ export const VoiceAssistantProvider = ({ children }) => {
 
     setVolumeLevel(0);
     setIsSpeaking(false);
+    isSpeakingRef.current = false;
+  };
+
+  // Helper to resume speech recognition safely after bot stops speaking (with acoustic cooldown)
+  const resumeListeningAfterSpeech = () => {
+    if (speechCooldownTimerRef.current) {
+      clearTimeout(speechCooldownTimerRef.current);
+    }
+    // 700ms cooldown: Wait for room reverb / speaker sound decay before unmuting mic recognition
+    speechCooldownTimerRef.current = setTimeout(() => {
+      isSpeakingRef.current = false;
+      setIsSpeaking(false);
+      setVolumeLevel(0);
+      if (callStatusRef.current === 'active' && recognitionRef.current && !isMutedRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          // ignore if already started
+        }
+      }
+    }, 700);
   };
 
   // Browser Web Speech fallback with Chrome garbage-collection & pause fix
   const fallbackBrowserSpeech = useCallback((spokenText, lang = 'en') => {
     if (!('speechSynthesis' in window) || !spokenText) {
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
       return;
+    }
+
+    // Stop any currently playing audio and pause mic recognition to avoid echo feedback
+    stopAnySpeaking();
+    isSpeakingRef.current = true;
+    setIsSpeaking(true);
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
     }
 
     try {
@@ -185,42 +218,35 @@ export const VoiceAssistantProvider = ({ children }) => {
         if (voice) utterance.voice = voice;
       }
 
-      setIsSpeaking(true);
-
       if (speakingAnimRef.current) clearInterval(speakingAnimRef.current);
       speakingAnimRef.current = setInterval(() => {
         setVolumeLevel(0.15 + Math.random() * 0.35);
       }, 120);
 
       utterance.onstart = () => {
+        isSpeakingRef.current = true;
         setIsSpeaking(true);
       };
 
       utterance.onend = () => {
-        setIsSpeaking(false);
-        setVolumeLevel(0);
         currentUtteranceRef.current = null;
         if (typeof window !== 'undefined') window.__activeUtterance = null;
         if (speakingAnimRef.current) {
           clearInterval(speakingAnimRef.current);
           speakingAnimRef.current = null;
         }
-        // Resume mic listening if call still active
-        if (callStatusRef.current === 'active' && recognitionRef.current && !isMutedRef.current) {
-          try { recognitionRef.current.start(); } catch (e) {}
-        }
+        resumeListeningAfterSpeech();
       };
 
       utterance.onerror = (e) => {
         console.warn('[VoiceAssistant] Browser speech synthesis event:', e.error);
-        setIsSpeaking(false);
-        setVolumeLevel(0);
         currentUtteranceRef.current = null;
         if (typeof window !== 'undefined') window.__activeUtterance = null;
         if (speakingAnimRef.current) {
           clearInterval(speakingAnimRef.current);
           speakingAnimRef.current = null;
         }
+        resumeListeningAfterSpeech();
       };
 
       window.speechSynthesis.cancel();
@@ -231,6 +257,7 @@ export const VoiceAssistantProvider = ({ children }) => {
 
     } catch (err) {
       console.warn('[VoiceAssistant] Browser speech failed:', err);
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
     }
   }, []);
@@ -243,6 +270,15 @@ export const VoiceAssistantProvider = ({ children }) => {
     const clean = cleanSpeechText(text);
     if (!clean) return;
     const spokenText = clean.length > 380 ? clean.slice(0, 360) + '... Please view the screen for complete details.' : clean;
+
+    // Immediately stop prior speech and silence mic recognition to prevent echo loop
+    stopAnySpeaking();
+    isSpeakingRef.current = true;
+    setIsSpeaking(true);
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+    }
 
     // 1. Try Backend Neural TTS first (real studio quality human voice)
     try {
@@ -262,6 +298,7 @@ export const VoiceAssistantProvider = ({ children }) => {
           audioPlayerRef.current = audio;
 
           audio.onplay = () => {
+            isSpeakingRef.current = true;
             setIsSpeaking(true);
             if (speakingAnimRef.current) clearInterval(speakingAnimRef.current);
             speakingAnimRef.current = setInterval(() => {
@@ -270,16 +307,13 @@ export const VoiceAssistantProvider = ({ children }) => {
           };
 
           audio.onended = () => {
-            setIsSpeaking(false);
-            setVolumeLevel(0);
             URL.revokeObjectURL(audioUrl);
             if (speakingAnimRef.current) {
               clearInterval(speakingAnimRef.current);
               speakingAnimRef.current = null;
             }
-            if (callStatusRef.current === 'active' && recognitionRef.current && !isMutedRef.current) {
-              try { recognitionRef.current.start(); } catch (e) {}
-            }
+            audioPlayerRef.current = null;
+            resumeListeningAfterSpeech();
           };
 
           audio.onerror = () => {
@@ -445,8 +479,14 @@ export const VoiceAssistantProvider = ({ children }) => {
     }
 
     try {
-      // 1. Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 1. Request microphone permission with browser acoustic echo cancellation and noise suppression
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       micStreamRef.current = stream;
 
       // 2. Start Audio Visualizer
@@ -470,7 +510,11 @@ export const VoiceAssistantProvider = ({ children }) => {
         recognition.lang = langCodes[lang] || 'en-IN';
 
         recognition.onresult = (event) => {
-          if (isMutedRef.current) return;
+          // CRITICAL: Drop any input heard while user muted OR while the assistant is speaking/cooling down
+          if (isMutedRef.current || isSpeakingRef.current) {
+            setTranscript('');
+            return;
+          }
 
           let interim = '';
           let final = '';
@@ -482,6 +526,9 @@ export const VoiceAssistantProvider = ({ children }) => {
               interim += event.results[i][0].transcript;
             }
           }
+
+          // Double check speaking state before updating transcript or submitting
+          if (isSpeakingRef.current) return;
 
           if (interim) {
             setTranscript(interim);
@@ -497,8 +544,8 @@ export const VoiceAssistantProvider = ({ children }) => {
         };
 
         recognition.onend = () => {
-          // Restart recognition if call is still active and not speaking
-          if (callStatusRef.current === 'active' && !isMutedRef.current) {
+          // Only restart recognition if call is still active, not muted, and the bot is NOT speaking
+          if (callStatusRef.current === 'active' && !isMutedRef.current && !isSpeakingRef.current) {
             try {
               recognition.start();
             } catch (err) {
