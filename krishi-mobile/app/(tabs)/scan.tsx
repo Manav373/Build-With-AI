@@ -20,6 +20,7 @@ import { getPhoneId } from '@/services/session';
 import * as Haptics from 'expo-haptics';
 import { PressableScale, FadeInUp, Counter, AnimatedProgress, Pulse } from '@/components/ui/Motion';
 import { DesignTokens } from '@/constants/DesignTokens';
+import { GlassCard } from '@/components/ui/Screen';
 
 const STRINGS = {
   en: {
@@ -283,6 +284,17 @@ export default function ScanScreen() {
     { id: '2', crop: 'Cotton', disease: 'Aphids infestation', date: 'June 14, 2026', status: 'Medium' },
     { id: '3', crop: 'Rice', disease: 'Healthy Crop', date: 'June 10, 2026', status: 'Low' },
   ]);
+
+  const handleOpenHistory = (item: ScanHistoryItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setResultData({
+      ...FALLBACK_DIAGNOSIS,
+      cropName: item.crop,
+      disease: item.disease,
+      severity: item.status,
+    });
+    setViewMode('result');
+  };
 
   useEffect(() => {
     if (viewMode === 'camera') {
