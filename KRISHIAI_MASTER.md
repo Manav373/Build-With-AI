@@ -616,6 +616,35 @@ EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
+### Render Deployment (Backend Web Service)
+
+The backend is pre-configured for one-click deployment on [Render](https://render.com).
+
+#### Option A: Monorepo Deployment (Direct from GitHub)
+1. In Render Dashboard, click **New +** → **Web Service** (or **Blueprint**).
+2. Connect your repository `Manav373/Build-With-AI`.
+3. Configure the settings:
+   - **Name:** `krishiai-backend`
+   - **Region:** `Singapore` (ap-southeast-1) or `Oregon`
+   - **Root Directory:** `krishiai/backend`
+   - **Runtime:** `Python`
+   - **Build Command:** `pip install --upgrade pip && pip install -r requirements.txt`
+   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. In **Environment Variables**, configure:
+   - `PYTHON_VERSION`: `3.11.9`
+   - `PYTHONPATH`: `.`
+   - `FORCE_SQLITE`: `true` (or provide `DATABASE_URL` for Supabase Postgres)
+   - `GROQ_API_KEY`: Your Groq API key
+   - `GEMINI_API_KEY`: Your Gemini API key
+   - `OPENWEATHER_API_KEY`: Your OpenWeather key
+   - `DATA_GOV_API_KEY`: Your Data.gov.in key
+   - `ALLOWED_ORIGINS`: `https://krishiai-bot.vercel.app,https://krishiai.vercel.app`
+
+#### Option B: Standalone Compressed Bundle (`krishiai-backend.zip`)
+- Run `py compress_backend.py` from project root to create `krishiai-backend.zip` (1.6 MB).
+- Extract or push directly into a standalone `krishiai-backend` repository.
+- Connect to Render with **Root Directory** as `./`.
+
 ### Production URLs
 - Frontend: `https://krishiai-bot.vercel.app` / `https://krishiai.vercel.app`
 - Backend: `https://krishiai-frontend-118806637740.us-central1.run.app`

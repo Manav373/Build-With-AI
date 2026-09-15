@@ -182,16 +182,29 @@ export default function MarketScreen() {
       try {
         setFetching(true);
         const response = await getLiveMandis(location.lat, location.lon);
+        const list = response?.mandis || response?.data;
 
-        if (response?.data && Array.isArray(response.data)) {
-          const mapped = response.data.slice(0, 4).map((mandi: any, idx: number) => ({
-            id: mandi.id || `m${idx + 1}`,
-            name: mandi.name || mandi.mandi_name || `Mandi ${idx + 1}`,
-            distance: mandi.distance ? `${Number(mandi.distance).toFixed(1)} km` : `${(idx + 1) * 5} km`,
-            price: mandi.price ? `₹${Math.round(mandi.price)}/Q` : `₹${2300 + idx * 20}/Q`,
-            trend: mandi.trend === 'up' ? 'up' : mandi.trend === 'down' ? 'down' : 'stable' as const,
-            change: mandi.change ? (mandi.change > 0 ? `+₹${Math.round(mandi.change)}` : `₹${Math.round(mandi.change)}`) : ['up', 'down', 'stable'][idx % 3] === 'up' ? '+₹30' : '₹0',
-          }));
+        if (list && Array.isArray(list) && list.length > 0) {
+          const mapped = list.slice(0, 5).map((mandi: any, idx: number) => {
+            let priceDisplay = `₹${2300 + idx * 20}/Q`;
+            if (mandi.price_note) {
+              const match = mandi.price_note.match(/₹[0-9]+/);
+              if (match) priceDisplay = `${match[0]}/Q`;
+            } else if (mandi.price) {
+              priceDisplay = `₹${Math.round(mandi.price)}/Q`;
+            }
+
+            const distStr = mandi.distance_km ? `${mandi.distance_km} km` : mandi.distance ? `${Number(mandi.distance).toFixed(1)} km` : `${(idx + 1) * 5} km`;
+
+            return {
+              id: mandi.id || `m${idx + 1}`,
+              name: mandi.name || mandi.mandi_name || `Mandi ${idx + 1}`,
+              distance: distStr,
+              price: priceDisplay,
+              trend: (mandi.trend === 'up' ? 'up' : mandi.trend === 'down' ? 'down' : 'stable') as const,
+              change: mandi.change ? (mandi.change > 0 ? `+₹${Math.round(mandi.change)}` : `₹${Math.round(mandi.change)}`) : '+₹30',
+            };
+          });
           setMandiData(mapped);
         }
       } catch (err) {

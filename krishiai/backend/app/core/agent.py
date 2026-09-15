@@ -413,16 +413,16 @@ async def process_query_base(
         """Safely narrate tool results back to the farmer without triggering tool calls."""
         res_str = json.dumps(tool_result, ensure_ascii=False, indent=2) if isinstance(tool_result, (dict, list)) else str(tool_result)
         narrate_prompt = (
-            f"You are KrishiAI, a friendly agricultural AI advisor.\n"
-            f"The farmer asked: '{user_message}'\n\n"
+            f"You are KrishiAI, a smart, farmer-friendly agricultural AI assistant.\n"
+            f"The farmer specifically asked: '{user_message}'\n\n"
             f"Here is the verified data from the '{tool_name}' tool:\n"
             f"{res_str}\n\n"
-            f"INSTRUCTIONS:\n"
-            f"- Directly write a helpful, friendly response for the farmer in rich Markdown.\n"
-            f"- DO NOT call any functions or tools.\n"
-            f"- DO NOT output JSON or function tags.\n"
-            f"- If structured data or weather is provided, format key metrics cleanly.\n"
-            f"- Include actionable farming advice based on this data."
+            f"STRICT INSTRUCTIONS:\n"
+            f"1. ANSWER EXACTLY WHAT THE FARMER ASKED. If they asked specifically for temperature, rain, a particular crop rate, or a specific metric, answer ONLY that requested item concisely (1-2 sentences). DO NOT provide full weather tables, sunrise/sunset, humidity, pressure, or lengthy unsolicited farming tips unless they specifically asked for a full forecast or general advisory!\n"
+            f"2. If the user asked a general question (e.g., 'What is today's weather?', 'Mandi update', 'Give farming advice'), then and only then provide a complete breakdown with markdown table and tips.\n"
+            f"3. Be natural, clear, and direct. Ideal for both reading on screen and listening via voice assistant.\n"
+            f"4. DO NOT call any functions or tools.\n"
+            f"5. DO NOT output JSON or function tags."
         )
         narrate_msgs = [
             {"role": "user", "content": narrate_prompt}
@@ -443,7 +443,14 @@ async def process_query_base(
                 temp = tool_result.get("temp_c", tool_result.get("temperature", "N/A"))
                 cond = tool_result.get("condition", tool_result.get("description", "Clear"))
                 hum = tool_result.get("humidity", "N/A")
-                city_name = tool_result.get("city", user_message)
+                city_name = tool_result.get("city", "your area")
+                lower_q = user_message.lower()
+                if any(w in lower_q for w in ["temp", "temperature", "tapman"]):
+                    return f"The current temperature in {city_name} is **{temp}°C**."
+                if any(w in lower_q for w in ["humidity", "nami"]):
+                    return f"The current humidity in {city_name} is **{hum}%**."
+                if any(w in lower_q for w in ["rain", "barish", "precipitation"]):
+                    return f"The current weather in {city_name} is **{cond}**."
                 return (
                     f"### 🌤 Weather Forecast for {city_name}\n\n"
                     f"| Metric | Value |\n|---|---|\n"

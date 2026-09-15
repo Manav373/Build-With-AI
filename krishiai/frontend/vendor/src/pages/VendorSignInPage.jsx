@@ -21,6 +21,8 @@ export default function VendorSignInPage() {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
+      localStorage.setItem('vendor_authenticated', 'true');
+      sessionStorage.setItem('vendor_authenticated', 'true');
       setLoading(false);
       navigate(redirectTarget);
     }, 600);

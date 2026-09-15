@@ -370,22 +370,26 @@ async def weather_endpoint(
     Real-time weather & 5-day forecast by GPS coordinates or city name.
     Used by mobile and web dashboards to personalize farmer weather.
     """
-    from app.services.weather import get_weather_by_coords, get_weather_by_city, get_forecast_by_coords
+    from app.services.weather import get_weather_by_coords, get_weather_by_city, get_forecast_by_coords, _generate_agri_advisory
     try:
         if lat is not None and lon is not None:
             current = await get_weather_by_coords(float(lat), float(lon))
             forecast = await get_forecast_by_coords(float(lat), float(lon))
+            advisory = _generate_agri_advisory(current, forecast)
             return {
                 "success": True,
                 "current": current,
-                "forecast": forecast
+                "forecast": forecast,
+                "advisory": advisory
             }
         elif city:
             current = await get_weather_by_city(city)
+            advisory = _generate_agri_advisory(current)
             return {
                 "success": True,
                 "current": current,
-                "forecast": []
+                "forecast": [],
+                "advisory": advisory
             }
         else:
             raise HTTPException(status_code=400, detail="Provide either lat & lon, or city")

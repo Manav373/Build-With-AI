@@ -1,0 +1,24 @@
+# Render Build Ignore Rules
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.venv/
+env/
+venv/
+ENV/
+*.db
+*.sqlite3
+
+# Large offline training datasets (runtime uses pre-trained .pkl models)
+app/services/data/*.csv
+
+# Local scratch and backup files
+scratch/
+requirements-full.txt.bak
+
+# Node / frontend connectivity monitor tools inside backend folder
+connectivity/

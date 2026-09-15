@@ -19,6 +19,13 @@ function CustomTabBar({ state, descriptors, navigation, menuOpen, onToggleMenu }
   const router = useRouter();
   const ui = useUIStrings();
 
+  // Hide the floating tab bar on full-screen interactive routes (e.g. Chat)
+  const currentRoute = state.routes[state.index];
+  const focusedOptions = descriptors[currentRoute?.key]?.options;
+  if (focusedOptions?.tabBarStyle?.display === 'none' || currentRoute?.name === 'chat') {
+    return null;
+  }
+
   // Translated tab labels keyed by route name
   const tabLabels: Record<string, string> = {
     index: ui.tab_home,
@@ -333,7 +340,13 @@ export default function TabLayout() {
       />
       {/* Hide these from tab bar */}
       <Tabs.Screen name="crops" options={{ href: null }} />
-      <Tabs.Screen name="chat" options={{ href: null }} />
+      <Tabs.Screen 
+        name="chat" 
+        options={{ 
+          href: null,
+          tabBarStyle: { display: 'none' },
+        }} 
+      />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
       </Tabs>

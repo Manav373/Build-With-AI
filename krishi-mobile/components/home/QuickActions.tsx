@@ -17,6 +17,7 @@ const STRINGS = {
     weather: 'Weather',
     predict: 'Predict',
     schemes: 'Schemes',
+    iotIrrigation: 'Smart Water (IoT)',
   },
   hi: {
     quickTools: 'त्वरित उपकरण',
@@ -26,6 +27,7 @@ const STRINGS = {
     weather: 'मौसम',
     predict: 'भविष्यवाणी',
     schemes: 'योजनाएं',
+    iotIrrigation: 'स्मार्ट सिंचाई (IoT)',
   },
   gu: {
     quickTools: 'ઝડપી સાધનો',
@@ -35,6 +37,7 @@ const STRINGS = {
     weather: 'હવામાન',
     predict: 'આગાહી',
     schemes: 'યોજનાઓ',
+    iotIrrigation: 'સ્માર્ટ સિંચાઈ (IoT)',
   },
   mr: {
     quickTools: 'जलद साधने',
@@ -44,14 +47,16 @@ const STRINGS = {
     weather: 'हवामान',
     predict: 'अंदाज',
     schemes: 'योजना',
+    iotIrrigation: 'स्मार्ट सिंचन (IoT)',
   },
 };
 
 const ACTIONS_BASE = [
   { id: 'chat', icon: 'message-circle' as const, labelKey: 'aiChat', route: '/chat', color: '#4ade80' },
+  { id: 'irrigation', icon: 'droplet' as const, labelKey: 'iotIrrigation', route: '/irrigation', color: '#06b6d4' },
   { id: 'scan', icon: 'camera' as const, labelKey: 'scanCrop', route: '/scan', color: '#f59e0b' },
   { id: 'market', icon: 'bar-chart-2' as const, labelKey: 'prices', route: '/market', color: '#3b82f6' },
-  { id: 'weather', icon: 'cloud' as const, labelKey: 'weather', route: '/weather', color: '#06b6d4' },
+  { id: 'weather', icon: 'cloud' as const, labelKey: 'weather', route: '/weather', color: '#0ea5e9' },
   { id: 'predict', icon: 'trending-up' as const, labelKey: 'predict', route: '/predict', color: '#8b5cf6' },
   { id: 'schemes', icon: 'award' as const, labelKey: 'schemes', route: '/schemes', color: '#ec4899' },
 ];

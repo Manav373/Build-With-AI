@@ -40,3 +40,5 @@ frontend/dist/
 .vercel
 
 backend/scratch/
+*.zip
+*.bak

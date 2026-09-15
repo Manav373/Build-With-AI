@@ -19,13 +19,14 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { id: 'crops', icon: 'leaf', labelKey: 'menu_crops', color: '#4ade80', route: '/(tabs)/crops' },
+  { id: 'irrigation', icon: 'droplet', labelKey: 'menu_irrigation', color: '#06b6d4', route: '/irrigation' },
   { id: 'chat', icon: 'message-circle', labelKey: 'menu_chat', color: '#3b82f6', route: '/(tabs)/chat' },
   { id: 'profile', icon: 'user', labelKey: 'menu_profile', color: '#8b5cf6', route: '/(tabs)/profile' },
   { id: 'weather', icon: 'cloud', labelKey: 'menu_weather', color: '#0ea5e9', route: '/weather' },
   { id: 'predict', icon: 'trending-up', labelKey: 'menu_predict', color: '#a855f7', route: '/predict' },
   { id: 'schemes', icon: 'award', labelKey: 'menu_schemes', color: '#ec4899', route: '/schemes' },
   { id: 'community', icon: 'users', labelKey: 'menu_community', color: '#f59e0b', route: '/community' },
-  { id: 'satellite', icon: 'globe', labelKey: 'menu_satellite', color: '#06b6d4', route: '/satellite' },
+  { id: 'satellite', icon: 'globe', labelKey: 'menu_satellite', color: '#10b981', route: '/satellite' },
   { id: 'settings', icon: 'settings', labelKey: 'menu_settings', color: '#94a3b8', route: '/settings' },
 ];
 

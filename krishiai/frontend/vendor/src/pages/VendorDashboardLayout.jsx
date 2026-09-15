@@ -350,7 +350,11 @@ export default function VendorDashboardLayout() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/vendor-sign-in')}
+            onClick={() => {
+              localStorage.removeItem('vendor_authenticated');
+              sessionStorage.removeItem('vendor_authenticated');
+              navigate('/vendor-sign-in');
+            }}
             title="Sign Out"
             style={{
               padding: '7px 10px', borderRadius: 8,

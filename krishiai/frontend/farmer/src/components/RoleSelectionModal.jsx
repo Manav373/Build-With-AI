@@ -379,11 +379,27 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                     zIndex: 1,
                   }}
                 >
-                  Already have an account?{' '}
+                <p
+                  style={{
+                    textAlign: 'center',
+                    color: 'rgba(134,239,172,0.5)',
+                    fontSize: '0.8rem',
+                    marginTop: '1.2rem',
+                    marginBottom: 0,
+                    position: 'relative',
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '1rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span>Already have an account?</span>
                   <button
                     type="button"
                     onClick={() => { onClose(); navigate('/sign-in'); }}
-                    id="modal-sign-in-link"
+                    id="modal-customer-sign-in-link"
                     style={{
                       color: '#4ade80',
                       background: 'none',
@@ -397,7 +413,30 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                       outline: 'none',
                     }}
                   >
-                    Sign in here
+                    Farmer Sign In
+                  </button>
+                  <span style={{ opacity: 0.4 }}>•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      window.location.href = 'http://localhost:5174/vendor-sign-in';
+                    }}
+                    id="modal-vendor-sign-in-link"
+                    style={{
+                      color: '#facc15',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: 'inherit',
+                      padding: 0,
+                      textDecoration: 'underline',
+                      textUnderlineOffset: '3px',
+                      outline: 'none',
+                    }}
+                  >
+                    Vendor Sign In
                   </button>
                 </p>
               </div>

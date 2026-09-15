@@ -41,6 +41,7 @@ function LayoutInner() {
       case 'predict': navigate('/predict'); break;
       case 'recommend': navigate('/recommend'); break;
       case 'satellite': navigate('/satellite'); break;
+      case 'iot': navigate('/iot'); break;
     }
   };
 

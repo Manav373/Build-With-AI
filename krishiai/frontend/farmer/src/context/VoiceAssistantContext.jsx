@@ -4,10 +4,29 @@ import { sendChatQuery } from '../services/api';
 
 const VoiceAssistantContext = createContext();
 
-// Clean markdown text for natural speech synthesis
+// Clean markdown text and extract natural spoken summary for voice assistant
 function cleanSpeechText(text) {
   if (!text) return '';
-  return text
+
+  let cleaned = text;
+
+  // If the response contains markdown tables, extract the key conclusion or top metric for voice
+  if (cleaned.includes('|') && cleaned.includes('---')) {
+    // Check if there is a temperature line in the table
+    const tempMatch = cleaned.match(/Temperature\s*\|\s*([^\n|]+)/i);
+    const condMatch = cleaned.match(/Condition\s*\|\s*([^\n|]+)/i);
+    const takeawayMatch = cleaned.match(/Quick Takeaway:?\s*([^\n#]+)/i);
+
+    if (tempMatch) {
+      const tempVal = tempMatch[1].trim();
+      const condVal = condMatch ? ` with ${condMatch[1].trim()}` : '';
+      cleaned = `The current temperature is ${tempVal}${condVal}.`;
+    } else if (takeawayMatch) {
+      cleaned = takeawayMatch[1].trim();
+    }
+  }
+
+  return cleaned
     // Remove markdown links [text](url) -> text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     // Remove markdown image tags
