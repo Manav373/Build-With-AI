@@ -63,22 +63,15 @@ krishiai/
 │       ├── vite.config.js   # Dedicated Vite configuration
 │       └── package.json     # @krishiai/admin
 │
-├── backend/                 # 🔒 READ-ONLY Central FastAPI Backend (Port 8000)
-│   ├── app/                # Application routes and dependencies
-│   ├── api/                # API router index
-│   ├── database/           # SQLAlchemy models and migrations
-│   ├── farmer/             # Farmer controllers and services
-│   ├── vendor/             # Vendor controllers and services
-│   ├── shared/             # Unified database session provider
+├── backend/                 # 🔒 Central FastAPI Backend (Port 8000)
+│   ├── app/                # Application routes, services (ML, Weather, Vision), and db models
+│   ├── api/                # API router index (Farmer, Vendor, Admin)
+│   ├── middleware/         # Security, CORS, logging middleware
 │   ├── krishiai.db         # Master SQLite physical database
+│   ├── requirements.txt    # Python dependencies
 │   └── server.py           # Uvicorn master server entrypoint
 │
-├── DATABASE/                # 🗄️ Master Database Specifications & Documentation
-│   ├── documentation/      # Database Architecture, ERDs, and design rules
-│   ├── configuration/      # Connection pooling & PostgreSQL production configs
-│   ├── schema-documentation/ # Full column schemas for all 30+ relational tables
-│   └── README.md           # Database guide
-│
+
 ├── SHARED/                  # 📦 Centralized Monorepo Reusable Library
 │   ├── ui/                 # Reusable UI primitives (@krishiai/ui)
 │   ├── api-client/         # UniversalApiClient (@krishiai/api)
