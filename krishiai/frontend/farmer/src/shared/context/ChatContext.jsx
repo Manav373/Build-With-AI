@@ -180,22 +180,70 @@ export const ChatProvider = ({ children }) => {
     updateChatMessages(currentChatId, [LANG_SELECTION_MESSAGE]);
   };
 
-  const processMessage = async (text, image = null, audioBlob = null) => {
-    if (!text && !image && !audioBlob) return;
-    
+  const processMessage = async (text, locationOrImage = null, fileOrAudio = null, previewUrl = null) => {
+    if (!text && !locationOrImage && !fileOrAudio) return;
+
+    // Detect if 2nd parameter is location or an image file/Blob
+    let location = null;
+    let image = null;
+    let audioBlob = null;
+
+    if (locationOrImage && typeof locationOrImage === 'object') {
+      if (
+        'lat' in locationOrImage ||
+        'latitude' in locationOrImage ||
+        'city' in locationOrImage ||
+        'state' in locationOrImage
+      ) {
+        location = locationOrImage;
+        setUserLocation(location);
+        if (fileOrAudio instanceof Blob || fileOrAudio instanceof File) {
+          image = fileOrAudio;
+        }
+      } else if (locationOrImage instanceof Blob || locationOrImage instanceof File) {
+        image = locationOrImage;
+        location = userLocation;
+        if (fileOrAudio instanceof Blob && !(fileOrAudio instanceof File)) {
+          audioBlob = fileOrAudio;
+        }
+      }
+    } else {
+      location = userLocation;
+      if (fileOrAudio instanceof Blob || fileOrAudio instanceof File) {
+        image = fileOrAudio;
+      }
+    }
+
+    if (!location && userLocation) {
+      location = userLocation;
+    }
+
     // Capture the target chatId for this message process
     const targetChatId = currentChatIdRef.current;
-    
+
+    // Generate safe image preview URL (NEVER pass plain objects to URL.createObjectURL)
+    let imagePreview = null;
+    if (previewUrl && typeof previewUrl === 'string') {
+      imagePreview = previewUrl;
+    } else if (image instanceof Blob || image instanceof File) {
+      try {
+        imagePreview = URL.createObjectURL(image);
+      } catch (e) {
+        imagePreview = null;
+      }
+    }
+
     // Create and add user message immediately
     const userMsg = {
       id: Date.now().toString(),
       sender: 'user',
-      text: text || (image ? '📷 Image uploaded' : '🎤 Voice message'),
+      text: text || (image ? '📷 Image uploaded' : audioBlob ? '🎤 Voice message' : ''),
       timestamp: Date.now(),
-      imagePreview: image ? URL.createObjectURL(image) : null,
-      isVoice: !!audioBlob
+      imagePreview,
+      isVoice: !!audioBlob,
+      location: location ? { city: location.city, state: location.state } : null
     };
-    
+
     addMessage(targetChatId, userMsg);
     setIsTyping(true);
 
@@ -205,21 +253,50 @@ export const ChatProvider = ({ children }) => {
       const promptWithLang = (text || 'Analyze this') + langInstruction;
       const token = await getToken();
 
+      const locLat = location?.lat ?? location?.latitude ?? null;
+      const locLon = location?.lon ?? location?.longitude ?? null;
+      const locCity = location?.city ?? null;
+      const locState = location?.state ?? null;
+      const locVillage = location?.village ?? null;
+      const locTaluka = location?.taluka ?? null;
+
       if (image) {
-        response = await sendImageQuery(promptWithLang, image, BROWSER_PHONE_ID, token);
+        response = await sendImageQuery(BROWSER_PHONE_ID, image, language, token);
       } else if (audioBlob) {
-        response = await sendVoiceQuery(audioBlob, BROWSER_PHONE_ID, token);
+        response = await sendVoiceQuery(
+          BROWSER_PHONE_ID,
+          audioBlob,
+          locLat,
+          locLon,
+          currentSession?.messages || [],
+          locCity,
+          locState,
+          token,
+          locVillage,
+          locTaluka
+        );
       } else {
-        response = await sendChatQuery(promptWithLang, BROWSER_PHONE_ID, token);
+        response = await sendChatQuery(
+          BROWSER_PHONE_ID,
+          promptWithLang,
+          locLat,
+          locLon,
+          currentSession?.messages || [],
+          locCity,
+          locState,
+          token,
+          locVillage,
+          locTaluka
+        );
       }
 
       const botMsg = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
-        text: response.reply || response.text || response.error || 'Sorry, I could not process your request.',
+        text: response?.reply || response?.text || response?.error || 'Sorry, I could not process your request.',
         timestamp: Date.now(),
-        groundingMetadata: response.groundingMetadata || null,
-        suggestedActions: response.suggestedActions || null
+        groundingMetadata: response?.groundingMetadata || null,
+        suggestedActions: response?.suggestedActions || null
       };
 
       addMessage(targetChatId, botMsg);

@@ -7,6 +7,7 @@ export const gu = {
   },
   navbar: {
     features: 'વિશેષતાઓ',
+    community: 'સમુદાય',
     howItWorks: 'તે કેવી રીતે કામ કરે છે',
     testimonials: 'પ્રશંસાપત્રો',
     about: 'માહિતી',

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import { ClerkProvider } from '@clerk/clerk-react';
 import { AuthProvider } from '@krishiai/auth';
 import { Preloader } from '@krishiai/ui';
 import App from './App.jsx';
 
 import './index.css';
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 function Root() {
   const [loading, setLoading] = useState(true);
@@ -15,6 +18,12 @@ function Root() {
     return () => clearTimeout(timer);
   }, []);
 
+  const content = (
+    <AuthProvider defaultDomain="vendor">
+      <App />
+    </AuthProvider>
+  );
+
   return (
     <div className="relative w-full h-full min-h-screen bg-[#050e07]">
       {appMounted && (
@@ -23,9 +32,13 @@ function Root() {
             loading ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
         >
-          <AuthProvider defaultDomain="vendor">
-            <App />
-          </AuthProvider>
+          {PUBLISHABLE_KEY && PUBLISHABLE_KEY !== 'pk_test_placeholder_key' ? (
+            <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/vendor-sign-in">
+              {content}
+            </ClerkProvider>
+          ) : (
+            content
+          )}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { VendorAppRoutes } from './routes/vendorRoutes.jsx';
 
 const VendorMarketplacePage = lazy(() => import('./pages/VendorMarketplacePage.jsx'));
@@ -7,6 +8,20 @@ const VendorProfilePage = lazy(() => import('./pages/VendorProfilePage.jsx'));
 const VendorTypeSelectionPage = lazy(() => import('./pages/VendorTypeSelectionPage.jsx'));
 const VendorOnboardingPage = lazy(() => import('./pages/VendorOnboardingPage.jsx'));
 const VendorSignUpPage = lazy(() => import('./pages/VendorSignUpPage.jsx'));
+const VendorSignInPage = lazy(() => import('./pages/VendorSignInPage.jsx'));
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const isClerkEnabled = PUBLISHABLE_KEY && PUBLISHABLE_KEY !== 'pk_test_placeholder_key';
+
+function ProtectedVendorRoute({ children }) {
+  if (!isClerkEnabled) return children;
+  return (
+    <>
+      <SignedIn>{children}</SignedIn>
+      <SignedOut><RedirectToSignIn signInUrl="/vendor-sign-in" /></SignedOut>
+    </>
+  );
+}
 
 const PageLoader = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-[#0b0f19]">
@@ -26,8 +41,8 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Default Root redirects to Dashboard */}
-          <Route path="/" element={<Navigate to="/vendor-dashboard" replace />} />
+          {/* Default Root: Always direct to vendor sign in */}
+          <Route path="/" element={<Navigate to="/vendor-sign-in" replace />} />
 
           {/* Public Vendor Marketplace & Onboarding */}
           <Route path="/vendors" element={<VendorMarketplacePage />} />
@@ -35,12 +50,18 @@ export default function App() {
           <Route path="/vendor-type-select" element={<VendorTypeSelectionPage />} />
           <Route path="/vendor-onboarding" element={<VendorOnboardingPage />} />
           <Route path="/vendor-sign-up" element={<VendorSignUpPage />} />
+          <Route path="/vendor-sign-in" element={<VendorSignInPage />} />
+          <Route path="/sign-in" element={<VendorSignInPage />} />
+          <Route path="/login" element={<VendorSignInPage />} />
+          <Route path="/sign-up" element={<VendorSignUpPage />} />
 
-          {/* Full Vendor Application Routes */}
-          {VendorAppRoutes}
+          {/* Protected Vendor Dashboard Routes */}
+          <Route element={<ProtectedVendorRoute><Outlet /></ProtectedVendorRoute>}>
+            {VendorAppRoutes}
+          </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/vendor-dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/vendor-sign-in" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

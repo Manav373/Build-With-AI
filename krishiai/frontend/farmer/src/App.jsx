@@ -84,6 +84,8 @@ export default function App() {
           <Route path="/vendor-onboarding" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-onboarding`} domainName="Vendor" />} />
           <Route path="/vendor-type-select" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-type-select`} domainName="Vendor" />} />
           <Route path="/vendor-sign-up/*" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-sign-up`} domainName="Vendor" />} />
+          <Route path="/vendor-sign-in/*" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-sign-in`} domainName="Vendor" />} />
+          <Route path="/vendor-sign-in" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-sign-in`} domainName="Vendor" />} />
           <Route path="/vendors" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendors`} domainName="Vendor" />} />
           <Route path="/vendor/:vendorId" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendors`} domainName="Vendor" />} />
           <Route path="/vendor/*" element={<DomainRedirect to={`${VENDOR_APP_URL}`} domainName="Vendor" />} />

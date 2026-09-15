@@ -80,8 +80,9 @@ export default function Navbar() {
           {/* DESKTOP NAV */}
           <nav className="hidden lg:flex items-center gap-4 xl:gap-6 px-6 py-2.5 rounded-full bg-gray-100/40 dark:bg-[#0a1a0d]/60 backdrop-blur-xl border border-gray-200/20 dark:border-[#86efac]/15 text-[0.84rem] xl:text-[0.92rem] font-bold text-gray-700 dark:text-[#e2f0e4]/90 shadow-[0_0_20px_rgba(0,0,0,0.4)] whitespace-nowrap flex-shrink-0">
             <a href="#features" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.features}</a>
-            <a href="/community" className="hover:text-[#38bdf8] transition-all hover:scale-105 flex items-center gap-1.5 whitespace-nowrap">💬 Community</a>
+            <a href="/community" className="hover:text-[#38bdf8] transition-all hover:scale-105 whitespace-nowrap">{t.community || 'Community'}</a>
             <a href="#howitworks" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.howItWorks}</a>
+            <a href="#testimonials" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.testimonials}</a>
             <a href="#footer" className="hover:text-[#4ade80] transition-all hover:scale-105 whitespace-nowrap">{t.about}</a>
           </nav>
 
@@ -112,7 +113,7 @@ export default function Navbar() {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-3 w-40 bg-white/95 dark:bg-[#0a1a0d] border border-gray-200 dark:border-[#86efac]/20 rounded-2xl shadow-2xl overflow-hidden py-2 backdrop-blur-xl"
+                    className="absolute right-0 mt-3 w-48 bg-white/95 dark:bg-[#0a1a0d] border border-gray-200 dark:border-[#86efac]/20 rounded-2xl shadow-2xl py-2 backdrop-blur-xl z-50 flex flex-col whitespace-normal overflow-hidden"
                   >
                     {LANGUAGES.map(lang => (
                       <button
@@ -122,9 +123,16 @@ export default function Navbar() {
                           setLanguage(lang.code);
                           setLangOpen(false);
                         }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-[#166534]/20 transition-colors ${language === lang.code ? 'text-[#166534] dark:text-[#86efac] font-bold' : 'text-gray-600 dark:text-[#e2f0e4]/60'}`}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-[#166534]/30 transition-colors ${
+                          language === lang.code
+                            ? 'text-[#166534] dark:text-[#4ade80] font-bold bg-emerald-500/10'
+                            : 'text-gray-700 dark:text-[#e2f0e4]/70'
+                        }`}
                       >
-                        {lang.label}
+                        <span>{lang.label}</span>
+                        {language === lang.code && (
+                          <span className="text-xs text-[#166534] dark:text-[#4ade80]">✓</span>
+                        )}
                       </button>
                     ))}
                   </motion.div>
@@ -172,9 +180,9 @@ export default function Navbar() {
                 <nav className="flex flex-col items-center gap-6 text-2xl text-gray-800 dark:text-white font-bold">
                   <a href="#features" onClick={() => setMenuOpen(false)} className="hover:text-[#86efac] transition-colors">{t.features}</a>
                   <a href="#howitworks" onClick={() => setMenuOpen(false)} className="hover:text-[#86efac] transition-colors">{t.howItWorks}</a>
-                  <a href="/community" onClick={() => setMenuOpen(false)} className="hover:text-[#38bdf8] transition-colors">💬 Community</a>
+                  <a href="/community" onClick={() => setMenuOpen(false)} className="hover:text-[#38bdf8] transition-colors">{t.community || 'Community'}</a>
                   <a href="#testimonials" onClick={() => setMenuOpen(false)} className="hover:text-[#86efac] transition-colors">{t.testimonials}</a>
-                  <a href="#aboutinfo" onClick={() => setMenuOpen(false)} className="hover:text-[#86efac] transition-colors">{t.about}</a>
+                  <a href="#footer" onClick={() => setMenuOpen(false)} className="hover:text-[#86efac] transition-colors">{t.about}</a>
 
                   <button
                     type="button"

@@ -185,7 +185,7 @@ export default function VendorSignUpPage() {
           <SignUp
             path="/vendor-sign-up"
             routing="path"
-            signInUrl="/sign-in"
+            signInUrl="/vendor-sign-in"
             afterSignUpUrl={afterSignUpTarget}
             appearance={{
               variables: {

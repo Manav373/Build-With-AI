@@ -34,8 +34,9 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    sessionStorage.removeItem('admin_authenticated');
     logout();
-    navigate('/');
+    navigate('/admin/login');
   };
 
   return (

@@ -7,6 +7,7 @@ export const en = {
   },
   navbar: {
     features: 'Features',
+    community: 'Community',
     howItWorks: 'How It Works',
     testimonials: 'Testimonials',
     about: 'About',

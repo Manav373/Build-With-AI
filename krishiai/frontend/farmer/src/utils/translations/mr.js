@@ -7,6 +7,7 @@ export const mr = {
   },
   navbar: {
     features: 'वैशिष्ट्ये',
+    community: 'समुदाय',
     howItWorks: 'हे कसे कार्य करते',
     testimonials: 'प्रशंसापत्रे',
     about: 'माहिती',

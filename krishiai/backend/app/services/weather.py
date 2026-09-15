@@ -13,28 +13,42 @@ BASE_URL = "https://api.openweathermap.org/data/2.5"
 
 async def get_weather_by_city(location: str) -> dict:
     """Fetch live weather by city name or 'lat,lon' GPS coordinates."""
-    # Check if location is GPS coordinates like "23.09,72.53"
-    if "," in location:
-        parts = location.split(",")
-        if len(parts) == 2:
-            try:
-                lat = float(parts[0].strip())
-                lon = float(parts[1].strip())
-                # Both parts are valid floats - it's GPS coordinates!
-                logger.info(f"Detected GPS coordinates in location: {lat},{lon}")
-                return await get_weather_by_coords(lat, lon)
-            except ValueError:
-                pass  # Not numeric - fall through to city name lookup
+    # Robustly check if location contains GPS coordinates like "23.09,72.53" or embedded coords
+    import re
+    coord_match = re.search(r'(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)', location)
+    if coord_match:
+        try:
+            lat = float(coord_match.group(1))
+            lon = float(coord_match.group(2))
+            logger.info(f"Detected GPS coordinates in location string: {lat},{lon}")
+            return await get_weather_by_coords(lat, lon)
+        except ValueError:
+            pass
 
     key = os.getenv("OPENWEATHER_API_KEY")
     if not key:
         return {"error": "OPENWEATHER_API_KEY not set"}
     try:
-        # Use location as-is (already cleaned by the LLM)
+        # Build candidate city search queries from most specific to cleaned parts
+        candidates = [location]
+        if "," in location:
+            parts = [p.strip() for p in location.split(",") if p.strip()]
+            for p in parts:
+                if p not in candidates:
+                    candidates.append(p)
+                # Strip administrative labels like Tahsil, Tehsil, District, Taluka
+                cleaned = p
+                for word in ["Tahsil", "Tehsil", "District", "Taluka", "Block"]:
+                    cleaned = cleaned.replace(word, "").strip()
+                if cleaned and cleaned not in candidates:
+                    candidates.append(cleaned)
+
         async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(f"{BASE_URL}/weather?q={location}&appid={key}&units=metric")
-            if r.status_code == 200:
-                return _parse(r.json())
+            for candidate in candidates:
+                r = await client.get(f"{BASE_URL}/weather?q={candidate}&appid={key}&units=metric")
+                if r.status_code == 200:
+                    return _parse(r.json())
+
             return {"error": f"Could not find weather for '{location}'. Please try a nearby major city name."}
     except Exception as e:
         logger.error(f"Weather city error: {e}")

@@ -1,11 +1,13 @@
 """
-Disease detection tool — wraps Gemini Vision with agronomist-grade prompt.
+Disease detection tool — analyzes crop photos to identify diseases, pests, and deficiencies.
+Uses Groq Vision (qwen/qwen3.8-27b) as the primary engine, with Gemini Vision as emergency fallback.
 Also provides a symptom-to-disease text lookup for text-based queries.
 """
 import httpx
 import base64
 import logging
 import os
+from typing import Optional
 
 logger = logging.getLogger("KrishiMCP.Disease")
 
@@ -39,26 +41,20 @@ Analyze this crop photo and provide:
 Keep language simple and actionable. Use Indian market product names when possible."""
 
 
-async def analyze_image_bytes(image_bytes: bytes, mime_type: str = "image/jpeg", language: str = "English") -> str:
-    """Analyze crop image using Groq Vision model."""
+async def _analyze_with_groq_vision(image_bytes: bytes, mime_type: str, prompt: str, groq_key: str) -> Optional[str]:
+    """Primary Vision: Analyze crop image using Groq Vision model (qwen/qwen3.8-27b)."""
     from groq import AsyncGroq
-
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return "Vision analysis unavailable. Please add GROQ_API_KEY to .env file."
-
+    # Verified working Groq Vision model
+    primary_model = "qwen/qwen3.8-27b"
+    
     try:
         base64_img = base64.b64encode(image_bytes).decode('utf-8')
         data_url = f"data:{mime_type};base64,{base64_img}"
+        client = AsyncGroq(api_key=groq_key, max_retries=1)
 
-        lang_instruction = f"\n\nIMPORTANT: Provide the entire response in {language} language using the native script (e.g. Devanagari for Hindi, Gujarati script for Gujarati)."
-        prompt = AGRO_VISION_PROMPT + lang_instruction
-
-        client = AsyncGroq(api_key=api_key, max_retries=0)
-        model_id = "meta-llama/llama-4-scout-17b-16e-instruct"
-        logger.info(f"Using Groq Vision model: {model_id}")
+        logger.info(f"[Vision] Analyzing crop image using Groq model: {primary_model}")
         response = await client.chat.completions.create(
-            model=model_id,
+            model=primary_model,
             messages=[{
                 "role": "user",
                 "content": [
@@ -69,15 +65,96 @@ async def analyze_image_bytes(image_bytes: bytes, mime_type: str = "image/jpeg",
             max_tokens=800,
             temperature=0.2
         )
-        return response.choices[0].message.content
-
+        if response.choices and response.choices[0].message.content:
+            logger.info(f"[Vision] Groq {primary_model} successfully analyzed image.")
+            return response.choices[0].message.content
     except Exception as e:
-        logger.error(f"Groq Vision error: {e}")
-        return "Vision analysis temporarily unavailable. Please describe the symptoms in text."
+        logger.warning(f"[Vision] Groq Vision ({primary_model}) encountered error: {e}")
+    
+    return None
+
+
+async def _analyze_with_gemini_emergency(image_bytes: bytes, mime_type: str, prompt: str, gemini_key: str) -> Optional[str]:
+    """Emergency Fallback: Analyze crop image using Gemini Vision if Groq is unavailable."""
+    logger.info("[Vision] Groq unavailable. Activating emergency Gemini Vision fallback...")
+    candidate_models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash"]
+    
+    # 1. Try google.genai SDK
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=gemini_key)
+
+        for model_id in candidate_models:
+            try:
+                part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+                response = client.models.generate_content(
+                    model=model_id,
+                    contents=[part, prompt]
+                )
+                if response and response.text:
+                    logger.info(f"[Vision] Emergency Gemini fallback succeeded with {model_id}.")
+                    return response.text
+            except Exception as model_err:
+                logger.warning(f"[Vision] Gemini {model_id} failed: {model_err}")
+                continue
+    except Exception as sdk_err:
+        logger.warning(f"[Vision] google.genai SDK error, falling back to direct REST: {sdk_err}")
+
+    # 2. Direct REST fallback via httpx
+    try:
+        base64_img = base64.b64encode(image_bytes).decode('utf-8')
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt},
+                    {"inline_data": {"mime_type": mime_type, "data": base64_img}}
+                ]
+            }]
+        }
+        for model_id in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={gemini_key}"
+            async with httpx.AsyncClient(timeout=25.0) as http_client:
+                r = await http_client.post(url, json=payload)
+                if r.status_code == 200:
+                    data = r.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and "text" in parts[0]:
+                            logger.info(f"[Vision] Emergency Gemini REST succeeded with {model_id}.")
+                            return parts[0]["text"]
+    except Exception as rest_err:
+        logger.error(f"[Vision] Emergency Gemini REST fallback failed: {rest_err}")
+
+    return None
+
+
+async def analyze_image_bytes(image_bytes: bytes, mime_type: str = "image/jpeg", language: str = "English") -> str:
+    """Analyze crop image. Uses Groq models primarily; Gemini only as emergency backup."""
+    lang_instruction = f"\n\nIMPORTANT: Provide the entire response in {language} language using the native script (e.g. Devanagari for Hindi, Gujarati script for Gujarati)."
+    prompt = AGRO_VISION_PROMPT + lang_instruction
+
+    # 1. PRIMARY: Groq Vision (qwen/qwen3.8-27b)
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        groq_result = await _analyze_with_groq_vision(image_bytes, mime_type, prompt, groq_key)
+        if groq_result:
+            return groq_result
+
+    # 2. EMERGENCY BACKUP ONLY: Gemini Vision (gemini-2.5-flash)
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key:
+        emergency_result = await _analyze_with_gemini_emergency(image_bytes, mime_type, prompt, gemini_key)
+        if emergency_result:
+            return emergency_result
+
+    logger.error("[Vision] All vision models failed or API keys missing.")
+    return "Vision analysis temporarily unavailable. Please describe the symptoms in text."
 
 
 async def analyze_crop_image(image_url: str) -> str:
-    """Download image from URL (Twilio) and analyze via Gemini."""
+    """Download image from URL (Twilio / WhatsApp) and analyze via Vision AI."""
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             r = await client.get(image_url, follow_redirects=True)
@@ -87,7 +164,7 @@ async def analyze_crop_image(image_url: str) -> str:
     except Exception as e:
         logger.error(f"Image download error: {e}")
         return "Error downloading image. Please describe the symptoms in text."
-    return ""  # Backup return to satisfy linter
+    return ""
 
 
 def lookup_symptom(query: str) -> str:

@@ -35,7 +35,7 @@ export default function Footer() {
       { label: 'Agri Marketplace', href: '/vendors', isRoute: true },
       { label: 'Sell Crops Direct', href: '/sell-crops', isRoute: true },
       { label: 'AI Voice Assistant', href: '/voice-assistant', isRoute: true },
-      { label: 'Farmer Community', href: '/community', isRoute: true },
+      { label: language === 'gu' ? 'ખેડૂત સમુદાય' : language === 'hi' ? 'किसान समुदाय' : language === 'mr' ? 'शेतकरी समुदाय' : 'Farmer Community', href: '/community', isRoute: true },
       { label: 'Satellite NDVI Health', href: '/satellite', isRoute: true },
       { label: 'Live Mandi Prices', href: '/market-prices', isRoute: true },
     ],

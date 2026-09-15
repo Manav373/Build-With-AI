@@ -190,14 +190,21 @@ export default function VendorMarketplacePage() {
             Discover verified crop buyers, certified seed & fertilizer suppliers, machinery hubs, and cold storage partners near you.
           </p>
 
-          {/* Become a Vendor CTA */}
-          <div className="pt-2">
+          {/* Become a Vendor / Sign In CTA */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={() => navigate('/vendor-type-select')}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-300 text-xs font-bold transition shadow-lg"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 text-amber-300 text-xs font-bold transition shadow-lg"
             >
-              <span>🏪 Are you a crop buyer or agri input supplier?</span>
-              <span className="text-white underline">Register Vendor Profile →</span>
+              <span>🏪 New Vendor?</span>
+              <span className="text-white underline">Register Profile →</span>
+            </button>
+            <button
+              onClick={() => navigate('/vendor-sign-in')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 hover:bg-emerald-500/25 text-emerald-300 text-xs font-bold transition shadow-lg"
+            >
+              <span>🔑 Existing Vendor?</span>
+              <span className="text-white underline">Sign In →</span>
             </button>
           </div>
         </div>

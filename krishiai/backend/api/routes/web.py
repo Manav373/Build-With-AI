@@ -26,7 +26,7 @@ WEATHER_KEYWORDS = ["weather", "forecast", "temperature", "rain", "humidity", "c
 async def _groq_chat_completion_with_fallback(client, **kwargs):
     """Helper to try a model and fallback to a working model."""
     primary_model = kwargs.get("model", "openai/gpt-oss-20b")
-    fallback_model = "openai/gpt-oss-20b"
+    fallback_model = "openai/gpt-oss-120b"
     try:
         return await client.chat.completions.create(**kwargs)
     except Exception as e:
@@ -92,8 +92,10 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
         # Prepend location context securely
         if lat and lon:
             parts = [p for p in [village, taluka, city, state] if p and p != "Unknown"]
-            location_str = ", ".join(parts) if parts else f"{float(lat):.3f}N, {float(lon):.3f}E"
-            message = f"[Farmer's approximate location: {location_str}]\n{message}"
+            location_str = ", ".join(parts) if parts else f"{float(lat):.4f}N, {float(lon):.4f}E"
+            clean_city = city or taluka or village or "India"
+            clean_state = state or "India"
+            message = f"[Farmer's exact GPS: {float(lat):.4f},{float(lon):.4f} | District/City: {clean_city}, State: {clean_state} | Address: {location_str}]\n{message}"
 
         logger.info(f"Frontend query from {user_data.get('sub', 'unknown')} (masked len: {len(message)})")
         
@@ -248,7 +250,7 @@ async def audio_endpoint(
         if lat and lon:
             parts = [p for p in [village, taluka, city, state] if p and p != "Unknown"]
             location_str = ", ".join(parts) if parts else f"{float(lat):.4f}N, {float(lon):.4f}E"
-            query = f"[Farmer's approx location: {location_str}]\n{masked_text}"
+            query = f"[Farmer's exact GPS: {float(lat):.4f},{float(lon):.4f} | Location: {location_str}]\n{masked_text}"
         else:
             query = masked_text
             
@@ -357,3 +359,95 @@ async def commodity_trends_endpoint(
     except Exception as e:
         logger.error(f"Error fetching commodity trends: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/weather")
+async def weather_endpoint(
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    city: Optional[str] = None
+):
+    """
+    Real-time weather & 5-day forecast by GPS coordinates or city name.
+    Used by mobile and web dashboards to personalize farmer weather.
+    """
+    from app.services.weather import get_weather_by_coords, get_weather_by_city, get_forecast_by_coords
+    try:
+        if lat is not None and lon is not None:
+            current = await get_weather_by_coords(float(lat), float(lon))
+            forecast = await get_forecast_by_coords(float(lat), float(lon))
+            return {
+                "success": True,
+                "current": current,
+                "forecast": forecast
+            }
+        elif city:
+            current = await get_weather_by_city(city)
+            return {
+                "success": True,
+                "current": current,
+                "forecast": []
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Provide either lat & lon, or city")
+    except Exception as e:
+        logger.error(f"Error in weather_endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/tts")
+@router.get("/tts")
+async def text_to_speech_endpoint(
+    text: Optional[str] = None,
+    lang: str = "en",
+    payload: Optional[dict] = None
+):
+    """
+    Synthesizes natural speech using Edge TTS (100% free studio-grade neural voices).
+    Returns audio/mpeg stream directly to browser.
+    """
+    try:
+        input_text = text
+        if not input_text and payload:
+            input_text = payload.get("text")
+            lang = payload.get("lang", lang)
+
+        if not input_text:
+            raise HTTPException(status_code=400, detail="Text is required")
+
+        # Clean text for speech
+        import re
+        clean_text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', input_text)
+        clean_text = re.sub(r'https?://\S+', '', clean_text)
+        clean_text = re.sub(r'[*#_`|~-]', ' ', clean_text)
+        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+        
+        # Limit length for spoken voice summary
+        if len(clean_text) > 400:
+            clean_text = clean_text[:380] + "..."
+
+        try:
+            import edge_tts
+            voice_map = {
+                "hi": "hi-IN-SwaraNeural",
+                "gu": "gu-IN-DhwaniNeural",
+                "mr": "mr-IN-AarohiNeural",
+                "en": "en-IN-NeerjaNeural"
+            }
+            voice = voice_map.get(lang, "en-IN-NeerjaNeural")
+            communicate = edge_tts.Communicate(clean_text, voice)
+            audio_bytes = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_bytes += chunk["data"]
+
+            from fastapi import Response
+            return Response(content=audio_bytes, media_type="audio/mpeg")
+        except Exception as tts_err:
+            logger.warning(f"edge_tts generation failed: {tts_err}")
+            raise HTTPException(status_code=500, detail=str(tts_err))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"TTS endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

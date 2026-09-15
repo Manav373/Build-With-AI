@@ -7,6 +7,7 @@ export const hi = {
   },
   navbar: {
     features: 'विशेषताएं',
+    community: 'समुदाय',
     howItWorks: 'यह कैसे काम करता है',
     testimonials: 'प्रशंसापत्र',
     about: 'जानकारी',

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, PhoneOff, Volume2, Sparkles, AlertCircle, History, Info, ChevronRight, Globe, Loader2, Menu, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
 import { useChat } from '../context/ChatContext';
 import { translations } from '../utils/translations/index';
@@ -19,9 +21,11 @@ const VoiceAssistantPage = () => {
         transcript,
         messages,
         currentAction,
+        isSpeaking,
         startCall,
         stopCall,
-        toggleMute
+        toggleMute,
+        sendVoiceText
     } = useVoiceAssistant();
 
     const transcriptEndRef = useRef(null);
@@ -246,7 +250,7 @@ const VoiceAssistantPage = () => {
 
                             <button
                                 disabled={callStatus === 'loading'}
-                                onClick={() => callStatus === 'active' ? stopCall() : startCall()}
+                                onClick={() => callStatus === 'active' ? stopCall() : startCall(null, language)}
                                 className={`px-6 sm:px-14 py-3.5 sm:py-5 rounded-2xl sm:rounded-[2.5rem] font-bold text-[0.65rem] sm:text-sm transition-all flex items-center gap-2 sm:gap-4 ${
                                     callStatus === 'active' 
                                     ? 'bg-red-500 text-white hover:bg-red-600 shadow-[0_20px_60px_rgba(239, 68, 68, 0.3)]' 
@@ -268,9 +272,7 @@ const VoiceAssistantPage = () => {
                                     key={i}
                                     whileHover={{ scale: 1.02, y: -2 }}
                                     onClick={() => {
-                                        if (callStatus !== 'active') {
-                                            startCall();
-                                        }
+                                        sendVoiceText(item.cmd, language);
                                     }}
                                     className={`${theme === 'light' ? 'bg-white shadow-md border-gray-100' : 'bg-black/40 border-emerald-500/10'} rounded-xl p-3 sm:p-4 min-w-[160px] sm:min-w-[200px] cursor-pointer hover:border-emerald-500/30 transition-all transition-gpu shadow-xl group/suggest`}
                                 >
@@ -326,7 +328,15 @@ const VoiceAssistantPage = () => {
                                             {msg.role === 'user' ? <User size={10} /> : <Sparkles size={10} />}
                                             {msg.role === 'user' ? 'Human' : 'KrishiAI'}
                                         </div>
-                                        <div className="text-xs sm:text-sm font-medium leading-relaxed tracking-tight">{msg.text}</div>
+                                        <div className="text-xs sm:text-sm font-medium leading-relaxed tracking-tight">
+                                            {msg.role === 'user' ? (
+                                                msg.text
+                                            ) : (
+                                                <div className="prose prose-sm prose-emerald dark:prose-invert max-w-none [&_table]:w-full [&_table]:text-xs [&_table]:border-collapse [&_th]:border [&_th]:border-emerald-500/20 [&_th]:p-1.5 [&_td]:border [&_td]:border-emerald-500/10 [&_td]:p-1.5 [&_a]:text-emerald-400 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </motion.div>
                             ))}

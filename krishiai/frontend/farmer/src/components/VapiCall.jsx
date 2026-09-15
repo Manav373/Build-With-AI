@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Mic, MicOff, Volume2, Loader2, Sparkles, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useVoiceAssistant } from '../context/VoiceAssistantContext';
 
 const VapiCall = ({ assistantId }) => {
@@ -10,6 +12,7 @@ const VapiCall = ({ assistantId }) => {
         volumeLevel,
         transcript,
         messages,
+        currentAction,
         startCall,
         stopCall,
         toggleMute
@@ -100,7 +103,8 @@ const VapiCall = ({ assistantId }) => {
                                     <h3 className="text-white font-black text-sm">AI Voice Assistant</h3>
                                     <p className="text-emerald-400/60 text-[10px] font-bold flex items-center gap-1.5">
                                         <span className={`w-1.5 h-1.5 rounded-full ${callStatus === 'active' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
-                                        {callStatus === 'loading' ? 'Establishing Secure Link...' :
+                                        {currentAction ? `${currentAction.name}...` :
+                                            callStatus === 'loading' ? 'Establishing Link...' :
                                             callStatus === 'active' ? (volumeLevel > 0.01 ? 'KrishiAI is speaking...' : 'Listening to you...') :
                                                 'Ready'}
                                     </p>
@@ -169,7 +173,13 @@ const VapiCall = ({ assistantId }) => {
                                                     ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/20 rounded-tr-none'
                                                     : 'bg-white/5 text-white/90 border border-white/10 rounded-tl-none'
                                                 }`}>
-                                                {msg.text}
+                                                {msg.role === 'user' ? (
+                                                    msg.text
+                                                ) : (
+                                                    <div className="prose prose-sm prose-invert max-w-none text-xs leading-relaxed [&_a]:text-emerald-400 [&_a]:underline">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                                                    </div>
+                                                )}
                                             </div>
                                         </motion.div>
                                     ))}

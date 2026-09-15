@@ -350,16 +350,17 @@ export default function VendorDashboardLayout() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/chat')}
+            onClick={() => navigate('/vendor-sign-in')}
+            title="Sign Out"
             style={{
-              flex: 1, padding: '7px', borderRadius: 8,
-              background: 'rgba(22,101,52,0.25)', border: '1px solid rgba(74,222,128,0.3)',
-              color: '#4ade80', fontSize: '0.72rem', fontWeight: 600,
+              padding: '7px 10px', borderRadius: 8,
+              background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#f87171', fontSize: '0.72rem', fontWeight: 600,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
               transition: 'all 0.2s',
             }}
           >
-            🌾 Farmer Portal
+            <LogOut size={12} />
           </button>
         </div>
       </div>

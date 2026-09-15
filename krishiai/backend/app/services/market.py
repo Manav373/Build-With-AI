@@ -326,7 +326,20 @@ async def get_market_price(crop: str, location: str) -> dict:
     crop = clean_input(crop)
     location = clean_input(location)
     
-    records = await fetch_gov_market_data({"commodity": crop, "district": location}, limit=1)
+    # Try exact district, then cleaned sub-parts (e.g. "Mhow", "Indore")
+    candidates = [location]
+    if "," in location:
+        for p in location.split(","):
+            p_clean = p.replace("Tahsil", "").replace("Tehsil", "").replace("District", "").replace("Taluka", "").strip()
+            if p_clean and p_clean not in candidates:
+                candidates.append(p_clean)
+
+    records = []
+    for loc_cand in candidates:
+        records = await fetch_gov_market_data({"commodity": crop, "district": loc_cand}, limit=1)
+        if records:
+            break
+
     if not records:
         # Try dynamic Groq AI price estimation fallback first
         try:

@@ -389,30 +389,71 @@ async def process_query_base(
     messages = _truncate_history(messages, max_tokens=4000)
 
     async def _groq_chat_completion_with_fallback(**kwargs):
-        """Helper to call Groq model."""
+        """Helper to call Groq model with smart fallback across models."""
         primary_model = kwargs.get("model", "openai/gpt-oss-20b")
-        fallback_model = "openai/gpt-oss-20b"
+        fallback_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b"]
         
         try:
             return await client.chat.completions.create(**kwargs)
         except Exception as e:
-            if "429" in str(e) or "rate_limit" in str(e).lower():
-                logger.warning(f"Rate limit hit for {primary_model}. Falling back to {fallback_model}.")
-                kwargs["model"] = fallback_model
-                return await client.chat.completions.create(**kwargs)
+            err_msg = str(e)
+            if any(k in err_msg.lower() for k in ["429", "rate_limit", "503", "model_not_found", "tool_choice"]):
+                for alt_model in fallback_models:
+                    if alt_model != primary_model:
+                        try:
+                            logger.warning(f"Groq error with {primary_model}: {e}. Retrying with {alt_model}.")
+                            kwargs["model"] = alt_model
+                            return await client.chat.completions.create(**kwargs)
+                        except Exception as alt_err:
+                            logger.warning(f"Fallback to {alt_model} failed: {alt_err}")
+                            continue
             raise
 
     async def _narrate(tool_name, tool_result, user_message):
-        narrate_msgs = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
-            {"role": "user", "content": f"Tool '{tool_name}' returned: {json.dumps(tool_result)}. Summarize in friendly, simple language for the farmer."}
-        ]
-        r = await _groq_chat_completion_with_fallback(
-            model="openai/gpt-oss-20b",
-            messages=narrate_msgs
+        """Safely narrate tool results back to the farmer without triggering tool calls."""
+        res_str = json.dumps(tool_result, ensure_ascii=False, indent=2) if isinstance(tool_result, (dict, list)) else str(tool_result)
+        narrate_prompt = (
+            f"You are KrishiAI, a friendly agricultural AI advisor.\n"
+            f"The farmer asked: '{user_message}'\n\n"
+            f"Here is the verified data from the '{tool_name}' tool:\n"
+            f"{res_str}\n\n"
+            f"INSTRUCTIONS:\n"
+            f"- Directly write a helpful, friendly response for the farmer in rich Markdown.\n"
+            f"- DO NOT call any functions or tools.\n"
+            f"- DO NOT output JSON or function tags.\n"
+            f"- If structured data or weather is provided, format key metrics cleanly.\n"
+            f"- Include actionable farming advice based on this data."
         )
-        return r.choices[0].message.content
+        narrate_msgs = [
+            {"role": "user", "content": narrate_prompt}
+        ]
+        try:
+            r = await client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=narrate_msgs
+            )
+            if r.choices and r.choices[0].message and r.choices[0].message.content:
+                return r.choices[0].message.content
+        except Exception as n_err:
+            logger.warning(f"Narration model failed: {n_err}")
+
+        # Deterministic fallback if all Groq calls fail so user NEVER gets a 500 error
+        if tool_name == "get_weather":
+            if isinstance(tool_result, dict):
+                temp = tool_result.get("temp_c", tool_result.get("temperature", "N/A"))
+                cond = tool_result.get("condition", tool_result.get("description", "Clear"))
+                hum = tool_result.get("humidity", "N/A")
+                city_name = tool_result.get("city", user_message)
+                return (
+                    f"### 🌤 Weather Forecast for {city_name}\n\n"
+                    f"| Metric | Value |\n|---|---|\n"
+                    f"| **Condition** | {cond} |\n"
+                    f"| **Temperature** | {temp}°C |\n"
+                    f"| **Humidity** | {hum}% |\n\n"
+                    f"💡 **Farming Tip**: Safe conditions for routine crop management and monitoring."
+                )
+            return f"### 🌤 Weather Report\n\n{str(tool_result)}"
+        return f"### 📋 Agricultural Advisory\n\n{res_str}"
 
     # --- Groq call with fallback for tool_use_failed ---
     try:
@@ -426,23 +467,25 @@ async def process_query_base(
 
     except Exception as e:
         logger.error(f"Groq Chat Completion Error: {e}")
-        # Log the first 200 chars of the last message for context
-        if messages:
-            last_msg = messages[-1].get("content", "")
-            logger.error(f"Last message attempted: {last_msg[:200]}...")
         err_str = str(e)
-        if "tool_use_failed" in err_str and "failed_generation" in err_str:
+        if "tool_use_failed" in err_str or "failed_generation" in err_str:
             logger.warning(f"tool_use_failed caught, attempting manual fallback. Error: {e}")
             try:
                 import re
-                failed_gen = e.body.get("error", {}).get("failed_generation", "") if hasattr(e, "body") else ""
+                failed_gen = ""
+                if hasattr(e, "body") and isinstance(e.body, dict):
+                    failed_gen = e.body.get("error", {}).get("failed_generation", "")
                 if not failed_gen:
-                    fg_match = re.search(r"'failed_generation':\s*'(.*?)(?:'\}|',$)", err_str, re.DOTALL)
+                    fg_match = re.search(r"'failed_generation':\s*['\"](.*?)['\"](?:\s*\}|,|\n)", err_str, re.DOTALL)
+                    if fg_match:
+                        failed_gen = fg_match.group(1)
+                if not failed_gen:
+                    fg_match = re.search(r'(\{.*"name":\s*"\w+".*\})', err_str, re.DOTALL)
                     if fg_match:
                         failed_gen = fg_match.group(1)
 
                 func_name, args = _parse_failed_generation(failed_gen)
-                if func_name and args:
+                if func_name and args is not None:
                     args = _coerce_args(func_name, args)
                     logger.info(f"Fallback: executing {func_name} with args {args}")
                     func = TOOL_FUNCTIONS_MAP.get(func_name)
@@ -450,14 +493,17 @@ async def process_query_base(
                         tool_result = await func(**args)
                         return await _narrate(func_name, tool_result, message)
             except Exception as parse_err:
-                logger.error(f"Fallback parse failed: {parse_err}")
+                logger.error(f"Fallback parse failed: {parse_err}", exc_info=True)
         raise
 
     # --- Handle tool_calls ---
     if response_msg.tool_calls:
         messages.append(response_msg)
+        last_func_name = None
+        last_tool_res = None
         for tool_call in response_msg.tool_calls:
             function_name = tool_call.function.name
+            last_func_name = function_name
             func = TOOL_FUNCTIONS_MAP.get(function_name)
             if func:
                 args = _coerce_args(function_name, json.loads(tool_call.function.arguments))
@@ -471,6 +517,7 @@ async def process_query_base(
                     tool_result = await func(**args)
                     if function_name in CACHEABLE:
                         _cache_set(cache_key, tool_result)
+                last_tool_res = tool_result
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -478,11 +525,8 @@ async def process_query_base(
                     "content": json.dumps(tool_result)
                 })
 
-        final_res = await _groq_chat_completion_with_fallback(
-            model="openai/gpt-oss-20b",
-            messages=messages
-        )
-        return final_res.choices[0].message.content
+        if last_func_name and last_tool_res is not None:
+            return await _narrate(last_func_name, last_tool_res, message)
 
     # --- Fallback: model returned JSON or XML tags in text instead of tool_calls ---
     elif response_msg.content:
