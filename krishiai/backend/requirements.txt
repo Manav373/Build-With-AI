@@ -47,5 +47,5 @@ edge-tts>=6.1.0
 gTTS>=2.5.0
 
 # Model Context Protocol & Adapter
-mcp>=1.0.0
+mcp>=1.0.0,<2.0.0
 mangum>=0.17.0
