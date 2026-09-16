@@ -91,18 +91,18 @@ export default function VendorSignInPage() {
         }}
       >
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
           <div
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: '16px',
+              width: 48,
+              height: 48,
+              borderRadius: '14px',
               background: 'linear-gradient(135deg, #713f12, #facc15)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.7rem',
-              marginBottom: '0.75rem',
+              fontSize: '1.5rem',
+              marginBottom: '0.5rem',
               boxShadow: '0 8px 24px rgba(250,204,21,0.3)',
             }}
           >
@@ -137,14 +137,6 @@ export default function VendorSignInPage() {
 
         {/* Clerk Sign In or Fallback Demo Form */}
         {isClerkEnabled ? (
-          <div
-            style={{
-              width: '100%',
-              borderRadius: '1.5rem',
-              overflow: 'hidden',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
-            }}
-          >
             <SignIn
               path="/vendor-sign-in"
               routing="path"
@@ -165,7 +157,7 @@ export default function VendorSignInPage() {
                     background: 'rgba(12,22,13,0.94)',
                     border: '1px solid rgba(250,204,21,0.22)',
                     backdropFilter: 'blur(20px)',
-                    padding: '2rem',
+                    padding: '1.5rem',
                   },
                   headerTitle: { color: '#fff', fontFamily: "'Outfit', sans-serif" },
                   headerSubtitle: { color: 'rgba(250,204,21,0.7)' },
@@ -176,10 +168,22 @@ export default function VendorSignInPage() {
                     boxShadow: '0 4px 20px rgba(250,204,21,0.3)',
                   },
                   footerActionLink: { color: '#facc15' },
+                  socialButtonsBlockButton: {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(250,204,21,0.2)',
+                  },
+                  socialButtonsBlockButtonText: { color: '#fff' },
+                  formFieldInput: {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(250,204,21,0.2)',
+                    color: '#ffffff',
+                  },
+                  formFieldLabel: {
+                    color: '#facc15',
+                  },
                 },
               }}
             />
-          </div>
         ) : (
           <form
             onSubmit={handleDemoLogin}

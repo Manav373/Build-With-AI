@@ -67,7 +67,7 @@ export default function App() {
 
           {/* Protected Vendor Dashboard Routes */}
           <Route element={<ProtectedVendorRoute><Outlet /></ProtectedVendorRoute>}>
-            {VendorAppRoutes}
+            {VendorAppRoutes()}
           </Route>
 
           {/* Fallback */}
