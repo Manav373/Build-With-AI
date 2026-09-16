@@ -52,20 +52,21 @@ export default function ScrollJourney() {
   const [activeMessageIndex, setActiveMessageIndex] = useState(-1); // -1 = Hero, 0-5 = Features
   const [showChatOptions, setShowChatOptions] = useState(false);
   const { language } = useLanguage();
-  const t = translations[language];
+  const t = translations[language] || translations.en;
+  const f = t?.features || translations.en.features;
 
   // Map icons and colors to localized content
   const localizedFeatures = [
-    { icon: <Store size={28} />, color: "text-amber-400", bg: "bg-amber-500/10", title: t.features.vendorMarketplace?.title || "Agri Marketplace", desc: t.features.vendorMarketplace?.desc || "Sell crops directly & buy inputs", messages: t.features.vendorMarketplace?.messages || [] },
-    { icon: <Mic size={28} />, color: "text-emerald-400", bg: "bg-emerald-500/10", title: t.features.voiceAssistant?.title || "Voice Assistant", desc: t.features.voiceAssistant?.desc || "Hands-free real-time voice advice", messages: t.features.voiceAssistant?.messages || [] },
-    { icon: <Users size={28} />, color: "text-sky-400", bg: "bg-sky-500/10", title: t.features.community?.title || "Farmer Community", desc: t.features.community?.desc || "Connect & discuss with farmers", messages: t.features.community?.messages || [] },
-    { icon: <CloudRain size={28} />, color: "text-blue-400", bg: "bg-blue-500/10", title: t.features.liveWeather.title, desc: t.features.liveWeather.desc, messages: t.features.liveWeather.messages },
-    { icon: <Bug size={28} />, color: "text-red-400", bg: "bg-red-500/10", title: t.features.diseaseDetection.title, desc: t.features.diseaseDetection.desc, messages: t.features.diseaseDetection.messages },
-    { icon: <Sprout size={28} />, color: "text-green-400", bg: "bg-green-500/10", title: t.features.cropAdvisory.title, desc: t.features.cropAdvisory.desc, messages: t.features.cropAdvisory.messages },
-    { icon: <MarketIcon size={28} />, color: "text-yellow-400", bg: "bg-yellow-500/10", title: t.features.marketPrices.title, desc: t.features.marketPrices.desc, messages: t.features.marketPrices.messages },
-    { icon: <Satellite size={28} />, color: "text-emerald-400", bg: "bg-emerald-500/10", title: t.features.satellite.title, desc: t.features.satellite.desc, messages: t.features.satellite.messages },
-    { icon: <ShieldCheck size={28} />, color: "text-purple-400", bg: "bg-purple-500/10", title: t.features.govtSchemes.title, desc: t.features.govtSchemes.desc, messages: t.features.govtSchemes.messages },
-    { icon: <MessageSquare size={28} />, color: "text-[#86efac]", bg: "bg-[#166534]/30", title: t.features.multilingual.title, desc: t.features.multilingual.desc, messages: t.features.multilingual.messages },
+    { icon: <Store size={28} />, color: "text-amber-400", bg: "bg-amber-500/10", title: f.vendorMarketplace?.title || "Agri Marketplace", desc: f.vendorMarketplace?.desc || "Sell crops directly & buy inputs", messages: f.vendorMarketplace?.messages || [] },
+    { icon: <Mic size={28} />, color: "text-emerald-400", bg: "bg-emerald-500/10", title: f.voiceAssistant?.title || "Voice Assistant", desc: f.voiceAssistant?.desc || "Hands-free real-time voice advice", messages: f.voiceAssistant?.messages || [] },
+    { icon: <Users size={28} />, color: "text-sky-400", bg: "bg-sky-500/10", title: f.community?.title || "Farmer Community", desc: f.community?.desc || "Connect & discuss with farmers", messages: f.community?.messages || [] },
+    { icon: <CloudRain size={28} />, color: "text-blue-400", bg: "bg-blue-500/10", title: f.liveWeather?.title || "Live Weather", desc: f.liveWeather?.desc || "", messages: f.liveWeather?.messages || [] },
+    { icon: <Bug size={28} />, color: "text-red-400", bg: "bg-red-500/10", title: f.diseaseDetection?.title || "Disease Detection", desc: f.diseaseDetection?.desc || "", messages: f.diseaseDetection?.messages || [] },
+    { icon: <Sprout size={28} />, color: "text-green-400", bg: "bg-green-500/10", title: f.cropAdvisory?.title || "Crop Advisory", desc: f.cropAdvisory?.desc || "", messages: f.cropAdvisory?.messages || [] },
+    { icon: <MarketIcon size={28} />, color: "text-yellow-400", bg: "bg-yellow-500/10", title: f.marketPrices?.title || "Market Prices", desc: f.marketPrices?.desc || "", messages: f.marketPrices?.messages || [] },
+    { icon: <Satellite size={28} />, color: "text-emerald-400", bg: "bg-emerald-500/10", title: f.satellite?.title || "Satellite Health", desc: f.satellite?.desc || "", messages: f.satellite?.messages || [] },
+    { icon: <ShieldCheck size={28} />, color: "text-purple-400", bg: "bg-purple-500/10", title: f.govtSchemes?.title || "Govt Schemes", desc: f.govtSchemes?.desc || "", messages: f.govtSchemes?.messages || [] },
+    { icon: <MessageSquare size={28} />, color: "text-[#86efac]", bg: "bg-[#166534]/30", title: f.multilingual?.title || "Multilingual", desc: f.multilingual?.desc || "", messages: f.multilingual?.messages || [] },
   ];
 
   useLayoutEffect(() => {

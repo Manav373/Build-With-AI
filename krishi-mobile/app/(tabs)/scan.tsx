@@ -20,6 +20,7 @@ import { getPhoneId } from '@/services/session';
 import * as Haptics from 'expo-haptics';
 import { PressableScale, FadeInUp, Counter, AnimatedProgress, Pulse } from '@/components/ui/Motion';
 import { DesignTokens } from '@/constants/DesignTokens';
+import { GlassCard } from '@/components/ui/Screen';
 
 const STRINGS = {
   en: {
@@ -284,6 +285,17 @@ export default function ScanScreen() {
     { id: '3', crop: 'Rice', disease: 'Healthy Crop', date: 'June 10, 2026', status: 'Low' },
   ]);
 
+  const handleOpenHistory = (item: ScanHistoryItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setResultData({
+      ...FALLBACK_DIAGNOSIS,
+      cropName: item.crop,
+      disease: item.disease,
+      severity: item.status,
+    });
+    setViewMode('result');
+  };
+
   useEffect(() => {
     if (viewMode === 'camera') {
       const messages = [s.keepLeafCentered, s.moveCloserToSpot, s.increaseLightLevel, s.holdSteady];
@@ -425,86 +437,174 @@ export default function ScanScreen() {
   if (viewMode === 'dashboard') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Modern Header */}
         <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <View style={{ gap: 2 }}>
-            <Text style={[t.title, { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 }]}>{s.cropDoctor}</Text>
-            <Text style={[t.caption, { color: colors.textMuted, fontWeight: '500', letterSpacing: 0.3 }]}>{s.instantDiagnosis}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <View style={[styles.headerBadge, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+              <Text style={{ fontSize: 22 }}>🔬</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[t.titleSmall, { color: colors.text, fontWeight: '800', fontSize: 18 }]}>AI Crop Doctor</Text>
+              <Text style={[t.caption, { color: colors.textMuted, fontWeight: '500' }]} numberOfLines={1}>Instant Leaf Pest & Disease Diagnosis</Text>
+            </View>
+          </View>
+          <View style={styles.accuracyPill}>
+            <View style={styles.accuracyDot} />
+            <Text style={styles.accuracyText}>98.4% Precision</Text>
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]} showsVerticalScrollIndicator={false}>
+          {/* 1. HERO SCANNER CARD */}
           <FadeInUp index={0} distance={16}>
-            <LinearGradient colors={scheme === 'dark' ? ['#0e2a14', '#050e07'] : ['#f0fdf4', '#ffffff']} style={[styles.heroCard, { borderColor: colors.accent + '40', ...DesignTokens.shadow.level2 }]}>
-              <View style={styles.heroRow}>
-                <View style={{ flex: 1, gap: 6 }}>
-                  <Text style={[t.title, { color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.3 }]}>{s.cropDiagnoser}</Text>
-                  <Text style={[t.body, { color: colors.textSecondary, fontWeight: '500', lineHeight: 22 }]}>
-                    {s.diagnoserDesc}
-                  </Text>
+            <GlassCard liquid padding={20} style={[styles.heroCard, { borderColor: scheme === 'dark' ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.22)' }]}>
+              <LinearGradient
+                colors={scheme === 'dark' ? ['rgba(16, 185, 129, 0.16)', 'rgba(6, 182, 212, 0.05)', 'transparent'] : ['rgba(16, 185, 129, 0.10)', 'rgba(6, 182, 212, 0.03)', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+
+              {/* Tag + Icon row */}
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroTagPill}>
+                  <View style={styles.heroTagDot} />
+                  <Text style={styles.heroTagText}>AI VISION PATHOLOGY</Text>
                 </View>
-                <Pulse>
-                  <View style={[styles.heroIconCircle, { backgroundColor: colors.accent }]}>
-                    <Feather name="shield" size={26} color="#ffffff" />
-                  </View>
-                </Pulse>
+                <View style={[styles.heroIconCircle, { backgroundColor: scheme === 'dark' ? 'rgba(16, 185, 129, 0.20)' : 'rgba(16, 185, 129, 0.12)' }]}>
+                  <Feather name="shield" size={18} color="#10b981" />
+                </View>
               </View>
-              <View style={styles.buttonRow}>
-                <PressableScale style={styles.scanBtnLaunch} onPress={handleStartCamera} haptic="medium" scaleTo={0.96}>
-                  <LinearGradient colors={colors.gradient.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.scanBtnGradient}>
+
+              {/* Title & Description */}
+              <View style={{ gap: 4, marginTop: 4 }}>
+                <Text style={[styles.heroTitle, { color: colors.text }]}>{s.cropDiagnoser}</Text>
+                <Text style={[styles.heroDesc, { color: colors.textSecondary }]}>
+                  {s.diagnoserDesc}
+                </Text>
+              </View>
+
+              {/* Dual Action Buttons */}
+              <View style={styles.heroButtonRow}>
+                <PressableScale style={styles.heroPrimaryBtn} onPress={handleStartCamera} haptic="medium" scaleTo={0.96}>
+                  <LinearGradient colors={colors.gradient.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.heroPrimaryBtnGradient}>
                     <Feather name="camera" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-                    <Text style={styles.scanBtnText}>{s.takeLeafScan}</Text>
+                    <Text style={styles.heroPrimaryBtnText}>{s.takeLeafScan}</Text>
                   </LinearGradient>
                 </PressableScale>
-                <PressableScale style={[styles.galleryBtnLaunch, { borderColor: colors.border, backgroundColor: colors.surfaceElevated }]} onPress={handlePickImage} haptic="light" scaleTo={0.96}>
-                  <Feather name="image" size={17} color={colors.text} style={{ marginRight: 6 }} />
-                  <Text style={[t.label, { color: colors.text, fontWeight: '700' }]}>{s.uploadPhoto}</Text>
+
+                <PressableScale
+                  style={[
+                    styles.heroSecondaryBtn,
+                    {
+                      borderColor: scheme === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.08)',
+                      backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
+                    }
+                  ]}
+                  onPress={handlePickImage}
+                  haptic="light"
+                  scaleTo={0.96}
+                >
+                  <Feather name="image" size={18} color={colors.text} style={{ marginRight: 8 }} />
+                  <Text style={[styles.heroSecondaryBtnText, { color: colors.text }]}>{s.uploadPhoto}</Text>
                 </PressableScale>
               </View>
-            </LinearGradient>
+            </GlassCard>
           </FadeInUp>
 
+          {/* 2. BEST SCAN GUIDELINES */}
           <FadeInUp index={1} distance={16}>
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, ...DesignTokens.shadow.level2 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                <View style={[styles.tipsIcon, { backgroundColor: colors.accent + '15' }]}>
-                  <Feather name="info" size={16} color={colors.accent} />
+            <GlassCard liquid padding={18} style={styles.card}>
+              <View style={styles.guidelinesHeader}>
+                <View style={[styles.guideIconCircle, { backgroundColor: 'rgba(6, 182, 212, 0.12)' }]}>
+                  <Feather name="help-circle" size={16} color="#06b6d4" />
                 </View>
-                <Text style={[t.bodyStrong, { color: colors.text, fontWeight: '700', fontSize: 15 }]}>{s.bestScanGuidelines}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.guideCardTitle, { color: colors.text }]}>{s.bestScanGuidelines}</Text>
+                  <Text style={[styles.guideCardSub, { color: colors.textMuted }]}>Follow these steps for accurate laboratory-grade analysis</Text>
+                </View>
               </View>
-              {[s.guideline1, s.guideline2, s.guideline3].map((tip, i) => (
-                <View key={tip} style={[styles.tipItem, { paddingVertical: 10, borderTopColor: colors.border, borderTopWidth: i > 0 ? 1 : 0, paddingTop: i > 0 ? 10 : 0 }]}>
-                  <View style={[styles.tipCheck, { backgroundColor: colors.accent + '15', borderColor: colors.accent, borderWidth: 1 }]}>
-                    <Feather name="check" size={13} color={colors.accent} />
+
+              <View style={styles.guideItemsList}>
+                <View style={[styles.guideItemBox, { backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: colors.border }]}>
+                  <View style={[styles.stepNumberBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981' }]}>
+                    <Feather name="crosshair" size={13} color="#10b981" />
                   </View>
-                  <Text style={[t.body, { color: colors.textSecondary, flex: 1, fontWeight: '500' }]}>{tip}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.guideItemTitle, { color: colors.text }]}>Center Leaf in Frame</Text>
+                    <Text style={[styles.guideItemDesc, { color: colors.textSecondary }]}>Keep leaf centered, filling 70% of the viewfinder</Text>
+                  </View>
                 </View>
-              ))}
-            </View>
+
+                <View style={[styles.guideItemBox, { backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: colors.border }]}>
+                  <View style={[styles.stepNumberBadge, { backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: '#f59e0b' }]}>
+                    <Feather name="sun" size={13} color="#f59e0b" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.guideItemTitle, { color: colors.text }]}>Bright, Even Lighting</Text>
+                    <Text style={[styles.guideItemDesc, { color: colors.textSecondary }]}>Use daylight or torch; avoid direct harsh shadows</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.guideItemBox, { backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: colors.border }]}>
+                  <View style={[styles.stepNumberBadge, { backgroundColor: 'rgba(6, 182, 212, 0.15)', borderColor: '#06b6d4' }]}>
+                    <Feather name="maximize-2" size={13} color="#06b6d4" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.guideItemTitle, { color: colors.text }]}>Sharp Macro Focus</Text>
+                    <Text style={[styles.guideItemDesc, { color: colors.textSecondary }]}>Hold phone steady 10–15 cm away to avoid blur</Text>
+                  </View>
+                </View>
+              </View>
+            </GlassCard>
           </FadeInUp>
 
+          {/* 3. RECENT SCANS */}
           <FadeInUp index={2} distance={16}>
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                <Text style={[t.title, { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.2 }]}>{s.recentScans}</Text>
-                <Text style={[t.caption, { color: colors.textMuted, fontWeight: '600' }]}>{s.recentScansCount}</Text>
+            <View style={{ gap: 10 }}>
+              <View style={styles.recentScansHeaderRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Feather name="clock" size={16} color={colors.accent} />
+                  <Text style={[styles.recentScansTitle, { color: colors.text }]}>{s.recentScans}</Text>
+                </View>
+                <View style={[styles.recentCountBadge, { backgroundColor: scheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: colors.border }]}>
+                  <Text style={[styles.recentCountText, { color: colors.textMuted }]}>{s.recentScansCount}</Text>
+                </View>
               </View>
+
               {recentScans.map((item, idx) => {
                 const tint = item.status === 'High' ? colors.danger : item.status === 'Medium' ? colors.warning : colors.accent;
+                const cropEmoji = item.crop.toLowerCase().includes('cotton') ? '🌱' : item.crop.toLowerCase().includes('rice') ? '🌾' : '🌾';
                 return (
                   <FadeInUp key={item.id} index={idx + 3} distance={12}>
-                    <PressableScale haptic="light" style={[styles.historyRow, { backgroundColor: colors.card, borderColor: colors.border, ...DesignTokens.shadow.level1 }]} scaleTo={0.97}>
+                    <PressableScale
+                      onPress={() => handleOpenHistory(item)}
+                      haptic="light"
+                      style={[
+                        styles.historyCard,
+                        {
+                          backgroundColor: colors.card,
+                          borderColor: colors.border,
+                          ...DesignTokens.shadow.level1,
+                        }
+                      ]}
+                      scaleTo={0.98}
+                    >
                       <View style={styles.historyLeft}>
-                        <View style={[styles.historyIcon, { backgroundColor: colors.accent + '15', borderColor: colors.accent, borderWidth: 1 }]}>
-                          <Text style={{ fontSize: 18 }}>🌾</Text>
+                        <View style={[styles.historyIconBox, { backgroundColor: tint + '15', borderColor: tint + '30' }]}>
+                          <Text style={{ fontSize: 20 }}>{cropEmoji}</Text>
                         </View>
-                        <View style={{ flex: 1, gap: 4 }}>
-                          <Text style={[t.bodyStrong, { color: colors.text, fontWeight: '700', fontSize: 14 }]}>{item.crop}</Text>
-                          <Text style={[t.caption, { color: colors.textSecondary, fontWeight: '500' }]}>{item.disease}</Text>
-                          <Text style={[t.caption, { color: colors.textMuted, fontWeight: '500', fontSize: 11 }]}>{item.date}</Text>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={[styles.historyCropName, { color: colors.text }]}>{item.crop}</Text>
+                            <View style={[styles.severityPill, { backgroundColor: tint + '15', borderColor: tint + '40' }]}>
+                              <Text style={[styles.severityPillText, { color: tint }]}>{item.status}</Text>
+                            </View>
+                          </View>
+                          <Text style={[styles.historyDisease, { color: colors.textSecondary }]} numberOfLines={1}>{item.disease}</Text>
+                          <Text style={[styles.historyDate, { color: colors.textMuted }]}>{item.date}</Text>
                         </View>
-                      </View>
-                      <View style={[styles.severityBadge, { backgroundColor: tint + '15', borderColor: tint, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 }]}>
-                        <Text style={[t.caption, { color: tint, fontWeight: '700', fontSize: 11 }]}>{item.status}</Text>
+                        <Feather name="chevron-right" size={18} color={colors.textMuted} />
                       </View>
                     </PressableScale>
                   </FadeInUp>
@@ -687,24 +787,258 @@ export default function ScanScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 16, 
+    paddingBottom: 16, 
+    borderBottomWidth: 1 
+  },
+  headerBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accuracyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+  },
+  accuracyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
+  },
+  accuracyText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#10b981',
+  },
   backBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   scrollContent: { padding: 16, gap: 16 },
-  heroCard: { padding: 20, borderRadius: 24, borderWidth: 1, gap: 16, overflow: 'hidden' },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  heroIconCircle: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  buttonRow: { flexDirection: 'row', gap: 10 },
-  scanBtnLaunch: { flex: 1, height: 48, borderRadius: 24, overflow: 'hidden' },
-  scanBtnGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  scanBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
-  galleryBtnLaunch: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  
+  // Hero Card
+  heroCard: { 
+    padding: 20, 
+    borderRadius: 24, 
+    borderWidth: 1, 
+    gap: 14, 
+    overflow: 'hidden' 
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroTagPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.14)',
+  },
+  heroTagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
+  },
+  heroTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#10b981',
+    letterSpacing: 0.5,
+  },
+  heroIconCircle: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    overflow: 'hidden' 
+  },
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  heroDesc: {
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 19,
+  },
+  heroButtonRow: { 
+    flexDirection: 'row', 
+    gap: 10,
+    marginTop: 6,
+  },
+  heroPrimaryBtn: { 
+    flex: 1.15, 
+    height: 50, 
+    borderRadius: 16, 
+    overflow: 'hidden',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroPrimaryBtnGradient: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  heroPrimaryBtnText: { 
+    color: '#ffffff', 
+    fontSize: 13, 
+    fontWeight: '800' 
+  },
+  heroSecondaryBtn: { 
+    flex: 1, 
+    height: 50, 
+    borderRadius: 16, 
+    borderWidth: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+  },
+  heroSecondaryBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Guidelines Card
   card: { padding: 18, borderRadius: 24, borderWidth: 1, overflow: 'hidden' },
-  tipItem: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
-  historyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  historyLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  historyIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  severityBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, overflow: 'hidden' },
-  severityBadgeText: { color: '#ffffff', fontSize: 10, fontWeight: '800' },
+  guidelinesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 14,
+  },
+  guideIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  guideCardSub: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  guideItemsList: {
+    gap: 8,
+  },
+  guideItemBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  stepNumberBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideItemTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  guideItemDesc: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+
+  // Recent Scans
+  recentScansHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  recentScansTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  recentCountBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  recentCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  historyCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  historyLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12, 
+    padding: 14,
+  },
+  historyIconBox: { 
+    width: 42, 
+    height: 42, 
+    borderRadius: 14, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderWidth: 1,
+    overflow: 'hidden' 
+  },
+  historyCropName: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  severityPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  severityPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  historyDisease: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  historyDate: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
   permissionScreen: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   permissionCard: { alignItems: 'center', paddingHorizontal: 36, gap: 16 },
   grantBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 22, marginTop: 8 },

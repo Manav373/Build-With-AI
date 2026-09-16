@@ -12,7 +12,12 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #cbd5e1;
+  border: 1px solid #94a3b8/30;
+}
+
+.dark input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -22,28 +27,33 @@ input[type="range"]::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4ade80, #10b981);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  margin-top: -7px;
-  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4), 0 0 0 3px rgba(74, 222, 128, 0.1);
+  background: var(--slider-thumb, linear-gradient(135deg, #4ade80, #10b981));
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  margin-top: -6px;
+  box-shadow: 0 2px 8px var(--slider-shadow, rgba(74, 222, 128, 0.4)), 0 0 0 3px var(--slider-shadow, rgba(74, 222, 128, 0.15));
   transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 input[type="range"]:hover::-webkit-slider-thumb {
   transform: scale(1.15);
-  box-shadow: 0 2px 12px rgba(74, 222, 128, 0.6), 0 0 0 5px rgba(74, 222, 128, 0.15);
+  box-shadow: 0 2px 12px var(--slider-shadow, rgba(74, 222, 128, 0.6)), 0 0 0 5px var(--slider-shadow, rgba(74, 222, 128, 0.2));
 }
 
 input[type="range"]:active::-webkit-slider-thumb {
   transform: scale(1.25);
-  box-shadow: 0 2px 16px rgba(74, 222, 128, 0.8), 0 0 0 6px rgba(74, 222, 128, 0.2);
+  box-shadow: 0 2px 16px var(--slider-shadow, rgba(74, 222, 128, 0.8)), 0 0 0 6px var(--slider-shadow, rgba(74, 222, 128, 0.25));
 }
 
 /* Firefox */
 input[type="range"]::-moz-range-track {
   height: 6px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #cbd5e1;
+  border: 1px solid #94a3b8/30;
+}
+
+.dark input[type="range"]::-moz-range-track {
+  background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -51,9 +61,9 @@ input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4ade80, #10b981);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(74, 222, 128, 0.4);
+  background: var(--slider-thumb, linear-gradient(135deg, #4ade80, #10b981));
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 8px var(--slider-shadow, rgba(74, 222, 128, 0.4));
   cursor: pointer;
 }
 
@@ -66,6 +76,10 @@ input[type="range"]::-moz-range-thumb {
 
 .skeleton-pulse {
   animation: skeletonPulse 1.8s ease-in-out infinite;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.06);
   border-radius: 12px;
+}
+
+.dark .skeleton-pulse {
+  background: rgba(255, 255, 255, 0.08);
 }

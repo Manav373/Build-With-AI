@@ -1,17 +1,7 @@
 import axios from 'axios';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
-// 1. Get the base URL with multiple fallback options
-let BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-// 2. Fix: Ensure absolute URL for relative environments
-if (BASE_URL && !BASE_URL.startsWith('http') && BASE_URL.includes('.')) {
-  BASE_URL = `https://${BASE_URL}`;
-}
-
-// 3. Cleanup trailing slashes
-if (BASE_URL.endsWith('/')) {
-  BASE_URL = BASE_URL.slice(0, -1);
-}
+let BASE_URL = getApiBaseUrl();
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

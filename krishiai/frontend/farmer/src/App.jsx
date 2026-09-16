@@ -5,7 +5,6 @@ import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import CustomCursor from './components/CustomCursor.jsx';
 import MainLayout from './layouts/MainLayout.jsx';
-import { FarmerAppRoutes } from './routes/farmerRoutes.jsx';
 
 // Farmer Public Pages
 const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
@@ -14,6 +13,25 @@ const TermsPage = lazy(() => import('./pages/TermsPage.jsx'));
 const SignInPage = lazy(() => import('./pages/SignInPage.jsx'));
 const SignUpPage = lazy(() => import('./pages/SignUpPage.jsx'));
 const DomainRestrictedPage = lazy(() => import('./pages/DomainRestrictedPage.jsx'));
+
+// Farmer Dashboard Pages
+const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
+const MarketPricePage = lazy(() => import('./pages/MarketPricePage.jsx'));
+const PredictPage = lazy(() => import('./pages/PredictPage.jsx'));
+const RecommendPage = lazy(() => import('./pages/RecommendPage.jsx'));
+const SatellitePage = lazy(() => import('./pages/SatellitePage.jsx'));
+const MandiMapPage = lazy(() => import('./pages/MandiMapPage.jsx'));
+const SchemesPage = lazy(() => import('./pages/SchemesPage.jsx'));
+const FarmerAnalytics = lazy(() => import('./pages/FarmerAnalytics.jsx'));
+const FarmerHeatmap = lazy(() => import('./pages/FarmerHeatmap.jsx'));
+const FarmerBrowseRequirementsPage = lazy(() => import('./pages/FarmerBrowseRequirementsPage.jsx'));
+const VoiceAssistantPage = lazy(() => import('./pages/VoiceAssistantPage.jsx'));
+const CallHistoryPage = lazy(() => import('./pages/CallHistoryPage.jsx'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage.jsx'));
+const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage.jsx'));
+const IoTPage = lazy(() => import('./pages/IoTPage.jsx'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const HelpPage = lazy(() => import('./pages/HelpPage.jsx'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-[#0a0f0d]">
@@ -77,7 +95,23 @@ export default function App() {
 
           {/* Farmer Portal Protected Dashboard Routes */}
           <Route element={isClerkEnabled ? <ProtectedRoute><MainLayout /></ProtectedRoute> : <MainLayout />}>
-            {FarmerAppRoutes}
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/analytics" element={<FarmerAnalytics />} />
+            <Route path="/heatmap" element={<FarmerHeatmap />} />
+            <Route path="/market-prices" element={<MarketPricePage />} />
+            <Route path="/predict" element={<PredictPage />} />
+            <Route path="/recommend" element={<RecommendPage />} />
+            <Route path="/satellite" element={<SatellitePage />} />
+            <Route path="/mandi-map" element={<MandiMapPage />} />
+            <Route path="/schemes" element={<SchemesPage />} />
+            <Route path="/sell-crops" element={<FarmerBrowseRequirementsPage />} />
+            <Route path="/whatsapp" element={<WhatsAppPage />} />
+            <Route path="/community" element={<CommunityPage />} />
+            <Route path="/call-history" element={<CallHistoryPage />} />
+            <Route path="/voice-assistant" element={<VoiceAssistantPage />} />
+            <Route path="/iot" element={<IoTPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/help" element={<HelpPage />} />
           </Route>
 
           {/* Root fallbacks */}

@@ -291,6 +291,15 @@ export default function ChatScreen() {
     </FadeInUp>
   );
 
+  const handleBack = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -300,7 +309,7 @@ export default function ChatScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
-          <PressableScale onPress={() => router.back()} haptic="light" style={styles.backBtn} accessibilityLabel="Go back">
+          <PressableScale onPress={handleBack} haptic="light" style={styles.backBtn} accessibilityLabel="Go back">
             <Feather name="chevron-left" size={24} color={colors.text} />
           </PressableScale>
           <View style={[styles.avatarCircle, { backgroundColor: colors.green + '15' }]}>
@@ -375,7 +384,7 @@ export default function ChatScreen() {
       )}
 
       {/* Input */}
-      <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 12, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) + 6, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         <View style={styles.inputRow}>
           <PressableScale onPress={() => setShowAttachmentMenu(!showAttachmentMenu)} haptic="light" style={[styles.iconBtn, { backgroundColor: colors.surfaceElevated }]} accessibilityLabel={s.attachFile}>
             <Feather name="paperclip" size={20} color={colors.textSecondary} />

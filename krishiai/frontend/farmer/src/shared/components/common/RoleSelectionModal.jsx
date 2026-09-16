@@ -24,31 +24,6 @@ const ROLES = [
     ctaTextColor: '#052e14',
     route: '/sign-up',
   },
-  {
-    id: 'vendor',
-    icon: '🏪',
-    label: 'Vendor',
-    sublabel: 'Procurement, Seller, or Hybrid',
-    description: 'Buy crops directly from farmers, sell agricultural inputs & equipment, or operate both with one account.',
-    benefits: [
-      'Product listing & store management',
-      'Crop buying requirements & procurement',
-      'Farmer negotiations & order tracking',
-      'Vendor marketplace profile & analytics',
-    ],
-    vendorTypes: [
-      { emoji: '🏭', label: 'Procurement Vendor', desc: 'Buy crops in bulk' },
-      { emoji: '🏪', label: 'Agri Input Seller', desc: 'Sell products & tools' },
-      { emoji: '🔄', label: 'Hybrid Vendor', desc: 'Buy crops & sell products' },
-    ],
-    color: '#facc15',
-    gradient: 'linear-gradient(135deg, #713f12 0%, #a16207 60%, #facc15 100%)',
-    glowColor: 'rgba(250,204,21,0.35)',
-    borderColor: 'rgba(250,204,21,0.25)',
-    bgCard: 'rgba(113,63,18,0.1)',
-    ctaTextColor: '#1c0e00',
-    route: '/vendor-type-select',
-  },
 ];
 
 export default function RoleSelectionModal({ isOpen, onClose }) {
@@ -106,7 +81,7 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
               style={{
                 width: '100%',
-                maxWidth: 820,
+                maxWidth: 480,
                 maxHeight: 'calc(100vh - 2rem)',
                 overflowY: 'auto',
                 pointerEvents: 'all',
@@ -333,22 +308,6 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                           </li>
                         ))}
                       </ul>
-
-                      {role.vendorTypes && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.5rem', borderRadius: '0.6rem', background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}>
-                          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Includes 3 Vendor Types:
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.25rem' }}>
-                            {role.vendorTypes.map((vt, k) => (
-                              <div key={k} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: 'rgba(255,255,255,0.04)' }}>
-                                <span style={{ fontSize: '0.9rem' }}>{vt.emoji}</span>
-                                <span style={{ fontSize: '0.62rem', color: '#f0fdf4', fontWeight: 700, marginTop: 2, lineHeight: 1.1 }}>{vt.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
                       <div
                         style={{

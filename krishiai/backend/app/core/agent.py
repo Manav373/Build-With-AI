@@ -355,12 +355,14 @@ def _truncate_history(messages: list, max_tokens: int = 4000) -> list:
 # ---------------------------------------------------------------------------
 # Shared base query processor (called by channel-specific agents)
 # ---------------------------------------------------------------------------
+from app.utils.language_detector import detect_language, get_language_rule
 
 async def process_query_base(
     message: str,
     system_prompt: str,
     history: list = None,
-    tools: list = None
+    tools: list = None,
+    target_language: str = None
 ) -> str:
     """
     Core LLM + tool-calling loop used by both the WhatsApp agent and
@@ -368,17 +370,18 @@ async def process_query_base(
     """
     selected_tools = tools if tools is not None else TOOLS_SCHEMA
     groq_api_key = os.getenv("GROQ_API_KEY")
+    current_lang = target_language or detect_language(message)
 
     if not groq_api_key:
         logger.warning("GROQ_API_KEY not set – using mocked fallbacks.")
-        if "market" in message.lower() or "price" in message.lower():
-            return "To get the market price, please provide the crop name and your location."
-        elif "weather" in message.lower():
-            return "Please provide your location to get the weather forecast."
-        elif "scheme" in message.lower():
-            return "Please mention your state to find relevant agricultural schemes."
-        elif any(w in message.lower() for w in ["sow", "plant", "grow", "advice", "crop"]):
-            return "Please provide the crop name and your location to get specific advice."
+        if current_lang == "Hindi":
+            return "नमस्ते! मैं कृषि एआई हूँ। आप मुझसे मौसम, फसल सलाह, मंडी भाव या फसल रोग के बारे में पूछ सकते हैं।"
+        elif current_lang == "Tamil":
+            return "வணக்கம்! நான் கிருஷி AI. வானிலை, பயிர் ஆலோசனை, சந்தை விலை அல்லது பயிர் நோய்கள் பற்றி நீங்கள் என்னிடம் கேட்கலாம்."
+        elif current_lang == "Gujarati":
+            return "નમસ્તે! હું કૃષિ AI છું. તમે મને હવામાન, પાકની સલાહ, બજાર ભાવ અથવા પાકના રોગ વિશે પૂછી શકો છો."
+        elif current_lang == "Marathi":
+            return "नमस्कार! मी कृषी AI आहे. तुम्ही मला हवामान, पीक सल्ला, बाजारभाव किंवा पिकांच्या रोगांबद्दल विचारू शकता."
         return "Namaste! I am Krishi AI. You can ask me about weather, crop advice, market prices, or send an image of a diseased crop."
 
     client = AsyncGroq(api_key=groq_api_key, max_retries=0)
@@ -424,17 +427,21 @@ async def process_query_base(
     async def _narrate(tool_name, tool_result, user_message):
         """Safely narrate tool results back to the farmer without triggering tool calls."""
         res_str = json.dumps(tool_result, ensure_ascii=False, indent=2) if isinstance(tool_result, (dict, list)) else str(tool_result)
+        narrate_lang = detect_language(user_message, preference=current_lang)
+        lang_rule = get_language_rule(narrate_lang)
+
         narrate_prompt = (
-            f"You are KrishiAI, a friendly agricultural AI advisor.\n"
-            f"The farmer asked: '{user_message}'\n\n"
+            f"You are KrishiAI, a smart, farmer-friendly agricultural AI assistant.\n"
+            f"The farmer specifically asked: '{user_message}'\n\n"
             f"Here is the verified data from the '{tool_name}' tool:\n"
             f"{res_str}\n\n"
-            f"INSTRUCTIONS:\n"
-            f"- Directly write a helpful, friendly response for the farmer in rich Markdown.\n"
-            f"- DO NOT call any functions or tools.\n"
-            f"- DO NOT output JSON or function tags.\n"
-            f"- If structured data or weather is provided, format key metrics cleanly.\n"
-            f"- Include actionable farming advice based on this data."
+            f"STRICT INSTRUCTIONS:\n"
+            f"1. STRICT DYNAMIC LANGUAGE MIRRORING (CRITICAL): The farmer asked in {narrate_lang} ('{user_message}'). You MUST respond ENTIRELY in {narrate_lang} (using appropriate script and natural conversational phrasing). {lang_rule} DO NOT default to English!\n"
+            f"2. ANSWER EXACTLY WHAT THE FARMER ASKED. If they asked specifically for temperature, rain, a particular crop rate, or a specific metric, answer ONLY that requested item concisely (1-2 sentences) in {narrate_lang}. DO NOT provide full weather tables, sunrise/sunset, humidity, pressure, or lengthy unsolicited farming tips unless they specifically asked for a full forecast or general advisory!\n"
+            f"3. If the user asked a general question (e.g., 'What is today's weather?', 'Mandi update', 'Give farming advice'), then and only then provide a complete breakdown with markdown table and tips in {narrate_lang}.\n"
+            f"4. Be natural, clear, and direct. Ideal for both reading on screen and listening via voice assistant.\n"
+            f"5. DO NOT call any functions or tools.\n"
+            f"6. DO NOT output JSON or function tags."
         )
         narrate_msgs = [
             {"role": "user", "content": narrate_prompt}
@@ -455,9 +462,44 @@ async def process_query_base(
                 temp = tool_result.get("temp_c", tool_result.get("temperature", "N/A"))
                 cond = tool_result.get("condition", tool_result.get("description", "Clear"))
                 hum = tool_result.get("humidity", "N/A")
-                city_name = tool_result.get("city", user_message)
+                city_name = tool_result.get("city", "your area")
+                lower_q = user_message.lower()
+                if any(w in lower_q for w in ["temp", "temperature", "tapman", "veppanilai"]):
+                    if narrate_lang == "Hindi":
+                        return f"{city_name} में वर्तमान तापमान **{temp}°C** है।"
+                    elif narrate_lang == "Tamil":
+                        return f"{city_name} இல் தற்போதைய வெப்பநிலை **{temp}°C** ஆகும்."
+                    elif narrate_lang == "Gujarati":
+                        return f"{city_name} માં વર્તમાન તાપમાન **{temp}°C** છે."
+                    elif narrate_lang == "Marathi":
+                        return f"{city_name} मध्ये सध्याचे तापमान **{temp}°C** आहे."
+                    return f"The current temperature in {city_name} is **{temp}°C**."
+                if any(w in lower_q for w in ["humidity", "nami", "eerappadham"]):
+                    if narrate_lang == "Hindi":
+                        return f"{city_name} में वर्तमान नमी **{hum}%** है।"
+                    elif narrate_lang == "Tamil":
+                        return f"{city_name} இல் தற்போதைய ஈரப்பதம் **{hum}%** ஆகும்."
+                    return f"The current humidity in {city_name} is **{hum}%**."
+                if any(w in lower_q for w in ["rain", "barish", "precipitation", "mazhai", "varsad", "paus"]):
+                    if narrate_lang == "Hindi":
+                        return f"{city_name} में मौसम की स्थिति: **{cond}**।"
+                    elif narrate_lang == "Tamil":
+                        return f"{city_name} இல் வானிலை நிலை: **{cond}**."
+                    elif narrate_lang == "Gujarati":
+                        return f"{city_name} માં હવામાનની સ્થિતિ: **{cond}**."
+                    elif narrate_lang == "Marathi":
+                        return f"{city_name} मधील हवामानाची स्थिती: **{cond}**."
+                    return f"The current weather in {city_name} is **{cond}**."
+                
+                header_title = {
+                    "Hindi": f"### 🌤 {city_name} के लिए मौसम पूर्वानुमान",
+                    "Tamil": f"### 🌤 {city_name} க்கான வானிலை முன்னறிவிப்பு",
+                    "Gujarati": f"### 🌤 {city_name} માટે હવામાન આગાહી",
+                    "Marathi": f"### 🌤 {city_name} साठी हवामान अंदाज",
+                }.get(narrate_lang, f"### 🌤 Weather Forecast for {city_name}")
+                
                 return (
-                    f"### 🌤 Weather Forecast for {city_name}\n\n"
+                    f"{header_title}\n\n"
                     f"| Metric | Value |\n|---|---|\n"
                     f"| **Condition** | {cond} |\n"
                     f"| **Temperature** | {temp}°C |\n"

@@ -20,10 +20,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark select/option theming */
+/* Select/option theming */
 select option {
-  background-color: var(--surface);
-  color: var(--text);
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select option {
+  background-color: #0d1b2a !important;
+  color: #ffffff !important;
 }
 
 /* ── Design Tokens ── */

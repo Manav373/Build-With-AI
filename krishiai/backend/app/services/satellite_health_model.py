@@ -2,7 +2,10 @@
 import os
 import joblib
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except Exception:
+    pd = None
 import logging
 
 logger = logging.getLogger("KrishiMCP.SatelliteML")

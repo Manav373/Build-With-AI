@@ -1,148 +1,123 @@
 import React from 'react';
 import { 
+  Cpu, 
+  BrainCircuit, 
+  ArrowRight, 
   CheckCircle2, 
   AlertTriangle, 
-  Droplet, 
-  CloudRain, 
-  Sun, 
-  ShieldCheck, 
-  Activity,
-  Cpu,
-  FileText
+  Zap, 
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 
 export default function DecisionEngineCard({ decision, telemetry, device }) {
-  if (!decision) {
-    return (
-      <div className="decision-card">
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Evaluating agronomic rule matrix...</div>
-      </div>
-    );
-  }
+  const pipeline = decision?.pipeline || {
+    sense: 'Reading soil capacitance, raindrop conductivity & microclimate...',
+    understand: 'Evaluating root zone moisture tension and evapotranspiration...',
+    decide: 'Standing by for moisture threshold trigger...',
+    act: 'Relay in safe de-energized standby (GPIO 26 HIGH)',
+    learn: 'Calculating field drying rate...'
+  };
 
-  const {
-    status,
-    headline,
-    color,
-    reasoning,
-    explanation,
-    confidence,
-    recommendedAction,
-    waterRequirementScore,
-    evapoTranspirationRate,
-    ruleFired
-  } = decision;
+  const action = decision?.action || 'STANDBY';
 
-  const borderLeftColor = color === 'rose' ? '#f87171' : color === 'amber' ? '#fbbf24' : color === 'sky' ? '#38bdf8' : '#34d399';
-  const headlineColor = color === 'rose' ? '#fca5a5' : color === 'amber' ? '#fde68a' : color === 'sky' ? '#7dd3fc' : '#86efac';
+  const getActionBadge = (act) => {
+    switch (act) {
+      case 'IRRIGATE_NOW':
+        return { label: '🚨 IRRIGATION TRIGGERED', bg: 'bg-red-500/20 text-red-600 dark:text-red-300 border-red-500/40' };
+      case 'HOLD_RAIN':
+        return { label: '🌧️ HOLD (RAIN LOCKOUT)', bg: 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/40' };
+      case 'STOP_OPTIMAL':
+        return { label: '✅ TARGET MOISTURE RESTORED', bg: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' };
+      case 'RECOMMEND_IRRIGATION':
+        return { label: '💧 RECOMMEND IRRIGATION', bg: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40' };
+      default:
+        return { label: '● MONITORING & STANDBY', bg: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700' };
+    }
+  };
+
+  const badge = getActionBadge(action);
+
+  const steps = [
+    { num: 1, title: 'SENSE', desc: pipeline.sense, color: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-300 dark:border-cyan-500/30' },
+    { num: 2, title: 'UNDERSTAND', desc: pipeline.understand, color: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-300 dark:border-indigo-500/30' },
+    { num: 3, title: 'DECIDE', desc: pipeline.decide, color: 'text-amber-600 dark:text-amber-400', border: 'border-amber-300 dark:border-amber-500/30' },
+    { num: 4, title: 'ACT', desc: pipeline.act, color: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-300 dark:border-emerald-500/30' },
+    { num: 5, title: 'LEARN', desc: pipeline.learn, color: 'text-purple-600 dark:text-purple-400', border: 'border-purple-300 dark:border-purple-500/30' },
+  ];
 
   return (
-    <div className="decision-card" id="card-decision-engine" style={{ borderLeftColor }}>
-      {/* Top Banner */}
-      <div className="decision-top">
-        <div className="decision-banner">
-          <div className="ai-brain-icon" style={{ borderColor: borderLeftColor, color: borderLeftColor }}>
-            <Cpu size={22} />
+    <div className="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-6 shadow-sm dark:shadow-xl relative overflow-hidden backdrop-blur-sm">
+      {/* Background glow */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <BrainCircuit size={22} />
           </div>
           <div>
-            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontWeight: 700 }}>
-              Agronomic Decision Controller · Rule Matrix v1.4
-            </div>
-            <div className="decision-headline" style={{ color: headlineColor, fontSize: '1.35rem', fontWeight: 800, marginTop: '2px' }}>
-              {headline}
-            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              Explainable Agricultural Decision Engine
+              <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                Track 4 Kisan Alert
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Autonomous agronomic reasoning pipeline evaluated every telemetry packet
+            </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="meta-pill" style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <span style={{ color: 'var(--text-muted)' }}>Confidence:</span>
-            <strong style={{ color: '#ffffff' }}>{confidence}%</strong>
-          </div>
-          <div className="meta-pill" style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <span style={{ color: 'var(--text-muted)' }}>Rule:</span>
-            <strong className="font-mono" style={{ color: borderLeftColor }}>{ruleFired || 'DEFAULT_THRESHOLD'}</strong>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold px-3 py-1 rounded-full border ${badge.bg}`}>
+            {badge.label}
+          </span>
+          <span className="text-[10px] text-slate-500 font-mono">
+            Mode: {device?.mode || 'AUTO'}
+          </span>
         </div>
       </div>
 
-      {/* Structured Reasoning Box */}
-      <div className="decision-reason-box">
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-          <Activity size={16} color="var(--emerald-400)" style={{ marginTop: '2px', flexShrink: 0 }} />
-          <div>
-            <strong style={{ color: 'var(--text-highlight)' }}>Agronomic Assessment: </strong>
-            <span>{reasoning}</span>
+      {/* 5-Step Pipeline Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        {steps.map((step) => (
+          <div 
+            key={step.num}
+            className={`rounded-xl bg-slate-50 dark:bg-slate-950/40 p-4 border ${step.border} flex flex-col justify-between hover:bg-slate-100 dark:hover:bg-slate-950/70 transition shadow-sm dark:shadow-none`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-[11px] font-black tracking-widest uppercase ${step.color}`}>
+                  {step.num}. {step.title}
+                </span>
+              </div>
+              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
+                {step.desc}
+              </p>
+            </div>
+            
+            <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+              <span>Stage {step.num} of 5</span>
+              <CheckCircle2 size={12} className="text-emerald-500 dark:text-emerald-400" />
+            </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* 5-Step Logic Pipeline */}
-      <div className="pipeline-grid">
-        {/* Step 1: Telemetry Acquisition */}
-        <div className="pipeline-step">
-          <div className="step-label">
-            <Droplet size={12} />
-            <span>1. Sensor Input</span>
-          </div>
-          <div className="step-content">
-            Soil: <strong style={{ color: 'var(--text-highlight)' }}>{telemetry?.soilMoisture}%</strong> (Raw: {telemetry?.soilRaw})
-            <br />
-            Temp: {telemetry?.temperature}°C · Hum: {telemetry?.humidity}%
-          </div>
+      {/* Rationale Footer */}
+      <div className="mt-4 pt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-slate-700 dark:text-slate-400 gap-2 bg-slate-50 dark:bg-slate-950/30 p-3 rounded-xl border border-slate-200 dark:border-slate-800/50">
+        <div className="flex items-center gap-2">
+          <Sparkles size={15} className="text-amber-500 dark:text-amber-400 flex-shrink-0" />
+          <span>
+            <strong className="text-slate-900 dark:text-slate-200">Current AI Recommendation: </strong>
+            {decision?.reason || 'Soil moisture is optimal. Standby.'}
+          </span>
         </div>
-
-        {/* Step 2: Threshold Analysis */}
-        <div className="pipeline-step">
-          <div className="step-label">
-            <Sun size={12} />
-            <span>2. Climate Factor</span>
-          </div>
-          <div className="step-content">
-            Daylight: <strong style={{ color: 'var(--text-highlight)' }}>{telemetry?.light ? 'Active Solar' : 'Night Cycle'}</strong>
-            <br />
-            ET Estimate: {evapoTranspirationRate || 'Moderate'}
-          </div>
-        </div>
-
-        {/* Step 3: Safety & Weather Interlock */}
-        <div className="pipeline-step">
-          <div className="step-label">
-            <CloudRain size={12} />
-            <span>3. Rain Interlock</span>
-          </div>
-          <div className="step-content">
-            Precipitation: <strong style={{ color: telemetry?.rain ? 'var(--sky-400)' : 'var(--text-secondary)' }}>{telemetry?.rain ? 'DETECTED' : 'CLEAR'}</strong>
-            <br />
-            Safety Override: {telemetry?.rain ? 'BLOCKED' : 'PASS'}
-          </div>
-        </div>
-
-        {/* Step 4: Actuator Command */}
-        <div className="pipeline-step">
-          <div className="step-label">
-            <ShieldCheck size={12} />
-            <span>4. Actuator Output</span>
-          </div>
-          <div className="step-content">
-            Recommended Action:
-            <br />
-            <strong style={{ color: 'var(--text-highlight)' }}>{recommendedAction}</strong>
-          </div>
-        </div>
-
-        {/* Step 5: System Logging */}
-        <div className="pipeline-step">
-          <div className="step-label">
-            <FileText size={12} />
-            <span>5. Audit Record</span>
-          </div>
-          <div className="step-content">
-            Water Need Index: <strong style={{ color: 'var(--text-highlight)' }}>{waterRequirementScore}/100</strong>
-            <br />
-            Controller State: Synced
-          </div>
-        </div>
+        <span className="text-slate-500 text-[11px] font-mono whitespace-nowrap">
+          Drying Velocity: ~{decision?.dryingRatePerHour || 1.8}%/hr
+        </span>
       </div>
     </div>
   );

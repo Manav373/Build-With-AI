@@ -1,229 +1,181 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
-  Power, 
-  ShieldAlert, 
-  Clock, 
-  CloudRain, 
   Zap, 
+  Power, 
+  AlertTriangle, 
+  ShieldCheck, 
+  Settings2, 
+  Droplets,
   Activity,
-  CheckCircle,
-  AlertTriangle,
-  Shield
+  CheckCircle2
 } from 'lucide-react';
 
-export default function ManualPumpControl({
-  device,
-  telemetry,
-  onModeChange,
-  onOpenPumpModal,
-  onStopPump,
-  onEmergencyStop,
-  userRole = 'Admin',
-  controlState
+export default function ManualPumpControl({ 
+  telemetry, 
+  device, 
+  onToggleMode, 
+  onStartPump, 
+  onStopPump, 
+  onEmergencyStop
 }) {
-  const [elapsedStr, setElapsedStr] = useState('0m 0s');
-
-  const isPumpOn = telemetry?.pump || false;
-  const isRain = telemetry?.rain || false;
+  const isPumpActive = Boolean(telemetry?.pump);
+  const isRaining = Boolean(telemetry?.rain);
   const mode = device?.mode || 'AUTO';
-
-  useEffect(() => {
-    let interval;
-    if (isPumpOn && telemetry?.pumpStartedAt) {
-      const updateTimer = () => {
-        const diff = Math.max(0, Math.floor((Date.now() - new Date(telemetry.pumpStartedAt).getTime()) / 1000));
-        const mins = Math.floor(diff / 60);
-        const secs = diff % 60;
-        setElapsedStr(`${mins}m ${secs}s`);
-      };
-      updateTimer();
-      interval = setInterval(updateTimer, 1000);
-    } else {
-      setElapsedStr('0m 0s');
-    }
-    return () => clearInterval(interval);
-  }, [isPumpOn, telemetry?.pumpStartedAt]);
+  const soilMoisture = telemetry?.soilMoisture ?? 0;
+  const targetMoisture = device?.settings?.targetMoisture || 65;
 
   return (
-    <div className="pump-control-card" id="pump-station-hub">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-        <div>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-highlight)' }}>
-            <Zap size={16} color="var(--emerald-400)" />
-            Irrigation Actuator Controller
-          </h3>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-            Relay Output: GPIO 26 · Active-LOW Isolated Switch · Interlock Safe
+    <div className="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-6 shadow-sm dark:shadow-xl backdrop-blur-sm">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition ${
+            isPumpActive 
+              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 animate-pulse' 
+              : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+          }`}>
+            <Droplets size={22} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              Pump Actuation & Safety Station
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                isPumpActive 
+                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 animate-pulse' 
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+              }`}>
+                {isPumpActive ? '● PUMP ENERGIZED (ON)' : '○ PUMP STANDBY (OFF)'}
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Direct GPIO 26 Relay actuation with real-time precipitation lockout & fail-safe cutoff
+            </p>
           </div>
         </div>
 
-        {/* Mode Selector */}
-        <div className="mode-switcher" role="radiogroup" aria-label="Irrigation Mode">
+        {/* Mode Switcher: AUTO vs MANUAL */}
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
           <button
-            id="btn-mode-auto"
-            type="button"
-            className={`mode-btn ${mode === 'AUTO' ? 'active' : ''}`}
-            onClick={() => onModeChange('AUTO')}
+            onClick={() => onToggleMode('AUTO')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              mode === 'AUTO' 
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
           >
-            AUTO (LOGIC CONTROL)
+            <ShieldCheck size={14} /> AUTO (AI)
           </button>
           <button
-            id="btn-mode-manual"
-            type="button"
-            className={`mode-btn ${mode === 'MANUAL' ? 'active' : ''}`}
-            onClick={() => onModeChange('MANUAL')}
+            onClick={() => onToggleMode('MANUAL')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              mode === 'MANUAL' 
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' 
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
           >
-            MANUAL OVERRIDE
+            <Settings2 size={14} /> MANUAL
           </button>
         </div>
       </div>
 
-      {/* Rain Alert Interlock Banner */}
-      {isRain && (
-        <div style={{ 
-          background: 'rgba(2, 132, 199, 0.12)', 
-          border: '1px solid rgba(2, 132, 199, 0.3)', 
-          borderRadius: 'var(--radius-sm)', 
-          padding: '0.75rem 1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.65rem',
-          marginBottom: '1rem',
-          color: '#93c5fd'
-        }}>
-          <CloudRain size={18} color="#38bdf8" />
-          <div style={{ fontSize: '0.82rem' }}>
-            <strong>Precipitation Interlock Active:</strong> Rain detected on FC-37 sensor. Pump activation is locked out by safety engine.
-          </div>
-        </div>
-      )}
-
-      {/* Main Status & Controls Panel */}
-      <div style={{ 
-        background: 'var(--bg-secondary)', 
-        border: '1px solid var(--border-subtle)', 
-        borderRadius: 'var(--radius-sm)', 
-        padding: '1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ 
-            width: '44px', 
-            height: '44px', 
-            borderRadius: 'var(--radius-sm)', 
-            background: isPumpOn ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-surface)', 
-            border: `1px solid ${isPumpOn ? 'var(--emerald-500)' : 'var(--border-medium)'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Power size={20} color={isPumpOn ? 'var(--emerald-400)' : 'var(--text-muted)'} />
-          </div>
-
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Relay 1 Circuit State (ESP32 status/motor)
+      {/* Main Control Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Direct Actuation Controls */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Active Rain Warning Banner if raining */}
+          {isRaining && (
+            <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 flex items-center gap-3 text-blue-700 dark:text-blue-300 text-xs">
+              <AlertTriangle size={18} className="text-blue-500 dark:text-blue-400 flex-shrink-0" />
+              <span>
+                <strong>Rain Safety Interlock Engaged:</strong> Natural precipitation is active. Pump actuation is locked out to prevent waterlogging.
+              </span>
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: isPumpOn ? 'var(--emerald-400)' : 'var(--text-primary)' }}>
-              {isPumpOn ? 'ENERGIZED / PUMP ACTIVE' : 'DE-ENERGIZED / STANDBY'}
-            </div>
-            {controlState?.motorCommand && !isPumpOn && (
-              <div style={{ fontSize: '0.75rem', color: 'var(--amber-400)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Clock size={12} /> Command Sent (control/motorCommand=true) · Awaiting ESP32 relay actuation...
-              </div>
-            )}
-            {isPumpOn ? (
-              <div style={{ fontSize: '0.78rem', color: 'var(--emerald-400)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
-                <Clock size={12} /> Runtime: <strong className="font-mono">{elapsedStr}</strong> (Operator: {telemetry?.pumpStartedBy || 'Admin'})
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                Operating Mode: <strong>{mode}</strong> {mode === 'AUTO' ? '(Automatic Sensor Logic)' : '(Manual Control Ready)'}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Action Button Set */}
-        <div className="pump-actions">
-          {isPumpOn ? (
-            <button
-              id="btn-hub-stop-pump"
-              type="button"
-              className="btn-danger"
-              onClick={() => onStopPump('Manual Operator Stop')}
-            >
-              <Power size={15} />
-              <span>De-energize Pump</span>
-            </button>
-          ) : (
-            <button
-              id="btn-hub-start-pump"
-              type="button"
-              className="btn-primary"
-              disabled={isRain || mode === 'AUTO'}
-              onClick={onOpenPumpModal}
-              title={mode === 'AUTO' ? 'Switch to MANUAL mode to activate pump' : (isRain ? 'Blocked by Rain Interlock' : 'Start Manual Irrigation')}
-              style={{ opacity: (isRain || mode === 'AUTO') ? 0.6 : 1, cursor: (isRain || mode === 'AUTO') ? 'not-allowed' : 'pointer' }}
-            >
-              <Power size={15} />
-              <span>{mode === 'AUTO' ? 'Locked (AUTO Mode)' : 'Start Pump (Manual)'}</span>
-            </button>
           )}
 
-          <button
-            id="btn-hub-emergency-stop"
-            type="button"
-            className="btn-emergency"
-            onClick={onEmergencyStop}
-          >
-            <ShieldAlert size={15} />
-            <span>EMERGENCY STOP</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Safety Interlocks Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '0.65rem', 
-        marginTop: '1rem' 
-      }}>
-        <div style={{ background: 'var(--bg-secondary)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)', fontSize: '0.75rem' }}>
-          <div style={{ color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Shield size={12} color="var(--emerald-400)" />
-            Safe Boot State
+          {/* Operational Status Banner */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Actuator Circuit Status
+              </span>
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isPumpActive ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
+                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                  {isPumpActive ? 'RELAY GPIO 26 ENERGIZED (Active LOW)' : 'RELAY GPIO 26 DE-ENERGIZED (High-Z Standby)'}
+                </span>
+              </div>
+            </div>
+            <div className="text-right font-mono text-[11px] text-slate-600 dark:text-slate-400">
+              <div>Soil Moisture: <strong className="text-emerald-600 dark:text-emerald-400">{soilMoisture}%</strong> / Target {targetMoisture}%</div>
+              <div>Interlock: <strong className={isRaining ? 'text-blue-500' : 'text-emerald-500'}>{isRaining ? 'LOCKED' : 'READY'}</strong></div>
+            </div>
           </div>
-          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem' }}>Relay defaults to OPEN at power-up</div>
+
+          {/* Direct ON / OFF Action Buttons */}
+          <div className="flex flex-wrap gap-3 pt-1">
+            {!isPumpActive ? (
+              <button
+                onClick={() => onStartPump()}
+                disabled={isRaining}
+                className="flex-1 min-h-[52px] py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:pointer-events-none text-white font-extrabold text-sm transition flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/30 active:scale-[0.99] cursor-pointer"
+              >
+                <Zap size={18} className="animate-pulse" />
+                <span>TURN PUMP ON (ACTUATE)</span>
+              </button>
+            ) : (
+              <button
+                onClick={onStopPump}
+                className="flex-1 min-h-[52px] py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-sm transition flex items-center justify-center gap-2.5 shadow-lg shadow-amber-600/30 active:scale-[0.99] cursor-pointer"
+              >
+                <Power size={18} />
+                <span>TURN PUMP OFF (DE-ACTUATE)</span>
+              </button>
+            )}
+
+            <button
+              onClick={onEmergencyStop}
+              className="py-3.5 px-6 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 uppercase tracking-wider active:scale-[0.99] cursor-pointer"
+            >
+              <AlertTriangle size={16} /> EMERGENCY STOP
+            </button>
+          </div>
         </div>
 
-        <div style={{ background: 'var(--bg-secondary)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)', fontSize: '0.75rem' }}>
-          <div style={{ color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Clock size={12} color="var(--amber-400)" />
-            Watchdog Cutoff
-          </div>
-          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem' }}>Auto limit: {device?.settings?.autoMaxDurationMinutes || 15}m · Manual limit: {device?.settings?.manualMaxDurationMinutes || 30}m</div>
-        </div>
+        {/* Safety Guardrails Panel */}
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-950/60 p-4 border border-slate-200 dark:border-slate-800 text-xs space-y-3">
+          <span className="font-bold text-slate-800 dark:text-slate-200 block uppercase tracking-wider text-[11px] border-b border-slate-200 dark:border-slate-800 pb-2 flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
+            Automated Safety Cutoffs
+          </span>
 
-        <div style={{ background: 'var(--bg-secondary)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)', fontSize: '0.75rem' }}>
-          <div style={{ color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <CloudRain size={12} color="var(--sky-400)" />
-            Precipitation Guard
+          <div className="space-y-2.5 text-slate-600 dark:text-slate-400">
+            <div className="flex justify-between items-center">
+              <span>Target Soil Hydration:</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{targetMoisture}% (Auto Stop)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Failsafe Max Runtime:</span>
+              <span className="font-mono text-slate-900 dark:text-slate-200 font-bold">30 mins (Continuous)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Rain Interlock:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                <CheckCircle2 size={12} /> Active (FC-37)
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Relay Safe-Boot:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">High-Z (OFF)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Hardware Watchdog:</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">30s Auto-Cutoff</span>
+            </div>
           </div>
-          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem' }}>Instant pump cutoff on rain sensor detection</div>
-        </div>
 
-        <div style={{ background: 'var(--bg-secondary)', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)', fontSize: '0.75rem' }}>
-          <div style={{ color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Activity size={12} color="var(--text-secondary)" />
-            Audit Logging
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500">
+            Compliant with PRD Section 30 Fail-Safe Guidelines.
           </div>
-          <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem' }}>Records duration, user ID, and trigger reason</div>
         </div>
       </div>
     </div>

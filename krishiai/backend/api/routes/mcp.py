@@ -1,5 +1,19 @@
 from fastapi import APIRouter
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except (ImportError, ModuleNotFoundError):
+    try:
+        from mcp.server.mcpserver import MCPServer as FastMCP
+    except Exception:
+        class FastMCP:
+            def __init__(self, name="KrishiMCP"):
+                self.name = name
+            def tool(self):
+                def decorator(fn):
+                    return fn
+                return decorator
+            def run(self):
+                pass
 from typing import Dict, Any
 from app.services.weather import get_weather_by_city
 from app.services.crop_advice import get_crop_advice

@@ -1,180 +1,72 @@
-import React, { useState } from 'react';
-import { Cpu, Wifi, Activity, CheckCircle2, AlertTriangle, Play, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import { Cpu, Wifi, Shield, Zap, Server, Activity } from 'lucide-react';
 
-export default function DeviceHealthView({ device, telemetry }) {
-  const [testingPin, setTestingPin] = useState(null);
-  const [testResults, setTestResults] = useState({});
-
-  const pins = device?.pinConfig || [
-    { component: 'ESP32', purpose: 'Main IoT controller', pin: '—', status: 'OK' },
-    { component: 'Capacitive Soil Moisture V1.2', purpose: 'Soil moisture', pin: 'GPIO 5', status: 'OK' },
-    { component: 'DHT11', purpose: 'Temperature + humidity', pin: 'GPIO 25', status: 'OK' },
-    { component: 'FC-37 Rain Sensor', purpose: 'Rain detection', pin: 'GPIO 27', status: 'OK' },
-    { component: 'HW-072 / 3362', purpose: 'Light/dark detection', pin: 'GPIO 34', status: 'OK' },
-    { component: 'LCD I²C', purpose: 'Local display', pin: 'SDA 21 / SCL 22', status: 'OK' },
-    { component: 'Relay', purpose: 'Pump control', pin: 'GPIO 26', status: 'OK' },
-    { component: 'Water Pump/Motor', purpose: 'Irrigation', pin: 'Relay', status: 'OK' }
+export default function DeviceHealthView({ device, telemetry, isFirebaseConnected }) {
+  const pinouts = [
+    { component: 'Capacitive Moisture V1.2', pin: 'GPIO 5', type: 'Analog (ADC1_CH6)', note: '0–4095 ADC (1400 wet, 3200 dry)' },
+    { component: 'DHT11 Temp & Humidity', pin: 'GPIO 25', type: '1-Wire Digital', note: 'Single-bus microclimate telemetry' },
+    { component: 'FC-37 Rain Detector', pin: 'GPIO 27', type: 'Digital Input', note: 'Active LOW raindrop conductivity' },
+    { component: 'HW-072 Daylight Sensor', pin: 'GPIO 34', type: 'Digital Input', note: 'Active LOW day/night threshold' },
+    { component: 'LCD I2C Display (16x2)', pin: 'SDA 21 / SCL 22', type: 'I2C Bus (0x27)', note: 'Field-side live status display' },
+    { component: 'Relay Pump Actuator', pin: 'GPIO 26', type: 'Digital Output', note: 'Active LOW 10A 250VAC switched' },
   ];
 
-  const isOnline = device?.status === 'online';
-
-  const runPinDiagnostic = (pinName) => {
-    setTestingPin(pinName);
-    setTimeout(() => {
-      setTestResults(prev => ({
-        ...prev,
-        [pinName]: 'Pass (Signal Latency 12ms • Reading Nominal)'
-      }));
-      setTestingPin(null);
-    }, 600);
-  };
-
-  const runFullHealthCheck = () => {
-    pins.forEach((p, idx) => {
-      setTimeout(() => {
-        setTestResults(prev => ({
-          ...prev,
-          [p.component]: 'Pass (Verified Normal)'
-        }));
-      }, idx * 150);
-    });
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Device Overview Header */}
-      <div className="glass-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-md)', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Cpu size={26} color="var(--sky-400)" />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.35rem' }}>ESP32 Hardware Node Diagnostics</h2>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Field Controller: {device?.name || 'KrishiAI Node 01'} (Expressif ESP32-WROOM-32D)
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button id="btn-full-diagnostic" className="btn-primary" onClick={runFullHealthCheck} style={{ fontSize: '0.85rem' }}>
-              <ShieldCheck size={16} />
-              <span>Run Full Hardware Self-Test</span>
-            </button>
-          </div>
+    <div className="rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-6 shadow-sm dark:shadow-xl backdrop-blur-sm space-y-6">
+      {/* Node status card */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Controller Node</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5 font-mono">
+            <Cpu size={15} className={device?.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'} />
+            ESP32 DevKit V1 {device?.status === 'online' ? '(Online)' : '(Offline)'}
+          </span>
         </div>
-
-        {/* Vital Health Metrics Grid (PRD Section 18) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Node Connection Status</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: isOnline ? 'var(--emerald-400)' : 'var(--rose-500)', marginTop: '0.2rem' }}>
-              ● {isOnline ? 'ONLINE' : 'OFFLINE'}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              IP: {device?.ipAddress || '192.168.1.104'}
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Wi-Fi Mesh Signal</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sky-400)', marginTop: '0.2rem' }}>
-              {device?.rssi || -62} dBm
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              SSID: {device?.wifiSSID || 'KrishiAI-Mesh-01'}
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Firmware Version</div>
-            <div className="font-mono" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--amber-400)', marginTop: '0.2rem' }}>
-              {device?.firmwareVersion || 'v1.0.4'}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Build Date: 2026-08-26
-            </div>
-          </div>
-
-          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>System Uptime</div>
-            <div className="font-mono" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
-              23h 24m
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Zero unexpected resets
-            </div>
-          </div>
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Wi-Fi & Cloud RSSI</span>
+          <span className={`text-sm font-bold flex items-center gap-1.5 font-mono ${device?.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+            <Wifi size={15} />
+            {device?.status === 'online' ? `${device?.rssi || -65} dBm (Good)` : '— (Disconnected)'}
+          </span>
+        </div>
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Node Uptime</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
+            {device?.status === 'online' && device?.uptimeMinutes ? `${Math.floor(device.uptimeMinutes / 60)}h ${device.uptimeMinutes % 60}m` : '0h 0m'}
+          </span>
+        </div>
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Data Channel</span>
+          <span className={`text-sm font-bold font-mono ${isFirebaseConnected ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400'}`}>
+            {isFirebaseConnected ? 'Firebase RTDB' : 'Standby / Disconnected'}
+          </span>
         </div>
       </div>
 
-      {/* Hardware Pin Mapping Table (PRD Section 2 Table) */}
-      <div className="glass-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1.15rem' }}>ESP32 GPIO Pinout & Peripherals Mapping</h3>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Hardware configuration extracted from PRD Section 2
-            </div>
-          </div>
-        </div>
-
-        <div className="table-responsive">
-          <table className="custom-table">
-            <thead>
+      {/* Pinout Table */}
+      <div>
+        <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">
+          ESP32 Hardware Pin Mapping (PRD Section 2)
+        </h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-mono text-[10px] uppercase border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th>Component</th>
-                <th>Purpose</th>
-                <th>ESP32 Pin</th>
-                <th>Health Status</th>
-                <th>Diagnostic Result</th>
-                <th>Action</th>
+                <th className="py-2 px-3">Component</th>
+                <th className="py-2 px-3">ESP32 Pin</th>
+                <th className="py-2 px-3">Logic Signal</th>
+                <th className="py-2 px-3">Specification / Range</th>
               </tr>
             </thead>
-            <tbody>
-              {pins.map((p) => {
-                const res = testResults[p.component];
-                const isTesting = testingPin === p.component;
-
-                return (
-                  <tr key={p.component}>
-                    <td style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{p.component}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{p.purpose}</td>
-                    <td>
-                      <span className="font-mono" style={{ 
-                        background: 'rgba(56, 189, 248, 0.12)', 
-                        color: 'var(--sky-400)', 
-                        padding: '0.2rem 0.5rem', 
-                        borderRadius: '4px',
-                        fontSize: '0.8rem',
-                        fontWeight: 600
-                      }}>
-                        {p.pin}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="status-badge badge-good" style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem' }}>
-                        ● {p.status}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.8rem', color: res ? 'var(--emerald-400)' : 'var(--text-muted)' }}>
-                      {res || 'Ready for check'}
-                    </td>
-                    <td>
-                      <button
-                        className="btn-secondary"
-                        style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
-                        disabled={isTesting}
-                        onClick={() => runPinDiagnostic(p.component)}
-                      >
-                        <Play size={11} />
-                        <span>{isTesting ? 'Testing...' : 'Test Signal'}</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              {pinouts.map((p, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                  <td className="py-2 px-3 font-semibold text-slate-900 dark:text-white">{p.component}</td>
+                  <td className="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400 font-bold">{p.pin}</td>
+                  <td className="py-2 px-3 text-slate-600 dark:text-slate-400">{p.type}</td>
+                  <td className="py-2 px-3 text-slate-500 dark:text-slate-400 text-[11px]">{p.note}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

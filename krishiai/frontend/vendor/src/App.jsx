@@ -14,11 +14,21 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const isClerkEnabled = PUBLISHABLE_KEY && PUBLISHABLE_KEY !== 'pk_test_placeholder_key';
 
 function ProtectedVendorRoute({ children }) {
-  if (!isClerkEnabled) return children;
+  const isVendorAuth = localStorage.getItem('vendor_authenticated') === 'true' || sessionStorage.getItem('vendor_authenticated') === 'true';
+
+  if (!isClerkEnabled) {
+    if (!isVendorAuth) {
+      return <Navigate to="/vendor-sign-in" replace />;
+    }
+    return children;
+  }
+
   return (
     <>
       <SignedIn>{children}</SignedIn>
-      <SignedOut><RedirectToSignIn signInUrl="/vendor-sign-in" /></SignedOut>
+      <SignedOut>
+        {isVendorAuth ? children : <Navigate to="/vendor-sign-in" replace />}
+      </SignedOut>
     </>
   );
 }
@@ -57,7 +67,7 @@ export default function App() {
 
           {/* Protected Vendor Dashboard Routes */}
           <Route element={<ProtectedVendorRoute><Outlet /></ProtectedVendorRoute>}>
-            {VendorAppRoutes}
+            {VendorAppRoutes()}
           </Route>
 
           {/* Fallback */}

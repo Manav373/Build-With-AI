@@ -1,239 +1,269 @@
-import React, { useState } from 'react';
-import { Sliders, X, Sparkles, Send, RefreshCw, Power, CloudRain, Sun, Moon, Wifi, WifiOff } from 'lucide-react';
+import React from 'react';
+import { 
+  X, 
+  Sliders, 
+  Droplet, 
+  Thermometer, 
+  Activity, 
+  CloudRain, 
+  Sun, 
+  Moon, 
+  Wifi, 
+  WifiOff, 
+  Sparkles,
+  RotateCcw
+} from 'lucide-react';
 
-export default function HardwareSimulator({
-  isOpen,
-  onClose,
-  telemetry,
-  device,
-  onSendTelemetry,
-  onToggleOnline
+export default function HardwareSimulator({ 
+  isOpen, 
+  onClose, 
+  telemetry, 
+  onUpdateTelemetry,
+  device
 }) {
-  const [soil, setSoil] = useState(telemetry?.soilMoisture || 34);
-  const [temp, setTemp] = useState(telemetry?.temperature || 29.8);
-  const [humidity, setHumidity] = useState(telemetry?.humidity || 61);
-  const [rain, setRain] = useState(telemetry?.rain || false);
-  const [light, setLight] = useState(telemetry?.light ?? true);
-  const [syncing, setSyncing] = useState(false);
-
   if (!isOpen) return null;
 
-  const handleSend = async (overrides = {}) => {
-    setSyncing(true);
-    const payload = {
-      soilMoisture: overrides.soil !== undefined ? overrides.soil : Number(soil),
-      temperature: overrides.temp !== undefined ? overrides.temp : Number(temp),
-      humidity: overrides.humidity !== undefined ? overrides.humidity : Number(humidity),
-      rain: overrides.rain !== undefined ? overrides.rain : Boolean(rain),
-      light: overrides.light !== undefined ? overrides.light : Boolean(light)
-    };
+  const moisture = telemetry?.soilMoisture ?? 35;
+  const temp = telemetry?.temperature ?? 28;
+  const humidity = telemetry?.humidity ?? 60;
+  const rain = Boolean(telemetry?.rain);
+  const light = Boolean(telemetry?.light);
+  const isOnline = device?.status === 'online';
 
-    await onSendTelemetry(payload);
-    setTimeout(() => setSyncing(false), 300);
-  };
+  // Calculate simulated raw ADC from percent
+  const dryAdc = device?.settings?.soilDryAdc || 2300;
+  const wetAdc = device?.settings?.soilWetAdc || 1200;
+  const calculatedAdc = Math.round(dryAdc - ((dryAdc - wetAdc) * (moisture / 100)));
 
   // Presets
-  const applyPreset = (presetName) => {
-    if (presetName === 'dry') {
-      setSoil(18);
-      setRain(false);
-      handleSend({ soil: 18, rain: false });
-    } else if (presetName === 'rain') {
-      setRain(true);
-      handleSend({ rain: true });
-    } else if (presetName === 'optimal') {
-      setSoil(54);
-      setRain(false);
-      setTemp(28.5);
-      setHumidity(62);
-      handleSend({ soil: 54, rain: false, temp: 28.5, humidity: 62 });
-    } else if (presetName === 'wet') {
-      setSoil(82);
-      setRain(false);
-      handleSend({ soil: 82, rain: false });
+  const applyPreset = (preset) => {
+    switch (preset) {
+      case 'DRY':
+        onUpdateTelemetry({
+          ...telemetry,
+          soilMoisture: 68,
+          soilRaw: 2044,
+          rain: false,
+          temperature: 32.5,
+          humidity: 42
+        });
+        break;
+      case 'RAIN':
+        onUpdateTelemetry({
+          ...telemetry,
+          rain: true,
+          humidity: 88,
+          temperature: 24.0
+        });
+        break;
+      case 'OPTIMAL':
+        onUpdateTelemetry({
+          ...telemetry,
+          soilMoisture: 45,
+          soilRaw: 2435,
+          rain: false,
+          temperature: 27.5,
+          humidity: 62
+        });
+        break;
+      case 'SATURATED':
+        onUpdateTelemetry({
+          ...telemetry,
+          soilMoisture: 0,
+          soilRaw: 0,
+          rain: false,
+          temperature: 28.0,
+          humidity: 50
+        });
+        break;
     }
   };
 
-  const isOnline = device?.status === 'online';
-
   return (
-    <div className="sim-drawer-panel" id="simulator-drawer" role="dialog" aria-labelledby="sim-title">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(56, 189, 248, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Sliders size={18} color="var(--sky-400)" />
+    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 p-6 shadow-2xl overflow-y-auto text-slate-900 dark:text-white flex flex-col justify-between transition-colors">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 mb-6">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Sliders size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold">Hardware Signal Simulator</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Emulate real ESP32 analog & digital inputs</p>
+            </div>
           </div>
-          <div>
-            <h3 id="sim-title" style={{ fontSize: '1.15rem' }}>ESP32 Node Simulator</h3>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inject Live Hardware Signals</div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Quick Test Presets */}
+        <div className="mb-6">
+          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-2">
+            1-Click Agricultural Scenarios
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => applyPreset('DRY')}
+              className="py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-bold transition text-left"
+            >
+              🚨 Critical Dry (18%)
+              <span className="block text-[10px] text-red-600/80 dark:text-red-400/80 font-normal">Triggers Auto Irrigation</span>
+            </button>
+            <button
+              onClick={() => applyPreset('RAIN')}
+              className="py-2 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-xs font-bold transition text-left"
+            >
+              🌧️ Rain Active (FC-37)
+              <span className="block text-[10px] text-blue-600/80 dark:text-blue-400/80 font-normal">Engages Safety Interlock</span>
+            </button>
+            <button
+              onClick={() => applyPreset('OPTIMAL')}
+              className="py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition text-left"
+            >
+              🌾 Optimal Field (55%)
+              <span className="block text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-normal">Stable Standby State</span>
+            </button>
+            <button
+              onClick={() => applyPreset('SATURATED')}
+              className="py-2 px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-xs font-bold transition text-left"
+            >
+              💧 Saturated (85%)
+              <span className="block text-[10px] text-cyan-600/80 dark:text-cyan-400/80 font-normal">Max Soil Hydration</span>
+            </button>
           </div>
         </div>
 
-        <button id="btn-close-sim" className="btn-secondary" onClick={onClose} style={{ padding: '0.35rem 0.5rem', border: 'none' }}>
-          <X size={18} />
+        {/* Sliders & Toggles */}
+        <div className="space-y-5">
+          {/* 1. Soil Moisture */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Droplet size={14} className="text-emerald-600 dark:text-emerald-400" />
+                Soil Moisture (GPIO 5)
+              </span>
+              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                {moisture}% ({calculatedAdc} ADC)
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={moisture}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                const adc = Math.round(dryAdc - ((dryAdc - wetAdc) * (val / 100)));
+                onUpdateTelemetry({ ...telemetry, soilMoisture: val, soilRaw: adc });
+              }}
+              className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+            />
+            <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+              <span>0% (Bone Dry)</span>
+              <span>25% (Wilting)</span>
+              <span>100% (Wet)</span>
+            </div>
+          </div>
+
+          {/* 2. Temperature */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Thermometer size={14} className="text-amber-600 dark:text-amber-400" />
+                Ambient Temp (DHT11 GPIO 25)
+              </span>
+              <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">{temp}°C</span>
+            </div>
+            <input
+              type="range"
+              min="10"
+              max="48"
+              step="0.5"
+              value={temp}
+              onChange={(e) => onUpdateTelemetry({ ...telemetry, temperature: Number(e.target.value) })}
+              className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+            />
+            <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+              <span>10°C (Cold)</span>
+              <span>28°C (Ideal)</span>
+              <span>48°C (Extreme)</span>
+            </div>
+          </div>
+
+          {/* 3. Humidity */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Activity size={14} className="text-cyan-600 dark:text-cyan-400" />
+                Relative Humidity (DHT11)
+              </span>
+              <span className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400">{humidity}%</span>
+            </div>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              value={humidity}
+              onChange={(e) => onUpdateTelemetry({ ...telemetry, humidity: Number(e.target.value) })}
+              className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+            />
+          </div>
+
+          {/* 4. Rain & Daylight Toggles */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Rain Toggle */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-2">
+                <CloudRain size={14} className="text-blue-500 dark:text-blue-400" />
+                Rain Sensor
+              </span>
+              <button
+                onClick={() => onUpdateTelemetry({ ...telemetry, rain: !rain })}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
+                  rain 
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm' 
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {rain ? '🌧️ RAIN (LOW)' : '☀️ NO RAIN'}
+              </button>
+            </div>
+
+            {/* Daylight Toggle */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-2">
+                {light ? <Sun size={14} className="text-amber-500 dark:text-amber-400" /> : <Moon size={15} className="text-indigo-500 dark:text-indigo-400" />}
+                Day/Night (HW-072)
+              </span>
+              <button
+                onClick={() => onUpdateTelemetry({ ...telemetry, light: !light })}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
+                  light 
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/50' 
+                    : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/50'
+                }`}
+              >
+                {light ? '☀️ DAYLIGHT' : '🌙 NIGHT'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="pt-6 border-t border-slate-200 dark:border-slate-800 mt-6">
+        <button
+          onClick={() => applyPreset('OPTIMAL')}
+          className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+        >
+          <RotateCcw size={14} /> Reset to Default Field Baseline
         </button>
       </div>
-
-      {/* Quick Scenario Preset Triggers */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          ⚡ Test Scenarios:
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <button 
-            id="btn-preset-dry"
-            type="button" 
-            className="btn-secondary" 
-            style={{ fontSize: '0.75rem', padding: '0.45rem 0.6rem', color: '#fb7185', borderColor: 'rgba(244,63,94,0.3)' }}
-            onClick={() => applyPreset('dry')}
-          >
-            🚨 Dry Soil (18%)
-          </button>
-          <button 
-            id="btn-preset-rain"
-            type="button" 
-            className="btn-secondary" 
-            style={{ fontSize: '0.75rem', padding: '0.45rem 0.6rem', color: '#60a5fa', borderColor: 'rgba(96,165,250,0.3)' }}
-            onClick={() => applyPreset('rain')}
-          >
-            🌧️ Rain Active (FC-37)
-          </button>
-          <button 
-            id="btn-preset-optimal"
-            type="button" 
-            className="btn-secondary" 
-            style={{ fontSize: '0.75rem', padding: '0.45rem 0.6rem', color: '#34d399', borderColor: 'rgba(52,211,153,0.3)' }}
-            onClick={() => applyPreset('optimal')}
-          >
-            🌾 Optimal Field (54%)
-          </button>
-          <button 
-            id="btn-preset-wet"
-            type="button" 
-            className="btn-secondary" 
-            style={{ fontSize: '0.75rem', padding: '0.45rem 0.6rem', color: '#38bdf8', borderColor: 'rgba(56,189,248,0.3)' }}
-            onClick={() => applyPreset('wet')}
-          >
-            💧 Saturated Soil (82%)
-          </button>
-        </div>
-      </div>
-
-      {/* Sliders */}
-      {/* 1. Soil Moisture */}
-      <div className="slider-group">
-        <div className="slider-label">
-          <span>🌱 Soil Moisture (Capacitive GPIO 5):</span>
-          <strong style={{ color: 'var(--emerald-400)' }}>{soil}%</strong>
-        </div>
-        <input 
-          id="sim-input-soil"
-          type="range" 
-          min="0" 
-          max="100" 
-          value={soil} 
-          onChange={(e) => setSoil(e.target.value)}
-          className="custom-range"
-        />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-          <span>0% (Critically Dry)</span>
-          <span>100% (Wet)</span>
-        </div>
-      </div>
-
-      {/* 2. Temperature */}
-      <div className="slider-group">
-        <div className="slider-label">
-          <span>🌡️ Temperature (DHT11 GPIO 25):</span>
-          <strong style={{ color: 'var(--amber-400)' }}>{temp}°C</strong>
-        </div>
-        <input 
-          id="sim-input-temp"
-          type="range" 
-          min="15" 
-          max="48" 
-          step="0.5"
-          value={temp} 
-          onChange={(e) => setTemp(e.target.value)}
-          className="custom-range"
-        />
-      </div>
-
-      {/* 3. Humidity */}
-      <div className="slider-group">
-        <div className="slider-label">
-          <span>💧 Humidity (DHT11 GPIO 25):</span>
-          <strong style={{ color: 'var(--sky-400)' }}>{humidity}%</strong>
-        </div>
-        <input 
-          id="sim-input-humidity"
-          type="range" 
-          min="20" 
-          max="95" 
-          value={humidity} 
-          onChange={(e) => setHumidity(e.target.value)}
-          className="custom-range"
-        />
-      </div>
-
-      {/* Toggles */}
-      {/* Rain Toggle */}
-      <div 
-        id="sim-toggle-rain"
-        className="toggle-switch" 
-        onClick={() => setRain(!rain)}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem' }}>
-          <CloudRain size={16} color={rain ? '#60a5fa' : 'var(--text-muted)'} />
-          <span>FC-37 Rain Sensor (GPIO 27)</span>
-        </div>
-        <span className={`status-badge ${rain ? 'badge-rain-detected' : 'badge-no-rain'}`}>
-          {rain ? 'RAIN DETECTED' : 'NO RAIN'}
-        </span>
-      </div>
-
-      {/* Light Toggle */}
-      <div 
-        id="sim-toggle-light"
-        className="toggle-switch" 
-        onClick={() => setLight(!light)}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem' }}>
-          {light ? <Sun size={16} color="#facc15" /> : <Moon size={16} color="#a5b4fc" />}
-          <span>HW-072 Light/Dark (GPIO 34)</span>
-        </div>
-        <span className={`status-badge ${light ? 'badge-light-day' : 'badge-light-dark'}`}>
-          {light ? 'DAY / LIGHT' : 'NIGHT / DARK'}
-        </span>
-      </div>
-
-      {/* Node Connection Toggle */}
-      <div 
-        id="sim-toggle-connection"
-        className="toggle-switch" 
-        onClick={onToggleOnline}
-        style={{ borderColor: isOnline ? 'var(--border-subtle)' : 'rgba(244,63,94,0.4)' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem' }}>
-          {isOnline ? <Wifi size={16} color="var(--emerald-400)" /> : <WifiOff size={16} color="var(--rose-500)" />}
-          <span>ESP32 Wi-Fi Link</span>
-        </div>
-        <span className={`status-badge ${isOnline ? 'badge-good' : 'badge-very-dry'}`}>
-          {isOnline ? 'CONNECTED' : 'DISCONNECTED'}
-        </span>
-      </div>
-
-      {/* Push Telemetry Button */}
-      <button 
-        id="btn-sim-send-telemetry"
-        className="btn-primary" 
-        style={{ width: '100%', marginTop: '0.5rem' }}
-        onClick={() => handleSend()}
-        disabled={syncing}
-      >
-        <Send size={16} className={syncing ? 'spin' : ''} />
-        <span>{syncing ? 'Broadcasting...' : 'Broadcast Telemetry to ESP32 Node'}</span>
-      </button>
     </div>
   );
 }

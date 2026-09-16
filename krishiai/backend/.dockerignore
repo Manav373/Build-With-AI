@@ -1,0 +1,24 @@
+# Docker build ignore rules
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.venv/
+env/
+venv/
+ENV/
+*.db
+*.sqlite3
+
+# Large offline training datasets
+app/services/data/*.csv
+
+# Local scratch and backup files
+scratch/
+requirements-full.txt.bak
+connectivity/
+.git/
+.gitignore

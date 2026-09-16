@@ -21,6 +21,8 @@ export default function VendorSignInPage() {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
+      localStorage.setItem('vendor_authenticated', 'true');
+      sessionStorage.setItem('vendor_authenticated', 'true');
       setLoading(false);
       navigate(redirectTarget);
     }, 600);
@@ -89,18 +91,18 @@ export default function VendorSignInPage() {
         }}
       >
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
           <div
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: '16px',
+              width: 48,
+              height: 48,
+              borderRadius: '14px',
               background: 'linear-gradient(135deg, #713f12, #facc15)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1.7rem',
-              marginBottom: '0.75rem',
+              fontSize: '1.5rem',
+              marginBottom: '0.5rem',
               boxShadow: '0 8px 24px rgba(250,204,21,0.3)',
             }}
           >
@@ -135,14 +137,6 @@ export default function VendorSignInPage() {
 
         {/* Clerk Sign In or Fallback Demo Form */}
         {isClerkEnabled ? (
-          <div
-            style={{
-              width: '100%',
-              borderRadius: '1.5rem',
-              overflow: 'hidden',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
-            }}
-          >
             <SignIn
               path="/vendor-sign-in"
               routing="path"
@@ -151,109 +145,45 @@ export default function VendorSignInPage() {
               appearance={{
                 variables: {
                   colorPrimary: '#facc15',
-                  colorBackground: '#0a1a0d',
-                  colorText: '#ffffff',
-                  colorTextSecondary: '#94a3b8',
-                  colorInputBackground: 'rgba(255, 255, 255, 0.07)',
-                  colorInputText: '#ffffff',
-                  colorTextOnPrimaryBackground: '#0a1a0d',
-                  borderRadius: '0.85rem',
-                  fontFamily: "'Inter', system-ui, sans-serif",
+                  colorBackground: '#0d180e',
+                  colorText: '#f0fdf4',
+                  colorTextSecondary: 'rgba(250,204,21,0.7)',
+                  colorInputBackground: 'rgba(255,255,255,0.05)',
+                  colorInputText: '#fff',
+                  borderRadius: '0.75rem',
                 },
                 elements: {
                   card: {
-                    background: 'rgba(10, 24, 13, 0.96)',
-                    border: '1px solid rgba(250, 204, 21, 0.25)',
-                    backdropFilter: 'blur(24px)',
-                    padding: '2.25rem 2rem',
-                    boxShadow: '0 25px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(234, 179, 8, 0.08)',
+                    background: 'rgba(12,22,13,0.94)',
+                    border: '1px solid rgba(250,204,21,0.22)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '1.5rem',
                   },
-                  headerTitle: {
-                    color: '#ffffff',
-                    fontFamily: "'Outfit', sans-serif",
-                    fontSize: '1.45rem',
-                    fontWeight: 800,
-                    letterSpacing: '-0.01em',
+                  headerTitle: { color: '#fff', fontFamily: "'Outfit', sans-serif" },
+                  headerSubtitle: { color: 'rgba(250,204,21,0.7)' },
+                  formButtonPrimary: {
+                    background: 'linear-gradient(135deg, #713f12 0%, #a16207 60%, #facc15 100%)',
+                    color: '#1c0e00',
+                    fontWeight: '800',
+                    boxShadow: '0 4px 20px rgba(250,204,21,0.3)',
                   },
-                  headerSubtitle: {
-                    color: '#cbd5e1',
-                    fontSize: '0.88rem',
-                    fontWeight: 400,
-                  },
+                  footerActionLink: { color: '#facc15' },
                   socialButtonsBlockButton: {
-                    background: 'rgba(255, 255, 255, 0.08) !important',
-                    border: '1px solid rgba(255, 255, 255, 0.2) !important',
-                    color: '#ffffff !important',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(250,204,21,0.2)',
                   },
-                  socialButtonsBlockButtonText: {
-                    color: '#ffffff !important',
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                    opacity: 1,
-                  },
-                  socialButtonsBlockButton__google: {
-                    color: '#ffffff !important',
-                  },
-                  dividerRow: {
-                    margin: '1.25rem 0',
-                  },
-                  dividerLine: {
-                    background: 'rgba(255, 255, 255, 0.18)',
-                  },
-                  dividerText: {
-                    color: '#94a3b8',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
+                  socialButtonsBlockButtonText: { color: '#fff' },
+                  formFieldInput: {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(250,204,21,0.2)',
+                    color: '#ffffff',
                   },
                   formFieldLabel: {
-                    color: '#f8fafc',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    marginBottom: '0.4rem',
-                  },
-                  formFieldInput: {
-                    background: 'rgba(255, 255, 255, 0.07) !important',
-                    border: '1px solid rgba(255, 255, 255, 0.18) !important',
-                    color: '#ffffff !important',
-                    fontSize: '0.92rem',
-                    borderRadius: '0.75rem',
-                  },
-                  formButtonPrimary: {
-                    background: 'linear-gradient(135deg, #facc15 0%, #eab308 100%) !important',
-                    color: '#000000 !important',
-                    fontWeight: '800 !important',
-                    fontSize: '0.95rem !important',
-                    boxShadow: '0 4px 20px rgba(250, 204, 21, 0.4) !important',
-                    borderRadius: '0.75rem',
-                    padding: '0.75rem',
-                  },
-                  footerActionText: {
-                    color: '#94a3b8',
-                    fontSize: '0.85rem',
-                  },
-                  footerActionLink: {
                     color: '#facc15',
-                    fontWeight: 700,
-                  },
-                  identityPreviewText: {
-                    color: '#ffffff',
-                    fontWeight: 600,
-                  },
-                  identityPreviewEditButton: {
-                    color: '#facc15',
-                  },
-                  formFieldAction: {
-                    color: '#facc15',
-                    fontWeight: 600,
                   },
                 },
               }}
             />
-          </div>
         ) : (
           <form
             onSubmit={handleDemoLogin}

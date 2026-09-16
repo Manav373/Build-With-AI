@@ -12,11 +12,26 @@ const getApiBase = () => {
   if (typeof window !== 'undefined' && window.__KRISHI_API_BASE__) {
     return window.__KRISHI_API_BASE__;
   }
-  return (
-    (typeof import.meta !== 'undefined' &&
-      (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_API_URL)) ||
-    'http://localhost:8000'
-  );
+  const envUrl = (typeof import.meta !== 'undefined' &&
+    (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_API_URL)) || '';
+
+  // In browser, if on production domain, do not use localhost/127.0.0.1
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+    if (!isLocal) {
+      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+        let clean = envUrl.trim();
+        if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+          clean = `https://${clean}`;
+        }
+        return clean;
+      }
+      return 'https://krishiai-backend-21jz.onrender.com';
+    }
+  }
+
+  return envUrl || 'http://localhost:8000';
 };
 
 export class UniversalApiClient {

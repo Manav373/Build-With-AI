@@ -108,9 +108,9 @@ const FIELD_CONFIG = [
 ];
 
 const RISK_CONFIG = {
-  Low: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', icon: '✅', glyph: CheckCircle },
-  Medium: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', icon: '⚠️', glyph: AlertCircle },
-  High: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', icon: '🔴', glyph: AlertCircle },
+  Low: { bg: 'bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-500/30', icon: '✅', glyph: CheckCircle },
+  Medium: { bg: 'bg-amber-500/15', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-500/30', icon: '⚠️', glyph: AlertCircle },
+  High: { bg: 'bg-red-500/15', text: 'text-red-700 dark:text-red-400', border: 'border-red-500/30', icon: '🔴', glyph: AlertCircle },
 };
 
 /* ─── sub-components ─────────────────────────────────────── */
@@ -129,9 +129,9 @@ const MetricCard = ({ label, value, unit, icon, color, sub }) => (
     <span className="text-[0.6rem] font-bold text-slate-500 dark:text-white/40 font-inter">{label}</span>
     <div className="flex items-end gap-1">
       <span className="text-2xl font-black" style={{ color }}>{value}</span>
-      <span className="text-xs font-bold text-slate-400 dark:text-white/30 pb-0.5">{unit}</span>
+      <span className="text-xs font-bold text-slate-500 dark:text-white/30 pb-0.5">{unit}</span>
     </div>
-    {sub && <p className="text-[0.6rem] text-slate-400 dark:text-white/30">{sub}</p>}
+    {sub && <p className="text-[0.6rem] text-slate-500 dark:text-white/30">{sub}</p>}
   </div>
 );
 
@@ -155,22 +155,22 @@ const FutureTrendChart = ({ data, targetYear, currentYear, color = '#10b981' }) 
           <defs>
             <linearGradient id="yieldGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={mainColor} stopOpacity={0.4} />
-              <stop offset="95%" stopColor={mainColor} stopOpacity={0} />
+              <stop offset="95%" stopColor={mainColor} stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={bandColor} stopOpacity={0.15} />
-              <stop offset="95%" stopColor={bandColor} stopOpacity={0} />
+              <stop offset="5%" stopColor={bandColor} stopOpacity={0.18} />
+              <stop offset="95%" stopColor={bandColor} stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.05} vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.25} vertical={false} />
           <XAxis 
             dataKey="year" 
-            tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.4, fontWeight: 700 }} 
+            tick={{ fontSize: 10, fill: '#64748b', fontWeight: 700 }} 
             axisLine={false} 
             tickLine={false}
           />
           <YAxis 
-            tick={{ fontSize: 10, fill: 'currentColor', opacity: 0.4, fontWeight: 700 }} 
+            tick={{ fontSize: 10, fill: '#64748b', fontWeight: 700 }} 
             axisLine={false} 
             tickLine={false} 
           />
@@ -179,7 +179,7 @@ const FutureTrendChart = ({ data, targetYear, currentYear, color = '#10b981' }) 
             content={({ active, payload, label }) => {
               if (active && payload && payload.length) {
                 return (
-                  <div className="premium-glass p-2 px-3 border rounded-xl shadow-2xl transition-all duration-300">
+                  <div className="bg-white dark:bg-slate-900 p-2 px-3 border border-slate-200 dark:border-white/10 rounded-xl shadow-xl transition-all duration-300">
                     <p className="text-[0.65rem] font-bold text-slate-500 dark:text-white/40 mb-1">{label}</p>
                     <p className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: mainColor }} />
@@ -193,17 +193,17 @@ const FutureTrendChart = ({ data, targetYear, currentYear, color = '#10b981' }) 
             position={{ y: -40 }}
           />
           <Area type="monotone" dataKey="upper" stroke="transparent" fill="url(#bandGrad)" fillOpacity={1} />
-          <Area type="monotone" dataKey="lower" stroke="transparent" fill="white" fillOpacity={0} />
+          <Area type="monotone" dataKey="lower" stroke="transparent" fill="transparent" fillOpacity={0} />
           <Area 
             type="monotone" 
             dataKey="yield" 
             stroke={mainColor} 
             strokeWidth={3} 
             fill="url(#yieldGrad)" 
-            dot={{ fill: mainColor, r: 4, strokeWidth: 2, stroke: '#000' }} 
-            activeDot={{ r: 6, strokeWidth: 0 }}
+            dot={{ fill: mainColor, r: 4, strokeWidth: 2, stroke: '#ffffff' }} 
+            activeDot={{ r: 6, strokeWidth: 2, stroke: '#ffffff' }}
           />
-          <ReferenceLine x={currentYear} stroke="#f59e0b" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: isHistory ? '' : 'Today', fill: '#f59e0b', fontSize: 10, fontWeight: 800 }} />
+          <ReferenceLine x={currentYear} stroke="#d97706" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: isHistory ? '' : 'Today', fill: '#d97706', fontSize: 10, fontWeight: 800 }} />
           <ReferenceLine x={targetYear} stroke={mainColor} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: isHistory ? 'Analysis' : 'Target', fill: mainColor, fontSize: 10, fontWeight: 800 }} />
         </AreaChart>
       </ResponsiveContainer>
@@ -448,7 +448,7 @@ What are key insights and recommendations?`;
                 <div className="flex items-center gap-3">
                   <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">Yield Predictor <span className="text-emerald-500">AI</span></h1>
                 </div>
-                <p className="text-emerald-600/70 dark:text-emerald-100/50 text-sm font-medium transition-colors">Next-gen forecasting · Village-level precision · 2076 Horizon</p>
+                <p className="text-emerald-700 dark:text-emerald-200/60 text-sm font-medium transition-colors">Next-gen forecasting · Village-level precision · 2076 Horizon</p>
               </div>
             </div>
           </div>
@@ -469,8 +469,8 @@ What are key insights and recommendations?`;
         <AnimatePresence>
           {showHistory && history.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="premium-glass p-4 sm:p-5 rounded-3xl border border-black/10 dark:border-white/10 overflow-hidden transition-all duration-500">
-              <h4 className="text-xs font-bold text-slate-400 dark:text-white/40 mb-4 flex items-center gap-2">
+              className="premium-glass p-4 sm:p-5 rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden transition-all duration-500">
+              <h4 className="text-xs font-bold text-slate-500 dark:text-white/40 mb-4 flex items-center gap-2">
                 <Activity size={14} /> Prediction history
               </h4>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -483,12 +483,12 @@ What are key insights and recommendations?`;
                         <span className="text-xl">{CROP_EMOJIS[h.crop] || '🌾'}</span>
                         <div>
                           <span className="font-bold text-slate-800 dark:text-white text-sm transition-colors">{h.crop}</span>
-                          <span className="text-slate-400 dark:text-white/30 text-xs ml-2">· {h.ts}</span>
+                          <span className="text-slate-500 dark:text-white/40 text-xs ml-2">· {h.ts}</span>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-emerald-600 dark:text-emerald-400 font-black text-sm transition-colors">{h.result.predicted_yield} t/ha</div>
-                        <div className="text-slate-400 dark:text-white/30 text-xs">{h.result.confidence}% conf</div>
+                        <div className="text-slate-500 dark:text-white/40 text-xs">{h.result.confidence}% conf</div>
                       </div>
                     </div>
                   ))}
@@ -497,9 +497,9 @@ What are key insights and recommendations?`;
                 {historyChartData.length > 1 && (
                   <ResponsiveContainer width="100%" height={150}>
                     <AreaChart data={historyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-black/5 dark:text-white/5" />
-                      <XAxis dataKey="name" tick={{ fill: 'currentColor', fontSize: 10 }} className="text-slate-400 dark:text-white/30" axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'currentColor', fontSize: 10 }} className="text-slate-400 dark:text-white/30" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} />
+                      <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ background: 'var(--surface)', border: '1px solid var(--primary)', borderRadius: '12px', fontSize: '12px', color: 'var(--text-main)' }} />
                       <Area type="monotone" dataKey="yield" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
                     </AreaChart>
@@ -514,21 +514,21 @@ What are key insights and recommendations?`;
 
           {/* ── Input Form ── */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-7 premium-glass p-3 sm:p-6 rounded-[2rem] border space-y-6 transition-all duration-500">
+            className="lg:col-span-7 premium-glass p-3 sm:p-6 rounded-[2rem] border border-slate-200 dark:border-white/10 space-y-6 transition-all duration-500">
 
-            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
               <div className="flex flex-col gap-1">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 transition-colors">
                   <FlaskConical size={18} className="text-emerald-500" /> Field Parameters
                 </h2>
               </div>
-              <button onClick={() => setForm(INITIAL_FORM)} className="text-xs font-bold text-slate-400 dark:text-white/40 hover:text-emerald-600 dark:hover:text-white/70 transition-colors">
+              <button onClick={() => setForm(INITIAL_FORM)} className="text-xs font-bold text-slate-500 dark:text-white/40 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                 Reset All
               </button>
             </div>
 
             {error && (
-              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-sm">
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 flex items-center gap-3 text-sm font-semibold">
                 <AlertCircle size={18} /> {error}
               </div>
             )}
@@ -536,25 +536,26 @@ What are key insights and recommendations?`;
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Crop Selector — full-width visual picker */}
               <div className="space-y-2">
-                <span className="text-[0.65rem] font-bold text-emerald-600/70 dark:text-emerald-400/60 font-inter transition-colors">Select crop</span>
+                <span className="text-[0.65rem] font-bold text-emerald-700 dark:text-emerald-400 font-inter transition-colors">Select crop</span>
                 <div className="relative">
-                  <Leaf size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500/50 transition-colors" />
+                  <Leaf size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400/80 transition-colors" />
                   <span className="absolute left-10 top-1/2 -translate-y-1/2 text-xl pointer-events-none">
                     {CROP_EMOJIS[form.crop_name] || '🌱'}
                   </span>
                   <select
-                    className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-16 pr-4 text-slate-900 dark:text-white focus:border-emerald-500/50 focus:outline-none transition-all appearance-none font-bold"
+                    className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-16 pr-10 text-slate-900 dark:text-white focus:border-emerald-500/50 focus:outline-none transition-all appearance-none font-bold cursor-pointer"
                     value={form.crop_name} onChange={e => setVal('crop_name', e.target.value)}
                   >
                     {CROPS.map(c => <option key={c} value={c} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{c}</option>)}
                   </select>
+                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
               {/* District & Time (Historical Mode Core) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-white/5">
-                <div className="space-y-2 relative">
-                  <span className="text-[0.65rem] font-bold text-emerald-400/60 font-inter flex items-center justify-between">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200 dark:border-white/5">
+                <div className="space-y-2 relative flex flex-col justify-between">
+                  <span className="text-[0.65rem] font-bold text-emerald-700 dark:text-emerald-400 font-inter flex items-center justify-between">
                     <span className="flex items-center gap-2"><MapPin size={12}/> Select district</span>
                     <motion.button 
                       type="button"
@@ -562,7 +563,7 @@ What are key insights and recommendations?`;
                       whileTap={{ scale: 0.95 }}
                       onClick={handleDirectDetect}
                       disabled={directLocating}
-                      className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-all flex items-center gap-2 font-bold text-[9px] shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                      className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all flex items-center gap-2 font-bold text-[9px] shadow-[0_0_15px_rgba(16,185,129,0.1)]"
                     >
                       <MapPin size={10} className={directLocating ? 'animate-pulse' : ''} />
                       {directLocating ? 'Scanning...' : 'Smart detect'}
@@ -582,7 +583,7 @@ What are key insights and recommendations?`;
                     />
                     {locLoading && (
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <Loader2 size={16} className="animate-spin text-emerald-400" />
+                        <Loader2 size={16} className="animate-spin text-emerald-500" />
                       </div>
                     )}
                     <AnimatePresence>
@@ -592,7 +593,7 @@ What are key insights and recommendations?`;
                           className="absolute z-50 top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl custom-scrollbar shadow-2xl transition-colors duration-300"
                         >
                           {DISTRICTS.filter(d => d.toLowerCase().includes(form.district.toLowerCase())).map(d => (
-                            <button key={d} type="button" onClick={() => { setVal('district', d); setShowDistrictList(false); }} className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-white/70 hover:bg-emerald-600 hover:text-white transition-colors border-b border-black/5 dark:border-white/5 last:border-0">{d}</button>
+                            <button key={d} type="button" onClick={() => { setVal('district', d); setShowDistrictList(false); }} className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-white/70 hover:bg-emerald-600 hover:text-white transition-colors border-b border-slate-100 dark:border-white/5 last:border-0">{d}</button>
                           ))}
                         </motion.div>
                       )}
@@ -604,50 +605,61 @@ What are key insights and recommendations?`;
                 {(form.village || form.taluka) && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="md:col-span-2 grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <span className="text-[0.6rem] font-bold text-slate-400 dark:text-white/30 uppercase tracking-wider">Taluka</span>
-                      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-[0.6rem] font-bold text-slate-500 dark:text-white/40 uppercase tracking-wider">Taluka</span>
+                      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
                         {form.taluka || '---'}
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[0.6rem] font-bold text-slate-400 dark:text-white/30 uppercase tracking-wider">Village</span>
-                      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-[0.6rem] font-bold text-slate-500 dark:text-white/40 uppercase tracking-wider">Village</span>
+                      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
                         {form.village || '---'}
                       </div>
                     </div>
                   </motion.div>
                 )}
 
-                <div className="space-y-2">
-                  <span className="text-[0.65rem] font-bold font-inter flex items-center gap-2"
-                    style={{ color: form.year > CURRENT_YEAR ? '#a78bfa' : '#6ee7b7' }}>
+                <div className="space-y-2 flex flex-col justify-between">
+                  <span className={`text-[0.65rem] font-bold font-inter flex items-center gap-2 transition-colors ${
+                    form.year > CURRENT_YEAR ? 'text-violet-700 dark:text-violet-400' : 'text-emerald-700 dark:text-emerald-400'
+                  }`}>
                     <Activity size={12}/>
                     {form.year > CURRENT_YEAR ? '🔮 Forecast Year' : '📅 Historical Year'} ({form.year})
                   </span>
-                  <input
-                    type="range" min={2000} max={CURRENT_YEAR + 50}
-                    className="w-full h-1.5 bg-slate-200 dark:bg-white/10 rounded-full appearance-none cursor-pointer transition-colors"
-                    style={{ accentColor: form.year > CURRENT_YEAR ? '#7c3aed' : '#10b981' }}
-                    value={form.year}
-                    onChange={e => setVal('year', parseInt(e.target.value))}
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-400 dark:text-white/20 font-bold px-1 transition-colors">
-                    <span>2000</span>
-                    <span className={form.year > CURRENT_YEAR ? 'text-violet-500 dark:text-violet-400/60' : ''}>
-                      {CURRENT_YEAR} (Today) → {CURRENT_YEAR + 50} (Future)
-                    </span>
+                  <div className="py-1">
+                    <input
+                      type="range" min={2000} max={CURRENT_YEAR + 50}
+                      className="w-full rounded-full cursor-pointer transition-colors"
+                      style={{
+                        '--slider-thumb': form.year > CURRENT_YEAR ? 'linear-gradient(135deg, #a78bfa, #7c3aed)' : 'linear-gradient(135deg, #4ade80, #10b981)',
+                        '--slider-shadow': form.year > CURRENT_YEAR ? 'rgba(124, 58, 237, 0.4)' : 'rgba(74, 222, 128, 0.4)',
+                        accentColor: form.year > CURRENT_YEAR ? '#7c3aed' : '#10b981',
+                      }}
+                      value={form.year}
+                      onChange={e => setVal('year', parseInt(e.target.value))}
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 dark:text-white/40 font-bold px-1 transition-colors mt-1">
+                      <span>2000</span>
+                      <span className={form.year > CURRENT_YEAR ? 'text-violet-700 dark:text-violet-400' : 'text-slate-500 dark:text-white/40'}>
+                        {CURRENT_YEAR} (Today) → {CURRENT_YEAR + 50} (Future)
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2 pb-2">
-                <span className="text-[0.65rem] font-bold text-emerald-400/60 font-inter">Growing season</span>
+                <span className="text-[0.65rem] font-bold text-emerald-700 dark:text-emerald-400 font-inter">Growing season</span>
                 <div className="flex gap-2">
                   {['Kharif', 'Rabi', 'Whole Year'].map(s => (
                     <button 
                       key={s} type="button" 
                       onClick={() => setVal('season', s)}
-                      className={`flex-1 py-2 rounded-xl border text-xs font-bold transition-all ${form.season === s ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/10'}`}
+                      className={`flex-1 py-2 rounded-xl border text-xs font-bold transition-all ${
+                        form.season === s 
+                          ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                          : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/50 hover:bg-slate-200 dark:hover:bg-white/10'
+                      }`}
                     >
                       {s}
                     </button>
@@ -656,14 +668,14 @@ What are key insights and recommendations?`;
               </div>
 
               {/* Advanced Environment Overrides */}
-              <div className="pt-4 border-t border-white/5">
+              <div className="pt-4 border-t border-slate-200 dark:border-white/5">
                 <button 
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full flex items-center justify-between text-xs font-bold text-emerald-400/60 font-inter hover:text-emerald-400 transition-colors group"
+                  className="w-full flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400 font-inter hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors group"
                 >
                   <span className="flex items-center gap-2">
-                    <Zap size={12} className={showAdvanced ? 'text-emerald-400' : ''} />
+                    <Zap size={12} className={showAdvanced ? 'text-emerald-600 dark:text-emerald-400' : ''} />
                     {showAdvanced ? 'Environment overrides active' : 'Configure environmental overrides'}
                   </span>
                   <ChevronDown size={14} className={`transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
@@ -677,16 +689,16 @@ What are key insights and recommendations?`;
                       exit={{ height: 0, opacity: 0 }} 
                       className="overflow-hidden space-y-6 pt-6"
                     >
-                      <p className="text-[0.65rem] text-slate-400 dark:text-white/20 text-center italic transition-colors">Advanced: Adjust atmospheric and soil parameters to override historical district averages.</p>
+                      <p className="text-[0.65rem] text-slate-500 dark:text-white/30 text-center italic transition-colors">Advanced: Adjust atmospheric and soil parameters to override historical district averages.</p>
                       {Object.entries(fieldGroups).map(([group, fields]) => (
                         <div key={group} className="space-y-3">
-                          <span className="text-[0.65rem] font-bold text-slate-400 dark:text-white/30 font-inter pl-1 transition-colors">{group}</span>
+                          <span className="text-[0.65rem] font-bold text-slate-600 dark:text-white/40 font-inter pl-1 transition-colors">{group}</span>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {fields.map(field => (
                               <div key={field.key} className="space-y-1">
-                                <label className="text-xs font-bold text-slate-500 dark:text-white/40 ml-1 transition-colors">{field.label}</label>
+                                <label className="text-xs font-bold text-slate-700 dark:text-white/60 ml-1 transition-colors">{field.label}</label>
                                 <div className="relative">
-                                  <field.icon size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: field.color + '80' }} />
+                                  <field.icon size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: field.color }} />
                                   <input
                                     type="number" step={field.step} min={field.min} max={field.max}
                                     className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-10 pr-10 text-slate-900 dark:text-white focus:border-emerald-500/50 focus:outline-none transition-all font-mono text-sm"
@@ -694,7 +706,7 @@ What are key insights and recommendations?`;
                                     onChange={e => setVal(field.key, parseFloat(e.target.value))}
                                   />
                                   <button type="button" onClick={() => handleVoice(field.key)}
-                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${voiceActive && voiceField === field.key ? 'bg-red-500/20 text-red-400' : 'text-slate-400 dark:text-white/25 hover:text-slate-600 dark:hover:text-white/60'}`}>
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${voiceActive && voiceField === field.key ? 'bg-red-500/20 text-red-500' : 'text-slate-500 dark:text-white/40 hover:text-slate-800 dark:hover:text-white/70'}`}>
                                     {voiceActive && voiceField === field.key
                                       ? <MicOff size={13} className="animate-pulse" />
                                       : <Mic size={13} />}
@@ -735,8 +747,8 @@ What are key insights and recommendations?`;
                   {/* ── Unified Prediction Card ── */}
                   <div className={`relative premium-glass p-4 sm:p-5 rounded-3xl border overflow-hidden shadow-2xl transition-all duration-500 ${
                     result.is_future 
-                      ? 'border-violet-500/40 bg-violet-500/5' 
-                      : 'border-emerald-500/40 bg-emerald-500/5'
+                      ? 'border-violet-500/30 bg-violet-50/60 dark:bg-violet-500/5' 
+                      : 'border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/5'
                   }`}>
                     <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-slate-900 dark:text-white">
                       <TrendingUp size={160} />
@@ -749,9 +761,9 @@ What are key insights and recommendations?`;
                       <div className="flex gap-2">
                         {result.trend_direction && (
                           <div className={`px-3 py-1 rounded-full text-xs font-black border ${
-                            result.trend_direction === 'increasing' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-                            result.trend_direction === 'decreasing' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                            'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                            result.trend_direction === 'increasing' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400' :
+                            result.trend_direction === 'decreasing' ? 'bg-red-500/15 border-red-500/30 text-red-700 dark:text-red-400' :
+                            'bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-400'
                           }`}>
                             {result.trend_direction === 'increasing' ? '📈 Improving' :
                              result.trend_direction === 'decreasing' ? '📉 Declining' : '➡️ Stable'}
@@ -761,8 +773,8 @@ What are key insights and recommendations?`;
                         <button onClick={handleSendToChat}
                           className={`p-1.5 rounded-lg border transition-all ${
                             result.is_future 
-                              ? 'bg-violet-500/10 border-violet-500/30 text-violet-400 hover:bg-violet-500 hover:text-white' 
-                              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                              ? 'bg-violet-500/10 border-violet-500/30 text-violet-700 dark:text-violet-400 hover:bg-violet-500 hover:text-white' 
+                              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white'
                           }`}
                           title="Ask AI Advisor">
                           <MessageSquare size={14} />
@@ -773,21 +785,21 @@ What are key insights and recommendations?`;
                     <div className="text-center relative z-10 mb-6">
                       <div className="text-3xl mb-1">{CROP_EMOJIS[form.crop_name] || '🌾'}</div>
                       <span className={`text-[0.65rem] font-bold ${
-                        result.is_future ? 'text-violet-300/60' : 'text-emerald-300/60'
+                        result.is_future ? 'text-violet-700 dark:text-violet-300' : 'text-emerald-700 dark:text-emerald-300'
                       }`}>
                         {result.is_future ? 'Projected' : 'Historical'} Yield · {form.crop_name}
                       </span>
                       <div className="flex items-baseline justify-center gap-2 mt-2">
                         <span className="text-7xl font-black text-slate-900 dark:text-white transition-colors">{result.predicted_yield}</span>
                         <div className="text-left">
-                          <div className={`font-bold text-sm ${result.is_future ? 'text-violet-600 dark:text-violet-400' : 'text-emerald-600 dark:text-emerald-400'} transition-colors`}>tons</div>
-                          <div className="text-slate-400 dark:text-white/30 text-[0.6rem] font-bold transition-colors">per hectare</div>
+                          <div className={`font-bold text-sm ${result.is_future ? 'text-violet-700 dark:text-violet-400' : 'text-emerald-700 dark:text-emerald-400'} transition-colors`}>tons</div>
+                          <div className="text-slate-500 dark:text-white/40 text-[0.6rem] font-bold transition-colors">per hectare</div>
                         </div>
                       </div>
                       
                       {vsNational !== null && !result.is_future && (
                         <div className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full text-[0.65rem] font-black border ${
-                          parseFloat(vsNational) >= 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
+                          parseFloat(vsNational) >= 0 ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-500/15 border-red-500/30 text-red-700 dark:text-red-400'
                         }`}>
                           {parseFloat(vsNational) >= 0 ? '📈' : '📉'}
                           {parseFloat(vsNational) >= 0 ? '+' : ''}{vsNational}% vs national avg
@@ -799,16 +811,16 @@ What are key insights and recommendations?`;
                         <div className="mt-4 mb-6 grid grid-cols-1 gap-2 relative z-10 px-4">
                           <div className={`p-3 rounded-2xl border flex items-center justify-between bg-emerald-500/10 border-emerald-500/20`}>
                             <div className="text-left">
-                              <p className="text-[0.6rem] font-bold text-emerald-600 dark:text-emerald-400/60 transition-colors">Growth since {result.forecast_year}</p>
+                              <p className="text-[0.6rem] font-bold text-emerald-700 dark:text-emerald-400 transition-colors">Growth since {result.forecast_year}</p>
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className={`text-xl font-black ${result.current_perspective.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'} transition-colors`}>
+                                <span className={`text-xl font-black ${result.current_perspective.delta >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'} transition-colors`}>
                                   {result.current_perspective.delta >= 0 ? '+' : ''}{result.current_perspective.delta} tons
                                 </span>
-                                <span className="text-[0.65rem] text-slate-400 dark:text-white/40 font-bold transition-colors">({result.current_perspective.delta_pct}%)</span>
+                                <span className="text-[0.65rem] text-slate-500 dark:text-white/40 font-bold transition-colors">({result.current_perspective.delta_pct}%)</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-[0.6rem] font-bold text-slate-400 dark:text-white/40 transition-colors">Current {CURRENT_YEAR}</p>
+                              <p className="text-[0.6rem] font-bold text-slate-500 dark:text-white/40 transition-colors">Current {CURRENT_YEAR}</p>
                               <p className="text-lg font-black text-slate-800 dark:text-white transition-colors">{result.current_perspective.yield} t/ha</p>
                             </div>
                           </div>
@@ -817,12 +829,12 @@ What are key insights and recommendations?`;
 
                       <div className="flex items-center justify-center gap-3 mt-4">
                         <div className="flex flex-col items-center">
-                          <span className="text-[0.55rem] text-slate-400 dark:text-white/30 font-bold transition-colors">Confidence</span>
-                          <span className="text-xs font-black text-slate-600 dark:text-white/70 transition-colors">{result.confidence}%</span>
+                          <span className="text-[0.6rem] text-slate-500 dark:text-white/40 font-bold transition-colors">Confidence</span>
+                          <span className="text-xs font-black text-slate-700 dark:text-white/80 transition-colors">{result.confidence}%</span>
                         </div>
-                        <div className="w-px h-6 bg-black/5 dark:bg-white/10" />
+                        <div className="w-px h-6 bg-slate-300 dark:bg-white/10" />
                         <div className="flex flex-col items-center">
-                          <span className="text-[0.55rem] text-slate-400 dark:text-white/30 font-bold transition-colors">Stability</span>
+                          <span className="text-[0.6rem] text-slate-500 dark:text-white/40 font-bold transition-colors">Stability</span>
                           <RiskBadge risk={result.risk_level} />
                         </div>
                       </div>
@@ -830,9 +842,9 @@ What are key insights and recommendations?`;
 
                     {/* Yield Trajectory Component */}
                     {result.year_range_yields?.length > 0 && (
-                      <div className="relative z-10 pt-4 border-t border-white/5">
+                      <div className="relative z-10 pt-4 border-t border-slate-200 dark:border-white/5">
                         <p className={`text-[0.65rem] font-black mb-3 flex items-center gap-2 ${
-                          result.is_future ? 'text-violet-400/60' : 'text-emerald-400/60'
+                          result.is_future ? 'text-violet-700 dark:text-violet-400' : 'text-emerald-700 dark:text-emerald-400'
                         }`}>
                           <BarChart2 size={11} /> 
                           {result.is_future 
@@ -840,13 +852,13 @@ What are key insights and recommendations?`;
                             : `Historical Bridge: ${result.forecast_year} → ${CURRENT_YEAR}`}
                         </p>
                         <FutureTrendChart data={result.year_range_yields} targetYear={result.is_future ? result.forecast_year : CURRENT_YEAR} currentYear={CURRENT_YEAR} />
-                        <div className="flex gap-4 mt-2 text-[0.6rem] text-slate-400 dark:text-white/30 justify-end font-bold transition-colors">
+                        <div className="flex gap-4 mt-2 text-[0.6rem] text-slate-500 dark:text-white/40 justify-end font-bold transition-colors">
                           <span className="flex items-center gap-1">
                             <span className={`w-3 h-0.5 inline-block ${result.is_future ? 'bg-violet-500' : 'bg-emerald-500'}`}></span> 
                             {result.is_future ? 'Projection' : 'Observed Trend'}
                           </span>
                           <span className="flex items-center gap-1">
-                            <span className={`w-3 h-0.5 inline-block opacity-40 ${result.is_future ? 'bg-violet-400' : 'bg-emerald-400'}`}></span> 
+                            <span className={`w-3 h-0.5 inline-block opacity-60 ${result.is_future ? 'bg-violet-400' : 'bg-emerald-400'}`}></span> 
                             Predictive Variance
                           </span>
                         </div>
@@ -857,7 +869,7 @@ What are key insights and recommendations?`;
                     {result.year_range_yields?.length > 0 && (
                       <div className="mt-6 relative z-10">
                         <p className={`text-[0.65rem] font-black mb-2 ${
-                          result.is_future ? 'text-violet-400/60' : 'text-emerald-400/60'
+                          result.is_future ? 'text-violet-700 dark:text-violet-400' : 'text-emerald-700 dark:text-emerald-400'
                         }`}>
                           Annual Performance Breakdown
                         </p>
@@ -865,17 +877,17 @@ What are key insights and recommendations?`;
                           {result.year_range_yields.map(d => (
                             <div key={d.year} className={`p-2 rounded-xl border text-center transition-all hover:bg-slate-200 dark:hover:bg-white/5 ${
                               d.year === result.forecast_year
-                                ? (result.is_future ? 'bg-violet-500/20 border-violet-500/40' : 'bg-emerald-500/20 border-emerald-500/40')
+                                ? (result.is_future ? 'bg-violet-100 dark:bg-violet-500/20 border-violet-400/50' : 'bg-emerald-100 dark:bg-emerald-500/20 border-emerald-400/50')
                                 : d.year === CURRENT_YEAR
-                                  ? 'bg-amber-500/10 border-amber-500/30'
+                                  ? 'bg-amber-100 dark:bg-amber-500/10 border-amber-400/50'
                                   : 'bg-slate-100 dark:bg-black/20 border-slate-200 dark:border-white/5'
                             }`}>
-                               <div className="text-[0.55rem] text-slate-400 dark:text-white/40 font-black transition-colors">{d.year}</div>
+                              <div className="text-[0.55rem] text-slate-500 dark:text-white/40 font-black transition-colors">{d.year}</div>
                               <div className={`font-black text-sm transition-colors ${
-                                d.year === result.forecast_year ? (result.is_future ? 'text-violet-600 dark:text-violet-300' : 'text-emerald-600 dark:text-emerald-300') :
-                                d.year === CURRENT_YEAR ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-white'
+                                d.year === result.forecast_year ? (result.is_future ? 'text-violet-700 dark:text-violet-300' : 'text-emerald-700 dark:text-emerald-300') :
+                                d.year === CURRENT_YEAR ? 'text-amber-700 dark:text-amber-400' : 'text-slate-800 dark:text-white'
                               }`}>{d.yield_value}</div>
-                              <div className="text-[0.5rem] text-slate-400 dark:text-white/20 font-bold transition-colors">±{((d.upper - d.lower)/2).toFixed(2)}</div>
+                              <div className="text-[0.5rem] text-slate-500 dark:text-white/30 font-bold transition-colors">±{((d.upper - d.lower)/2).toFixed(2)}</div>
                             </div>
                           ))}
                         </div>
@@ -904,7 +916,7 @@ What are key insights and recommendations?`;
                   </div>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {['📍 Pune', '📍 Ahmadabad', '📍 Nashik', '📍 Agra'].map(d => (
-                      <span key={d} className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/30 border border-slate-200 dark:border-white/5 transition-colors">{d}</span>
+                      <span key={d} className="text-xs px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/40 border border-slate-200 dark:border-white/5 transition-colors font-semibold">{d}</span>
                     ))}
                   </div>
                 </div>
@@ -914,7 +926,7 @@ What are key insights and recommendations?`;
         </div>
 
         {/* ── Tips Section ── */}
-        <section className="premium-glass p-4 md:p-6 rounded-3xl border transition-all duration-500">
+        <section className="premium-glass p-4 md:p-6 rounded-3xl border border-slate-200 dark:border-white/10 transition-all duration-500">
           <h3 className="text-slate-800 dark:text-white font-bold flex items-center gap-2 mb-5 transition-colors">
             <Zap size={16} className="text-amber-500" /> Predicting via Historical Mapping
           </h3>
@@ -928,7 +940,7 @@ What are key insights and recommendations?`;
               <div key={tip.title} className="space-y-1.5">
                 <div className="text-xl">{tip.icon}</div>
                 <div className="text-slate-800 dark:text-white font-black text-xs transition-colors">{tip.title}</div>
-                <div className="text-slate-500 dark:text-white/40 text-[0.7rem] font-medium leading-relaxed transition-colors">{tip.desc}</div>
+                <div className="text-slate-600 dark:text-white/50 text-[0.7rem] font-medium leading-relaxed transition-colors">{tip.desc}</div>
               </div>
             ))}
           </div>

@@ -54,14 +54,16 @@ function useSpeech() {
     const utt = new SpeechSynthesisUtterance(clean.slice(0, 1000));
 
     // BCP-47 Map
-    const langMap = { hi: 'hi-IN', gu: 'gu-IN', mr: 'mr-IN', en: 'en-IN' };
+    const langMap = { hi: 'hi-IN', gu: 'gu-IN', mr: 'mr-IN', ta: 'ta-IN', en: 'en-IN' };
     let targetLang = langMap[language] || 'en-IN';
 
     // Advanced script-based auto-detection
+    const hasTamil = /[\u0B80-\u0BFF]/.test(text);      // Tamil
     const hasDevanagari = /[\u0900-\u097F]/.test(text); // Hindi, Marathi
     const hasGujarati = /[\u0a80-\u0aff]/.test(text);   // Gujarati
 
-    if (hasGujarati) targetLang = 'gu-IN';
+    if (hasTamil) targetLang = 'ta-IN';
+    else if (hasGujarati) targetLang = 'gu-IN';
     else if (hasDevanagari) targetLang = 'hi-IN';
 
     utt.lang = targetLang;
@@ -287,7 +289,8 @@ function MessageBubble({ m, onFeedback, onSuggestionClick, onPin, isPinned, lang
                 { code: 'en', label: 'English', emoji: '🇬🇧' },
                 { code: 'hi', label: 'हिन्दी', emoji: '🇮🇳' },
                 { code: 'gu', label: 'ગુજરાતી', emoji: '🇮🇳' },
-                { code: 'mr', label: 'मરાઠી', emoji: '🇮🇳' },
+                { code: 'mr', label: 'मराठी', emoji: '🇮🇳' },
+                { code: 'ta', label: 'தமிழ்', emoji: '🇮🇳' },
               ].map((lang) => (
                 <motion.button
                   key={lang.code}

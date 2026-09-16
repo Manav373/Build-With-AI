@@ -22,8 +22,8 @@ body {
 
 /* Dark select/option theming */
 select option {
-  background-color: var(--surface);
-  color: var(--text);
+  background-color: #0d1b2a !important;
+  color: #ffffff !important;
 }
 
 /* ── Design Tokens ── */

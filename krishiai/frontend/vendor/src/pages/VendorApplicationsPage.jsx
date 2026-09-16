@@ -6,6 +6,7 @@ import {
   Clock, Wheat, MapPin, IndianRupee, Phone, Eye, Filter, Search,
   ChevronDown, ArrowRight, Loader2, Star, Image, AlertCircle
 } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 const STATUS_STYLES = {
   pending: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', label: '⏳ Pending', icon: Clock },
@@ -112,8 +113,7 @@ export default function VendorApplicationsPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [counterOfferApp, setCounterOfferApp] = useState(null);
 
-  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-  const API = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
+  const API = API_BASE;
 
   const fetchApplications = async () => {
     setLoading(true);

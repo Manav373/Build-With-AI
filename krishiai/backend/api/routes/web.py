@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from app.core.auth import verify_clerk_token
 
 from typing import Optional
@@ -38,7 +38,7 @@ async def _groq_chat_completion_with_fallback(client, **kwargs):
         raise
 
 @router.post("/chat")
-async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data: dict = Depends(verify_clerk_token)):
+async def chat_endpoint(payload: dict, request: Request, db: Session = Depends(get_db), user_data: dict = Depends(verify_clerk_token)):
     """
     Endpoint for the React frontend to send chat messages.
     """
@@ -54,8 +54,13 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
         village = payload.get("village")
         taluka = payload.get("taluka")
         history = payload.get("history", [])
+        channel = payload.get("channel") or ("voice" if payload.get("phone_id") == "voice_user" else "web")
 
+<<<<<<< HEAD
         # --- STEP 1: Analytics Integrity (Save Raw Location with fast non-blocking lookup) ---
+=======
+        # --- STEP 1: Analytics Integrity & Smart Location Resolution ---
+>>>>>>> origin/main
         if lat and lon:
             try:
                 res_village = village
@@ -87,8 +92,13 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
                     district=res_district,
                     city=res_city or "Manual",
                     state=res_state or "Manual",
+<<<<<<< HEAD
                     pincode=res_pincode,
                     source="chat", timestamp=datetime.utcnow()
+=======
+                    pincode=loc.get("pincode"),
+                    source=channel, timestamp=datetime.utcnow()
+>>>>>>> origin/main
                 )
                 db.add(record)
                 db.commit()
@@ -97,6 +107,45 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
                 city, state, village, taluka = res_city, res_state, res_village, res_taluka
             except Exception as db_err:
                 logger.warning(f"Failed to log chat location for analytics: {db_err}")
+        elif not city or city == "India":
+            # If coordinates are missing, auto-resolve location from client IP
+            try:
+                client_ip = request.headers.get("x-forwarded-for")
+                if not client_ip:
+                    client_ip = request.client.host if request.client else None
+                if client_ip and client_ip in ["127.0.0.1", "localhost", "::1"]:
+                    try:
+                        async with httpx.AsyncClient() as http_client:
+                            resp = await http_client.get("https://api.ipify.org", timeout=2.0)
+                            client_ip = resp.text
+                    except Exception:
+                        pass
+                if client_ip:
+                    from app.services.location_service import location_service
+                    res = await location_service.resolve_from_ip(client_ip)
+                    if res:
+                        city = res.get("district") or res.get("city") or city
+                        state = res.get("state") or state
+                        lat = res.get("lat") or lat
+                        lon = res.get("lon") or lon
+            except Exception as ip_err:
+                logger.warning(f"Could not resolve IP for chat location: {ip_err}")
+
+            # If still missing, check user's last recorded location in DB
+            if (not lat or not lon) and (not city or city == "India"):
+                try:
+                    user_id = user_data.get("sub")
+                    if user_id:
+                        last_loc = db.query(FarmerLocation).filter_by(user_id=user_id).order_by(FarmerLocation.timestamp.desc()).first()
+                        if last_loc:
+                            city = last_loc.district or last_loc.city or city
+                            state = last_loc.state or state
+                            lat = last_loc.lat or lat
+                            lon = last_loc.lon or lon
+                            village = last_loc.village or village
+                            taluka = last_loc.taluka or taluka
+                except Exception as db_loc_err:
+                    logger.warning(f"Could not fetch last user location: {db_loc_err}")
 
         # --- STEP 2: PII Masking (Secure Chat) ---
         message, token_map = pii_service.mask(message)
@@ -108,15 +157,30 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
             clean_city = city or taluka or village or "India"
             clean_state = state or "India"
             message = f"[Farmer's exact GPS: {float(lat):.4f},{float(lon):.4f} | District/City: {clean_city}, State: {clean_state} | Address: {location_str}]\n{message}"
+        elif city and city != "India":
+            parts = [p for p in [village, taluka, city, state] if p and p != "Unknown"]
+            location_str = ", ".join(parts) if parts else (city or state or "India")
+            clean_city = city or taluka or village or "India"
+            clean_state = state or "India"
+            message = f"[Farmer's Location: District/City: {clean_city}, State: {clean_state} | Address: {location_str}]\n{message}"
+        elif channel == "voice":
+            # For voice assistant, if no location was resolved, default to Delhi, India so weather/mandi tools immediately provide direct answers
+            message = f"[Farmer's Location: District/City: Delhi, State: India]\n{message}"
 
-        logger.info(f"Frontend query from {user_data.get('sub', 'unknown')} (masked len: {len(message)})")
+        language = payload.get("language")
+        logger.info(f"Frontend ({channel}) query from {user_data.get('sub', 'unknown')} (masked len: {len(message)}, lang_pref: {language})")
         
+<<<<<<< HEAD
         # Process the masked query with safe 45s timeout
         try:
             ai_reply = await asyncio.wait_for(process_web_query(message, history=history), timeout=45.0)
         except asyncio.TimeoutError:
             logger.warning("Web query exceeded 45s threshold, providing fallback advisory")
             ai_reply = "🌱 **KrishiAI Advisor Notice**:\n\nOur agricultural models took slightly longer than expected to analyze satellite and market feeds. Here is immediate guidance for your query:\n\n- Ensure proper field drainage and soil moisture.\n- Monitor for early signs of pests or nutritional deficiencies.\n\nPlease feel free to ask a specific follow-up question (e.g. crop pricing, weather forecast, or fertilizer dosage)!"
+=======
+        # Process the masked query with channel-appropriate prompt and auto-language mirroring
+        ai_reply = await process_web_query(message, history=history, channel=channel, language_preference=language)
+>>>>>>> origin/main
         
         # --- STEP 3: Detokenize Reply (Restore Context) ---
         final_reply = pii_service.unmask(ai_reply, token_map)
@@ -204,6 +268,7 @@ async def audio_endpoint(
     lat: Optional[float] = Form(None), 
     lon: Optional[float] = Form(None),
     city: Optional[str] = Form(None),
+    state: Optional[str] = Form(None),
     village: Optional[str] = Form(None),
     taluka: Optional[str] = Form(None),
     history: str = Form("[]"),
@@ -267,10 +332,12 @@ async def audio_endpoint(
             parts = [p for p in [village, taluka, city, state] if p and p != "Unknown"]
             location_str = ", ".join(parts) if parts else f"{float(lat):.4f}N, {float(lon):.4f}E"
             query = f"[Farmer's exact GPS: {float(lat):.4f},{float(lon):.4f} | Location: {location_str}]\n{masked_text}"
+        elif city and city != "India":
+            query = f"[Farmer's Location: District/City: {city}, State: {state or 'India'}]\n{masked_text}"
         else:
-            query = masked_text
+            query = f"[Farmer's Location: District/City: Delhi, State: India]\n{masked_text}"
             
-        ai_reply = await process_web_query(query, history=history_list)
+        ai_reply = await process_web_query(query, history=history_list, channel="voice")
         
         # --- Detokenize Reply ---
         final_reply = pii_service.unmask(ai_reply, token_map)
@@ -386,22 +453,26 @@ async def weather_endpoint(
     Real-time weather & 5-day forecast by GPS coordinates or city name.
     Used by mobile and web dashboards to personalize farmer weather.
     """
-    from app.services.weather import get_weather_by_coords, get_weather_by_city, get_forecast_by_coords
+    from app.services.weather import get_weather_by_coords, get_weather_by_city, get_forecast_by_coords, _generate_agri_advisory
     try:
         if lat is not None and lon is not None:
             current = await get_weather_by_coords(float(lat), float(lon))
             forecast = await get_forecast_by_coords(float(lat), float(lon))
+            advisory = _generate_agri_advisory(current, forecast)
             return {
                 "success": True,
                 "current": current,
-                "forecast": forecast
+                "forecast": forecast,
+                "advisory": advisory
             }
         elif city:
             current = await get_weather_by_city(city)
+            advisory = _generate_agri_advisory(current)
             return {
                 "success": True,
                 "current": current,
-                "forecast": []
+                "forecast": [],
+                "advisory": advisory
             }
         else:
             raise HTTPException(status_code=400, detail="Provide either lat & lon, or city")

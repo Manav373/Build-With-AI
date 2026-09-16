@@ -1,119 +1,89 @@
 import React, { useState } from 'react';
-import { ShieldCheck, AlertTriangle, Clock, Power, X } from 'lucide-react';
+import { X, Droplets, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 
-export default function PumpControlModal({ isOpen, onClose, onConfirm, userRole = 'Admin' }) {
-  const [duration, setDuration] = useState(5);
-  const [customReason, setCustomReason] = useState('Manual irrigation cycle');
+export default function PumpControlModal({ isOpen, onClose, onConfirm, device }) {
+  const [duration, setDuration] = useState(10);
+  const [reason, setReason] = useState('Manual morning irrigation');
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    onConfirm({
-      durationMinutes: Number(duration),
-      reason: customReason,
-      user: `${userRole} (Manual Override)`
-    });
+  const maxMins = device?.settings?.manualMaxDurationMinutes || 30;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onConfirm(Number(duration), reason);
     onClose();
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-pump-title">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Power size={18} color="var(--emerald-400)" />
-            </div>
-            <h3 id="modal-pump-title" style={{ fontSize: '1.15rem' }}>Confirm Pump Activation</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-slate-900 dark:text-white transition-colors">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
+        >
+          <X size={18} />
+        </button>
+
+        {/* Title */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <Droplets size={22} />
           </div>
-          <button 
-            id="btn-close-modal"
-            onClick={onClose} 
-            className="btn-secondary" 
-            style={{ padding: '0.35rem 0.5rem', border: 'none' }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-          Are you sure you want to start field irrigation? The ESP32 will energize Relay GPIO 26 to power the water pump.
-        </p>
-
-        {/* Duration Selection (Safety Enforced) */}
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            Select Run Duration (Safety Cutoff):
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-            {[2, 5, 10, 15].map((mins) => (
-              <button
-                key={mins}
-                type="button"
-                className={`btn-secondary ${duration === mins ? 'active' : ''}`}
-                style={{ 
-                  padding: '0.5rem 0.25rem',
-                  fontSize: '0.85rem',
-                  borderColor: duration === mins ? 'var(--emerald-500)' : 'var(--border-subtle)',
-                  background: duration === mins ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.03)',
-                  color: duration === mins ? 'var(--emerald-400)' : 'var(--text-primary)',
-                  fontWeight: 700
-                }}
-                onClick={() => setDuration(mins)}
-              >
-                {mins} min
-              </button>
-            ))}
+          <div>
+            <h3 className="text-base font-bold">Start Irrigation Cycle</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Node: {device?.name || 'ESP32 Node 01'}</p>
           </div>
         </div>
 
-        {/* Reason / Operator note */}
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            Operator Reason:
-          </label>
-          <input 
-            type="text" 
-            value={customReason} 
-            onChange={(e) => setCustomReason(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '0.65rem 0.85rem', 
-              background: 'rgba(0, 0, 0, 0.4)', 
-              border: '1px solid var(--border-subtle)', 
-              borderRadius: 'var(--radius-md)', 
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem'
-            }}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Actuation Mode Confirmation */}
+          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Actuator Command</span>
+            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">GPIO 26 RELAY [ON]</span>
+          </div>
 
-        {/* Operator Badge */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.03)', 
-          border: '1px solid var(--border-subtle)', 
-          borderRadius: 'var(--radius-sm)', 
-          padding: '0.6rem 0.85rem',
-          fontSize: '0.8rem',
-          marginBottom: '1.5rem'
-        }}>
-          <span style={{ color: 'var(--text-muted)' }}>Authorized Operator:</span>
-          <strong style={{ color: 'var(--sky-400)' }}>{userRole}</strong>
-        </div>
+          {/* Operator Reason */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">
+              Audit Reason / Activity
+            </label>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g., Immediate root zone hydration"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-emerald-500 transition"
+              required
+            />
+          </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-          <button id="btn-modal-cancel" className="btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button id="btn-modal-start-pump" className="btn-primary" onClick={handleConfirm}>
-            <Power size={16} />
-            <span>Start Pump ({duration} min)</span>
-          </button>
-        </div>
+          {/* Safety Notice */}
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2">
+            <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+            <span>
+              If precipitation or communication loss is detected, safety cutoffs will immediately de-energize the pump.
+            </span>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition border border-slate-200 dark:border-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/30"
+            >
+              Confirm & Start
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

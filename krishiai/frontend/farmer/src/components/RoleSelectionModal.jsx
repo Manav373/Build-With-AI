@@ -24,31 +24,6 @@ const ROLES = [
     ctaTextColor: '#052e14',
     route: '/sign-up',
   },
-  {
-    id: 'vendor',
-    icon: '🏪',
-    label: 'Vendor',
-    sublabel: 'Procurement, Seller, or Hybrid',
-    description: 'Buy crops directly from farmers, sell agricultural inputs & equipment, or operate both with one account.',
-    benefits: [
-      'Product listing & store management',
-      'Crop buying requirements & procurement',
-      'Farmer negotiations & order tracking',
-      'Vendor marketplace profile & analytics',
-    ],
-    vendorTypes: [
-      { emoji: '🏭', label: 'Procurement Vendor', desc: 'Buy crops in bulk' },
-      { emoji: '🏪', label: 'Agri Input Seller', desc: 'Sell products & tools' },
-      { emoji: '🔄', label: 'Hybrid Vendor', desc: 'Buy crops & sell products' },
-    ],
-    color: '#facc15',
-    gradient: 'linear-gradient(135deg, #713f12 0%, #a16207 60%, #facc15 100%)',
-    glowColor: 'rgba(250,204,21,0.35)',
-    borderColor: 'rgba(250,204,21,0.25)',
-    bgCard: 'rgba(113,63,18,0.1)',
-    ctaTextColor: '#1c0e00',
-    route: '/vendor-type-select',
-  },
 ];
 
 export default function RoleSelectionModal({ isOpen, onClose }) {
@@ -106,7 +81,7 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
               style={{
                 width: '100%',
-                maxWidth: 820,
+                maxWidth: 480,
                 maxHeight: 'calc(100vh - 2rem)',
                 overflowY: 'auto',
                 pointerEvents: 'all',
@@ -334,22 +309,6 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                         ))}
                       </ul>
 
-                      {role.vendorTypes && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.5rem', borderRadius: '0.6rem', background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.15)' }}>
-                          <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Includes 3 Vendor Types:
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.25rem' }}>
-                            {role.vendorTypes.map((vt, k) => (
-                              <div key={k} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: 'rgba(255,255,255,0.04)' }}>
-                                <span style={{ fontSize: '0.9rem' }}>{vt.emoji}</span>
-                                <span style={{ fontSize: '0.62rem', color: '#f0fdf4', fontWeight: 700, marginTop: 2, lineHeight: 1.1 }}>{vt.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
                       <div
                         style={{
                           padding: '0.55rem 1rem',
@@ -371,19 +330,24 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                 <p
                   style={{
                     textAlign: 'center',
-                    color: 'rgba(134,239,172,0.3)',
-                    fontSize: '0.75rem',
-                    marginTop: '1.1rem',
+                    color: 'rgba(134,239,172,0.5)',
+                    fontSize: '0.8rem',
+                    marginTop: '1.2rem',
                     marginBottom: 0,
                     position: 'relative',
                     zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '1rem',
+                    flexWrap: 'wrap',
                   }}
                 >
-                  Already have an account?{' '}
+                  <span>Already have an account?</span>
                   <button
                     type="button"
                     onClick={() => { onClose(); navigate('/sign-in'); }}
-                    id="modal-sign-in-link"
+                    id="modal-customer-sign-in-link"
                     style={{
                       color: '#4ade80',
                       background: 'none',
@@ -397,7 +361,30 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                       outline: 'none',
                     }}
                   >
-                    Sign in here
+                    Farmer Sign In
+                  </button>
+                  <span style={{ opacity: 0.4 }}>•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      window.location.href = 'http://localhost:5174/vendor-sign-in';
+                    }}
+                    id="modal-vendor-sign-in-link"
+                    style={{
+                      color: '#facc15',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: 'inherit',
+                      padding: 0,
+                      textDecoration: 'underline',
+                      textUnderlineOffset: '3px',
+                      outline: 'none',
+                    }}
+                  >
+                    Vendor Sign In
                   </button>
                 </p>
               </div>

@@ -1,303 +1,306 @@
 import React from 'react';
 import { 
-  Droplets, 
+  Droplet, 
   Thermometer, 
-  Wind, 
   CloudRain, 
   Sun, 
   Moon, 
-  Power,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Layers
+  Zap, 
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 
-export default function SensorCards({ telemetry, device, onOpenPumpModal, userRole }) {
-  if (!telemetry) {
-    return (
-      <div className="sensors-grid">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <div key={i} className="glass-card" style={{ height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Acquiring telemetry channel {i}...</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
+export default function SensorCards({ telemetry, device, onOpenPumpModal, onStartPump, onEmergencyStop }) {
+  const isOffline = device?.status === 'offline' || (!telemetry?.timestamp && telemetry?.soilMoisture === 0 && telemetry?.temperature === 0);
+  const moisture = typeof telemetry?.soilMoisture === 'number' ? Math.round(telemetry.soilMoisture) : (telemetry?.soilMoisture ?? 0);
+  const rawAdc = telemetry?.soilRaw ?? 0;
+  const tempC = telemetry?.temperature ?? 0;
+  const tempF = tempC > 0 ? Number(((tempC * 9) / 5 + 32).toFixed(1)) : 0;
+  const humidity = telemetry?.humidity ?? 0;
+  const isRaining = Boolean(telemetry?.rain);
+  const isDaylight = Boolean(telemetry?.light);
+  const isPumpActive = Boolean(telemetry?.pump);
 
-  // 1. Soil Moisture Assessment
-  const soil = Number(telemetry.soilMoisture ?? 0);
-  const soilRaw = telemetry.soilRaw ?? 2450;
-  let soilStatusClass = 'badge-good';
-  let soilStatusText = 'OPTIMAL MOISTURE';
-  if (soil < 25) {
-    soilStatusClass = 'badge-very-dry';
-    soilStatusText = 'CRITICALLY DRY';
-  } else if (soil < 40) {
-    soilStatusClass = 'badge-dry';
-    soilStatusText = 'DRY (IRRIGATE)';
-  } else if (soil > 80) {
-    soilStatusClass = 'badge-wet';
-    soilStatusText = 'SATURATED';
-  }
+  // Soil status badge logic based on user's calibrated hardware:
+  // 0% -> Not on soil (sensor not placed in soil)
+  // ~45% (<=48%) -> Sorted (optimal moisture)
+  // 49% - 64% -> Dry / Deficit (approaching dry mark)
+  // 65% and up -> Dry (soil dry, irrigation required)
+  const getSoilBadge = (val) => {
+    if (isOffline) {
+      return { 
+        label: 'OFFLINE / DISCONNECTED', 
+        bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30' 
+      };
+    }
+    if (val <= 0) {
+      return { 
+        label: 'NOT ON SOIL (0%)', 
+        bg: 'bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/30' 
+      };
+    }
+    if (val >= 65) {
+      return { 
+        label: 'DRY (≥65%)', 
+        bg: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30' 
+      };
+    }
+    if (val > 48) {
+      return { 
+        label: 'DRY (DEFICIT 49–64%)', 
+        bg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' 
+      };
+    }
+    return { 
+      label: 'SORTED (~45%)', 
+      bg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+    };
+  };
 
-  // 2. Temperature Assessment & Trend
-  const temp = Number(telemetry.temperature ?? 0);
-  const prevTemp = Number(telemetry.tempPrev ?? temp);
-  const tempDiff = temp - prevTemp;
-  let TrendIcon = Minus;
-  let trendClass = 'trend-stable';
-  let trendText = 'Stable';
-  if (tempDiff > 0.3) {
-    TrendIcon = TrendingUp;
-    trendClass = 'trend-up';
-    trendText = `+${tempDiff.toFixed(1)}°C/hr`;
-  } else if (tempDiff < -0.3) {
-    TrendIcon = TrendingDown;
-    trendClass = 'trend-down';
-    trendText = `${tempDiff.toFixed(1)}°C/hr`;
-  }
+  const soilBadge = getSoilBadge(moisture);
 
-  // 3. Humidity
-  const hum = Number(telemetry.humidity ?? 0);
+  // Accurate Magnus-Tetens Dew point calculation (°C)
+  const a = 17.27;
+  const b = 237.7;
+  const alpha = (tempC > 0 && humidity > 0) ? (((a * tempC) / (b + tempC)) + Math.log(humidity / 100.0)) : 0;
+  const dewPoint = (tempC > 0 && humidity > 0) ? ((b * alpha) / (a - alpha)).toFixed(1) : '0.0';
 
-  // 4. Rain Sensor (FC-37)
-  const isRain = Boolean(telemetry.rain);
+  // Accurate NOAA Steadman Heat Index (°C)
+  const calculateHeatIndex = (t, rh) => {
+    if (!t || !rh || t <= 0) return 0;
+    if (t < 20) return t;
+    const tf = (t * 9) / 5 + 32;
+    const hiF = 0.5 * (tf + 61.0 + ((tf - 68.0) * 1.2) + (rh * 0.094));
+    if (hiF < 80) return Number((((hiF - 32) * 5) / 9).toFixed(1));
+    const c1 = -42.379, c2 = 2.04901523, c3 = 10.14333127, c4 = -0.22475541;
+    const c5 = -0.00683783, c6 = -0.05481717, c7 = 0.00122874, c8 = 0.00085282, c9 = -0.00000199;
+    const rhi = c1 + (c2 * tf) + (c3 * rh) + (c4 * tf * rh) + (c5 * tf * tf) + (c6 * rh * rh) + (c7 * tf * tf * rh) + (c8 * tf * rh * rh) + (c9 * tf * tf * rh * rh);
+    return Number((((rhi - 32) * 5) / 9).toFixed(1));
+  };
+  const heatIndex = calculateHeatIndex(tempC, humidity);
 
-  // 5. Light Sensor (HW-072)
-  const isDay = Boolean(telemetry.light);
-
-  // 6. Pump Status
-  const isPumpActive = Boolean(telemetry.pump);
+  // Accurate Agronomic Vapor Pressure Deficit (VPD in kPa)
+  const vpSat = tempC > 0 ? 0.61078 * Math.exp((17.27 * tempC) / (tempC + 237.3)) : 0;
+  const vpAct = vpSat * (humidity / 100);
+  const vpd = (tempC > 0 && humidity > 0) ? Number((vpSat - vpAct).toFixed(2)) : 0;
+  const vpdStatus = isOffline ? 'Offline' : (vpd < 0.4 ? 'Low' : vpd <= 1.2 ? 'Ideal' : 'High');
 
   return (
-    <div className="sensors-grid">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* 1. SOIL MOISTURE */}
-      <div className="glass-card" id="card-soil-moisture">
-        <div className="card-header">
-          <div className="card-title-group">
-            <div className="card-icon-box" style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-              <Droplets size={22} color="var(--emerald-400)" />
-            </div>
-            <div>
-              <div className="card-title">Soil Moisture</div>
-              <div className="card-subtitle">GPIO 5 · Capacitive V1.2</div>
-            </div>
-          </div>
-          <span className={`status-badge ${soilStatusClass}`}>{soilStatusText}</span>
+      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-5 shadow-sm dark:shadow-lg hover:border-emerald-500/40 transition-all">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Droplet size={15} className="text-emerald-500 dark:text-emerald-400" />
+            Capacitive Soil Moisture
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${soilBadge.bg}`}>
+            {soilBadge.label}
+          </span>
         </div>
 
-        <div className="metric-row">
-          <div className="metric-value">
-            {soil}
-            <span className="metric-unit">%</span>
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            <div>Target: 40% – 70%</div>
-            <div className="font-mono" style={{ color: 'var(--emerald-400)', fontWeight: 600 }}>ADC: {soilRaw}</div>
-          </div>
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="text-4xl font-extrabold text-slate-900 dark:text-white font-mono">{moisture}%</span>
+          <span className="text-xs text-slate-500 font-mono">({rawAdc} ADC)</span>
         </div>
 
-        <div className="meter-bar-container">
-          <div className="meter-fill soil" style={{ width: `${Math.min(100, Math.max(5, soil))}%` }}></div>
+        {/* Moisture progress bar */}
+        <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3 p-0.5 border border-slate-200 dark:border-slate-700/50">
+          <div 
+            className={`h-full rounded-full transition-all duration-500 ${
+              moisture <= 0 ? 'bg-slate-400 dark:bg-slate-600' :
+              moisture >= 65 ? 'bg-gradient-to-r from-red-500 to-rose-600' :
+              moisture > 48 ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+              'bg-gradient-to-r from-emerald-500 to-teal-400'
+            }`}
+            style={{ width: `${moisture <= 0 ? 4 : Math.min(100, Math.max(5, moisture))}%` }}
+          />
         </div>
 
-        <div className="card-footer-info">
-          <span>Dry Threshold: 35%</span>
-          <span>Calibrated: 1200 – 3200</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>0%: Not on Soil</span>
+          <span>~45%: Sorted</span>
+          <span>≥65%: Dry</span>
         </div>
       </div>
 
       {/* 2. AMBIENT TEMPERATURE */}
-      <div className="glass-card" id="card-temperature">
-        <div className="card-header">
-          <div className="card-title-group">
-            <div className="card-icon-box" style={{ background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }}>
-              <Thermometer size={22} color="var(--amber-400)" />
-            </div>
-            <div>
-              <div className="card-title">Ambient Temperature</div>
-              <div className="card-subtitle">GPIO 25 · DHT11 Sensor</div>
-            </div>
-          </div>
-          <div className={`trend-indicator ${trendClass}`} style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
-            <TrendIcon size={16} />
-            <span>{trendText}</span>
-          </div>
+      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-5 shadow-sm dark:shadow-lg hover:border-amber-500/40 transition-all">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Thermometer size={15} className="text-amber-500 dark:text-amber-400" />
+            Field Temperature (DHT11)
+          </span>
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            {tempF}°F
+          </span>
         </div>
 
-        <div className="metric-row">
-          <div className="metric-value">
-            {temp.toFixed(1)}
-            <span className="metric-unit">°C</span>
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            <div>Thermal Balance</div>
-            <div style={{ color: temp > 35 ? 'var(--amber-400)' : 'var(--emerald-400)', fontWeight: 700 }}>
-              {temp > 35 ? 'HIGH EVAPORATION' : 'OPTIMAL'}
-            </div>
-          </div>
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="text-4xl font-extrabold text-slate-900 dark:text-white font-mono">{tempC}°C</span>
+          <span className={`text-xs flex items-center font-medium ${isOffline ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {isOffline ? 'Node Offline' : <><ArrowUpRight size={14} /> Normal</>}
+          </span>
         </div>
 
-        <div className="meter-bar-container">
-          <div className="meter-fill temp" style={{ width: `${Math.min(100, Math.max(10, (temp / 50) * 100))}%` }}></div>
-        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1 mb-3">
+          {isOffline ? 'Awaiting temperature telemetry from DHT11 sensor' : tempC > 35 ? '⚠️ High heat stress on crops' : tempC < 15 ? '❄️ Low temperature alert' : 'Optimal diurnal vegetative range'}
+        </p>
 
-        <div className="card-footer-info">
-          <span>Heat Stress Alert: &gt; 35°C</span>
-          <span>Optimal: 20°C – 30°C</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>Heat Index: {heatIndex}°C</span>
+          <span>Sensor: GPIO 25</span>
         </div>
       </div>
 
       {/* 3. RELATIVE HUMIDITY */}
-      <div className="glass-card" id="card-humidity">
-        <div className="card-header">
-          <div className="card-title-group">
-            <div className="card-icon-box" style={{ background: 'rgba(14, 165, 233, 0.15)', borderColor: 'rgba(14, 165, 233, 0.3)' }}>
-              <Wind size={22} color="var(--sky-400)" />
-            </div>
-            <div>
-              <div className="card-title">Relative Humidity</div>
-              <div className="card-subtitle">GPIO 25 · DHT11 Sensor</div>
-            </div>
-          </div>
-          <span className="status-badge" style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
-            {hum < 40 ? 'LOW' : hum > 80 ? 'HIGH' : 'MODERATE'}
+      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-5 shadow-sm dark:shadow-lg hover:border-cyan-500/40 transition-all">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Activity size={15} className="text-cyan-500 dark:text-cyan-400" />
+            Air Humidity & Dew
+          </span>
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20">
+            Dew: {dewPoint}°C
           </span>
         </div>
 
-        <div className="metric-row">
-          <div className="metric-value">
-            {Math.round(hum)}
-            <span className="metric-unit">%</span>
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            <div>Vapor Saturation</div>
-            <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{hum > 75 ? 'Low Transpiration' : 'Normal'}</div>
-          </div>
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="text-4xl font-extrabold text-slate-900 dark:text-white font-mono">{humidity}%</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">RH</span>
         </div>
 
-        <div className="meter-bar-container">
-          <div className="meter-fill hum" style={{ width: `${Math.min(100, Math.max(10, hum))}%` }}></div>
+        <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3 p-0.5 border border-slate-200 dark:border-slate-700/50">
+          <div 
+            className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
+            style={{ width: `${Math.min(100, Math.max(5, humidity))}%` }}
+          />
         </div>
 
-        <div className="card-footer-info">
-          <span>Dew Point Margin: 85%</span>
-          <span>Accuracy: ±5% RH</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>VPD: {vpd} kPa ({vpdStatus})</span>
+          <span>Fungal Risk: {humidity > 80 ? 'High' : 'Low'}</span>
         </div>
       </div>
 
-      {/* 4. PRECIPITATION SENSOR */}
-      <div className="glass-card" id="card-rain">
-        <div className="card-header">
-          <div className="card-title-group">
-            <div className="card-icon-box" style={{ background: 'rgba(14, 165, 233, 0.15)', borderColor: 'rgba(14, 165, 233, 0.3)' }}>
-              <CloudRain size={22} color="var(--sky-400)" />
-            </div>
-            <div>
-              <div className="card-title">Precipitation</div>
-              <div className="card-subtitle">GPIO 27 · FC-37 Active LOW</div>
-            </div>
-          </div>
-          <span className={`status-badge ${isRain ? 'badge-rain-detected' : 'badge-no-rain'}`}>
-            {isRain ? 'RAIN DETECTED' : 'DRY SURFACE'}
+      {/* 4. RAIN SENSOR (FC-37) */}
+      <div className={`relative overflow-hidden rounded-2xl p-5 shadow-sm dark:shadow-lg transition-all border ${
+        isRaining 
+          ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-500/30' 
+          : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80 hover:border-blue-500/40'
+      }`}>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <CloudRain size={15} className="text-blue-500 dark:text-blue-400" />
+            Rain Detector (FC-37)
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            isRaining ? 'bg-blue-500 text-white animate-pulse border-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+          }`}>
+            {isRaining ? '🌧️ RAIN DETECTED' : 'CLEAR / NO RAIN'}
           </span>
         </div>
 
-        <div className="metric-row">
-          <div className="metric-value" style={{ fontSize: '2.1rem', marginTop: '0.2rem' }}>
-            {isRain ? 'PRECIPITATION' : 'NO RAIN'}
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem' }}>
-            <div style={{ color: isRain ? 'var(--sky-400)' : 'var(--emerald-400)', fontWeight: 700 }}>
-              {isRain ? 'SAFETY LOCKOUT' : 'CIRCUIT CLEAR'}
-            </div>
-            <div className="font-mono" style={{ color: 'var(--text-muted)' }}>PIN: {isRain ? 'LOW' : 'HIGH'}</div>
-          </div>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className={`text-2xl font-bold font-mono ${isRaining ? 'text-blue-600 dark:text-blue-300' : 'text-slate-900 dark:text-slate-200'}`}>
+            {isRaining ? 'Precipitation Active' : 'No Rain'}
+          </span>
         </div>
 
-        <div className="meter-bar-container">
-          <div className="meter-fill rain" style={{ width: isRain ? '100%' : '4%', background: isRain ? '#38bdf8' : 'rgba(255,255,255,0.06)' }}></div>
-        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+          {isRaining 
+            ? 'Safety Interlock Engaged: Pump strictly locked to protect crops.' 
+            : 'Natural evaporation ongoing. Normal irrigation permitted.'}
+        </p>
 
-        <div className="card-footer-info">
-          <span>Safety Interlock: Active Cutoff</span>
-          <span>Auto-Override: Enabled</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>Pin: GPIO 27</span>
+          <span>Interlock: Active</span>
         </div>
       </div>
 
-      {/* 5. SOLAR ILLUMINATION */}
-      <div className="glass-card" id="card-light">
-        <div className="card-header">
-          <div className="card-title-group">
-            <div className="card-icon-box" style={{ background: isDay ? 'rgba(245, 158, 11, 0.15)' : 'rgba(100, 116, 139, 0.15)', borderColor: isDay ? 'rgba(245, 158, 11, 0.3)' : 'var(--border-subtle)' }}>
-              {isDay ? <Sun size={22} color="var(--amber-400)" /> : <Moon size={22} color="var(--sky-400)" />}
-            </div>
-            <div>
-              <div className="card-title">Solar Illumination</div>
-              <div className="card-subtitle">GPIO 34 · HW-072 Digital</div>
-            </div>
-          </div>
-          <span className={`status-badge ${isDay ? 'badge-light-day' : 'badge-light-dark'}`}>
-            {isDay ? 'ACTIVE SUNLIGHT' : 'DARK / NIGHT'}
+      {/* 5. LIGHT / DARK DETECTION (HW-072) */}
+      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-5 shadow-sm dark:shadow-lg hover:border-amber-400/40 transition-all">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            {isDaylight ? <Sun size={15} className="text-amber-500 dark:text-amber-400" /> : <Moon size={15} className="text-indigo-500 dark:text-indigo-400" />}
+            Daylight Sensor (HW-072)
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            isDaylight ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
+          }`}>
+            {isDaylight ? '☀️ DAYLIGHT' : '🌙 NIGHT / DARK'}
           </span>
         </div>
 
-        <div className="metric-row">
-          <div className="metric-value" style={{ fontSize: '2.4rem' }}>
-            {isDay ? 'DAYLIGHT' : 'NIGHT'}
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            <div>Photoperiod Mode</div>
-            <div className="font-mono" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>PIN: {isDay ? 'LOW' : 'HIGH'}</div>
-          </div>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+            {isDaylight ? 'Daytime Cycle' : 'Night Cycle'}
+          </span>
         </div>
 
-        <div className="meter-bar-container">
-          <div className="meter-fill light" style={{ width: isDay ? '85%' : '15%', background: isDay ? 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)' : 'rgba(255,255,255,0.06)' }}></div>
-        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+          {isDaylight 
+            ? 'Higher solar radiation & transpiration. Evening irrigation yields best water retention.' 
+            : 'Minimal solar evaporation. High absorption efficiency.'}
+        </p>
 
-        <div className="card-footer-info">
-          <span>Optoelectronic Comparator</span>
-          <span>Adaptive Scaling: ON</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>Pin: GPIO 34</span>
+          <span>Mode: Photodiode Digital</span>
         </div>
       </div>
 
-      {/* 6. IRRIGATION PUMP RELAY */}
-      <div className="glass-card" id="card-pump-status">
-        <div className="card-header">
-          <div className="card-title-group">
-            <div className="card-icon-box" style={{ background: isPumpActive ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-surface)', borderColor: isPumpActive ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-subtle)' }}>
-              <Power size={22} color={isPumpActive ? 'var(--emerald-400)' : 'var(--text-muted)'} />
-            </div>
-            <div>
-              <div className="card-title">Irrigation Pump</div>
-              <div className="card-subtitle">GPIO 26 · Isolated 5V Relay</div>
-            </div>
-          </div>
-          <span className={`status-badge ${isPumpActive ? 'badge-pump-on' : 'badge-pump-off'}`}>
-            {isPumpActive ? 'RELAY CLOSED (ON)' : 'RELAY OPEN (OFF)'}
+      {/* 6. IRRIGATION PUMP MODULE */}
+      <div className={`relative overflow-hidden rounded-2xl p-5 shadow-sm dark:shadow-lg transition-all border ${
+        isPumpActive 
+          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-500/60 ring-2 ring-emerald-500/30' 
+          : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80 hover:border-emerald-500/40'
+      }`}>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Zap size={15} className={isPumpActive ? 'text-emerald-500 dark:text-emerald-400 animate-bounce' : 'text-slate-400'} />
+            Relay Pump Actuator
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            isPumpActive ? 'bg-emerald-500 text-white animate-pulse border-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+          }`}>
+            {isPumpActive ? '● PUMP ON' : '○ PUMP OFF'}
           </span>
         </div>
 
-        <div className="metric-row">
-          <div className="metric-value" style={{ fontSize: '2.4rem', color: isPumpActive ? 'var(--emerald-400)' : 'var(--text-secondary)' }}>
-            {isPumpActive ? 'IRRIGATING' : 'STANDBY'}
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.82rem' }}>
-            <div style={{ color: 'var(--text-muted)' }}>Mode: <strong style={{ color: 'var(--text-highlight)' }}>{device?.mode || 'AUTO'}</strong></div>
-            <div style={{ color: 'var(--text-muted)' }}>Max Run: 15 min</div>
-          </div>
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className={`text-2xl font-bold font-mono ${isPumpActive ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-900 dark:text-slate-200'}`}>
+            {isPumpActive ? 'Dispensing Water' : 'Standby Mode'}
+          </span>
         </div>
 
-        <div className="meter-bar-container">
-          <div className="meter-fill pump" style={{ width: isPumpActive ? '100%' : '4%', background: isPumpActive ? 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)' : 'rgba(255,255,255,0.06)' }}></div>
+        <div className="flex items-center gap-2 mb-3">
+          {isPumpActive ? (
+            <button
+              onClick={onEmergencyStop}
+              className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-lg shadow-red-600/30 active:scale-[0.98]"
+            >
+              <AlertCircle size={14} /> EMERGENCY STOP
+            </button>
+          ) : (
+            <button
+              onClick={() => onStartPump ? onStartPump() : (onOpenPumpModal && onOpenPumpModal())}
+              disabled={isRaining}
+              className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20 active:scale-[0.98]"
+            >
+              <Droplet size={14} /> START IRRIGATION (ACTUATE)
+            </button>
+          )}
         </div>
 
-        <div className="card-footer-info">
-          <span>Boot Failsafe: Guaranteed OFF</span>
-          <span>Watchdog: Armed</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>Relay: GPIO 26</span>
+          <span>Cutoff: {device?.settings?.autoMaxDurationMinutes || 15}m max</span>
         </div>
       </div>
     </div>

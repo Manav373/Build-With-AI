@@ -112,24 +112,43 @@ export default function VendorTypeSelectionPage() {
       <div style={{ position: 'absolute', bottom: -200, right: -200, width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(74,222,128,0.06), transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(167,139,250,0.04), transparent 70%)', pointerEvents: 'none' }} />
 
-      {/* Back Button */}
-      <motion.button
-        type="button"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-        onClick={() => navigate(-1)}
-        style={{
-          position: 'fixed', top: '1.5rem', left: '1.5rem', zIndex: 100,
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '50px', padding: '0.5rem 1rem', color: '#e2e8f0',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-          fontSize: '0.82rem', fontWeight: 600, backdropFilter: 'blur(10px)',
-        }}
-        id="vendor-type-back-btn"
-      >
-        <ArrowLeft size={15} /> Back
-      </motion.button>
+      {/* Top Bar Buttons */}
+      <div style={{ position: 'fixed', top: '1.5rem', left: '1.5rem', right: '1.5rem', zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '50px', padding: '0.5rem 1rem', color: '#e2e8f0',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+            fontSize: '0.82rem', fontWeight: 600, backdropFilter: 'blur(10px)', pointerEvents: 'all',
+          }}
+          id="vendor-type-back-btn"
+        >
+          <ArrowLeft size={15} /> Back
+        </motion.button>
+
+        <motion.button
+          type="button"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          onClick={() => navigate('/vendor-sign-in')}
+          style={{
+            background: 'rgba(113,63,18,0.25)', border: '1px solid rgba(250,204,21,0.3)',
+            borderRadius: '50px', padding: '0.5rem 1.25rem', color: '#facc15',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+            fontSize: '0.82rem', fontWeight: 700, backdropFilter: 'blur(10px)', pointerEvents: 'all',
+            boxShadow: '0 4px 14px rgba(250,204,21,0.15)',
+          }}
+          id="vendor-type-signin-btn"
+        >
+          Already a Vendor? Sign In <ArrowRight size={14} />
+        </motion.button>
+      </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 1.5rem 4rem' }}>
         {/* Header */}
