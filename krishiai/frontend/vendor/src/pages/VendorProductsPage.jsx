@@ -5,7 +5,7 @@ import {
   Plus, Search, Filter, Package, Edit3, Trash2, Eye, EyeOff,
   Upload, Image, Star, ShoppingCart, AlertTriangle, CheckCircle2,
   X, Save, Send, ChevronDown, Tag, Boxes, Clock, ArrowRight,
-  Loader2, MoreVertical, Camera, RefreshCw
+  Loader2, MoreVertical, Camera, RefreshCw, Sparkles
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -225,6 +225,7 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
         sub_category: product.sub_category || '',
         brand: product.brand || '',
         sku: product.sku || '',
+        barcode: product.barcode || '',
         mrp: product.mrp || '',
         selling_price: product.selling_price || '',
         unit: product.unit || 'per packet',
@@ -243,7 +244,7 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
     } else {
       setForm({
         name: '', description: '', category: '', sub_category: '',
-        brand: '', sku: '', mrp: '', selling_price: '', unit: 'per packet',
+        brand: '', sku: '', barcode: '', mrp: '', selling_price: '', unit: 'per packet',
         min_order_qty: 1, stock_quantity: 0, key_features: [],
         suitable_crops: [], application_season: '', weight: '',
         manufacturer: '', images: [], imageUrl: '', delivery_options: 'both',
@@ -253,6 +254,17 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
   }, [product, isOpen]);
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const generateSKU = () => {
+    // Generate maximum digit purely numeric SKU code (12 digits)
+    const randomNumericSku = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    update('sku', randomNumericSku);
+  };
+
+  const generateBarcode = () => {
+    const randomEan = '890' + Math.floor(100000000 + Math.random() * 900000000);
+    update('barcode', randomEan);
+  };
 
   const addFeature = () => {
     if (featureInput.trim()) {
@@ -336,62 +348,50 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
                   value={form.name} onChange={e => update('name', e.target.value)} />
               </div>
 
-              {/* Product Image - Mandatory Live Camera Only */}
+              {/* Product Image - Live Camera Photo & Image URL */}
               <div>
-                <label style={labelStyle}>Product Image (Mandatory Live Camera Photo) *</label>
+                <label style={labelStyle}>Product Image (Live Camera Photo or Image URL) *</label>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                   <div style={{
                     width: 80, height: 80, borderRadius: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)', border: form.imageUrl ? '1px solid rgba(74,222,128,0.5)' : '1px solid rgba(239,68,68,0.4)',
+                    background: 'rgba(255,255,255,0.05)', border: form.imageUrl ? '1px solid rgba(74,222,128,0.5)' : '1px solid rgba(255,255,255,0.15)',
                     overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0, position: 'relative',
                   }}>
-                    {form.imageUrl ? (
-                      <img src={form.imageUrl} alt="Camera Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {form.imageUrl || (form.category && DEFAULT_IMAGES[form.category]) ? (
+                      <img src={form.imageUrl || DEFAULT_IMAGES[form.category] || DEFAULT_IMAGES['Farm Equipment']} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ textAlign: 'center', color: 'rgba(239,68,68,0.6)', padding: 4 }}>
+                      <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 4 }}>
                         <Camera size={26} style={{ margin: '0 auto 2px' }} />
-                        <span style={{ fontSize: '0.6rem', display: 'block', fontWeight: 700 }}>Required</span>
+                        <span style={{ fontSize: '0.6rem', display: 'block', fontWeight: 600 }}>Photo</span>
                       </div>
                     )}
                   </div>
 
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {/* Live Camera Snapshot Button */}
                       <button
                         type="button"
                         onClick={() => setShowCameraModal(true)}
                         style={{
-                          padding: '0.6rem 1.25rem', borderRadius: '0.65rem', border: 'none',
+                          padding: '0.6rem 1rem', borderRadius: '0.65rem', border: 'none',
                           background: 'linear-gradient(135deg, #14532d, #4ade80)',
-                          color: '#fff', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
+                          color: '#fff', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer',
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           boxShadow: '0 4px 14px rgba(74,222,128,0.25)',
                         }}
                       >
-                        <Camera size={16} /> Open Live Camera
+                        <Camera size={15} /> Open Live Camera
                       </button>
                     </div>
 
-                    {form.imageUrl ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <CheckCircle2 size={12} /> Camera photo captured
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => update('imageUrl', '')}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          Retake Photo
-                        </button>
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 600 }}>
-                        ⚠️ Live camera click photo is mandatory to enable saving this product.
-                      </p>
-                    )}
+                    <input
+                      style={{ ...inputStyle, padding: '0.45rem 0.75rem', fontSize: '0.78rem' }}
+                      placeholder="Or enter Image URL (https://...)"
+                      value={form.imageUrl}
+                      onChange={e => update('imageUrl', e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
@@ -408,14 +408,67 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
                 <label style={labelStyle}>Category *</label>
                 <select style={{ ...inputStyle, cursor: 'pointer' }}
                   value={form.category} onChange={e => update('category', e.target.value)}>
-                  <option value="" style={{ background: '#0d1b2a' }}>Select Category</option>
-                  {CATEGORIES.map(c => <option key={c} value={c} style={{ background: '#0d1b2a' }}>{c}</option>)}
+                  <option value="" style={{ background: '#0d1b2a', color: '#ffffff' }}>Select Category</option>
+                  {CATEGORIES.map(c => <option key={c} value={c} style={{ background: '#0d1b2a', color: '#ffffff' }}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <label style={labelStyle}>Brand</label>
                 <input style={inputStyle} placeholder="e.g., Tata Rallis"
                   value={form.brand} onChange={e => update('brand', e.target.value)} />
+              </div>
+            </div>
+
+            {/* Inventory Identifiers: SKU & Barcode */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <label style={labelStyle}>SKU Code (Stock Keeping Unit)</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
+                    placeholder="e.g., 984210574829"
+                    value={form.sku}
+                    onChange={e => update('sku', e.target.value.replace(/\D/g, '').slice(0, 12))}
+                  />
+                  <button
+                    type="button"
+                    onClick={generateSKU}
+                    title="Auto-Generate SKU Code"
+                    style={{
+                      padding: '0 12px', borderRadius: '0.65rem', border: '1px solid rgba(74,222,128,0.3)',
+                      background: 'rgba(74,222,128,0.15)', color: '#4ade80', fontWeight: 700,
+                      fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <RefreshCw size={12} /> Auto SKU
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Barcode / EAN Number</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
+                    placeholder="e.g., 8901234567890"
+                    value={form.barcode || ''}
+                    onChange={e => update('barcode', e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={generateBarcode}
+                    title="Auto-Generate Barcode"
+                    style={{
+                      padding: '0 12px', borderRadius: '0.65rem', border: '1px solid rgba(250,204,21,0.3)',
+                      background: 'rgba(250,204,21,0.15)', color: '#facc15', fontWeight: 700,
+                      fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Sparkles size={12} /> Barcode
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -435,7 +488,7 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
                 <select style={{ ...inputStyle, cursor: 'pointer' }}
                   value={form.unit} onChange={e => update('unit', e.target.value)}>
                   {['per packet', 'per kg', 'per piece', 'per litre', 'per bag', 'per set'].map(u =>
-                    <option key={u} value={u} style={{ background: '#0d1b2a' }}>{u}</option>
+                    <option key={u} value={u} style={{ background: '#0d1b2a', color: '#ffffff' }}>{u}</option>
                   )}
                 </select>
               </div>
@@ -503,9 +556,9 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
               <label style={labelStyle}>Season</label>
               <select style={{ ...inputStyle, cursor: 'pointer' }}
                 value={form.application_season} onChange={e => update('application_season', e.target.value)}>
-                <option value="" style={{ background: '#0d1b2a' }}>All Season</option>
+                <option value="" style={{ background: '#0d1b2a', color: '#ffffff' }}>All Season</option>
                 {['Kharif', 'Rabi', 'Zaid', 'All-Season'].map(s =>
-                  <option key={s} value={s} style={{ background: '#0d1b2a' }}>{s}</option>
+                  <option key={s} value={s} style={{ background: '#0d1b2a', color: '#ffffff' }}>{s}</option>
                 )}
               </select>
             </div>
@@ -520,12 +573,12 @@ function ProductFormModal({ isOpen, onClose, onSave, product = null }) {
               }}>
                 Cancel
               </button>
-              <button type="button" onClick={handleSave} disabled={saving || !form.name || !form.category || !form.mrp || !form.selling_price || !form.imageUrl} style={{
+              <button type="button" onClick={handleSave} disabled={saving || !form.name || !form.category || !form.mrp || !form.selling_price} style={{
                 padding: '0.65rem 1.5rem', borderRadius: '0.75rem', border: 'none',
                 background: 'linear-gradient(135deg, #14532d, #4ade80)',
                 color: '#fff', fontWeight: 800, fontSize: '0.85rem',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                opacity: (!form.name || !form.category || !form.mrp || !form.selling_price || !form.imageUrl) ? 0.5 : 1,
+                opacity: (!form.name || !form.category || !form.mrp || !form.selling_price) ? 0.5 : 1,
               }}>
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 {saving ? 'Saving...' : (product ? 'Update Product' : 'Save as Draft')}
@@ -819,12 +872,12 @@ export default function VendorProductsPage() {
             color: '#fff', fontSize: '0.82rem', cursor: 'pointer', outline: 'none',
           }}
         >
-          <option value="all" style={{ background: '#0d1b2a' }}>All Status</option>
-          <option value="draft" style={{ background: '#0d1b2a' }}>Draft</option>
-          <option value="pending_review" style={{ background: '#0d1b2a' }}>Pending Review</option>
-          <option value="published" style={{ background: '#0d1b2a' }}>Published</option>
-          <option value="out_of_stock" style={{ background: '#0d1b2a' }}>Out of Stock</option>
-          <option value="rejected" style={{ background: '#0d1b2a' }}>Rejected</option>
+          <option value="all" style={{ background: '#0d1b2a', color: '#ffffff' }}>All Status</option>
+          <option value="draft" style={{ background: '#0d1b2a', color: '#ffffff' }}>Draft</option>
+          <option value="pending_review" style={{ background: '#0d1b2a', color: '#ffffff' }}>Pending Review</option>
+          <option value="published" style={{ background: '#0d1b2a', color: '#ffffff' }}>Published</option>
+          <option value="out_of_stock" style={{ background: '#0d1b2a', color: '#ffffff' }}>Out of Stock</option>
+          <option value="rejected" style={{ background: '#0d1b2a', color: '#ffffff' }}>Rejected</option>
         </select>
         <select
           value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
@@ -834,8 +887,8 @@ export default function VendorProductsPage() {
             color: '#fff', fontSize: '0.82rem', cursor: 'pointer', outline: 'none',
           }}
         >
-          <option value="all" style={{ background: '#0d1b2a' }}>All Categories</option>
-          {CATEGORIES.map(c => <option key={c} value={c} style={{ background: '#0d1b2a' }}>{c}</option>)}
+          <option value="all" style={{ background: '#0d1b2a', color: '#ffffff' }}>All Categories</option>
+          {CATEGORIES.map(c => <option key={c} value={c} style={{ background: '#0d1b2a', color: '#ffffff' }}>{c}</option>)}
         </select>
       </div>
 

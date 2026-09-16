@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings, Bell, CreditCard, Shield, Save, CheckCircle2 } from 'lucide-react';
+import { Settings, Bell, CreditCard, Shield, Save, CheckCircle2, LogOut } from 'lucide-react';
 
 export default function VendorSettingsPage() {
+  const navigate = useNavigate();
   const [bank, setBank] = useState({
     account_number: '9820019482910',
     ifsc: 'HDFC0000482',
@@ -23,6 +25,21 @@ export default function VendorSettingsPage() {
   const handleSave = (e) => {
     e.preventDefault();
     setMsg('Settings saved successfully!');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      localStorage.removeItem('vendor_token');
+      localStorage.removeItem('vendor_session');
+    } catch (e) {}
+
+    try {
+      if (window.Clerk && window.Clerk.signOut) {
+        await window.Clerk.signOut();
+      }
+    } catch (e) {}
+
+    navigate('/vendor-sign-in');
   };
 
   const cardStyle = {
@@ -136,6 +153,27 @@ export default function VendorSettingsPage() {
           </div>
         </div>
 
+        {/* Account Security & Sign Out Section */}
+        <div style={cardStyle} className="p-6 space-y-4">
+          <h3 className="text-lg font-bold text-white font-['Outfit'] border-b border-[#86efac]/10 pb-3 flex items-center gap-2">
+            <Shield size={20} className="text-red-400" /> Account Security & Session Management
+          </h3>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Active Vendor Session</p>
+              <p className="text-xs text-slate-400 mt-0.5">End your current session & log out of the KrishiAI Vendor Portal</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="px-6 py-2.5 rounded-xl bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 text-red-400 font-bold text-xs transition flex items-center gap-2"
+              id="vendor-settings-signout-btn"
+            >
+              <LogOut size={16} /> Sign Out of Account
+            </button>
+          </div>
+        </div>
+
         <button
           type="submit"
           className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#166534] to-[#15803d] hover:from-[#15803d] hover:to-[#166534] text-white font-bold transition flex items-center gap-2 shadow-lg"
@@ -147,3 +185,4 @@ export default function VendorSettingsPage() {
     </div>
   );
 }
+

@@ -22,7 +22,10 @@ export { default as VendorPromotionsPage } from './VendorPromotionsPage';
 export { default as VendorReviewsPage } from './VendorReviewsPage';
 export { default as VendorSettingsPage } from './VendorSettingsPage';
 export { default as VendorSignUpPage } from './VendorSignUpPage';
+export { default as VendorSignInPage } from './VendorSignInPage';
 export { default as VendorTypeSelectionPage } from './VendorTypeSelectionPage';
 export { default as VendorAdminPage } from './VendorAdminPage';
 export { default as VendorNotificationsPage } from './VendorNotificationsPage';
 export { default as VendorProfilePage } from './VendorProfilePage';
+export { default as VendorStockReturnsPage } from './VendorStockReturnsPage';
+

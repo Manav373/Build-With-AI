@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Boxes, AlertTriangle, RefreshCw, CheckCircle2, Edit } from 'lucide-react';
+import { Boxes, AlertTriangle, RefreshCw, CheckCircle2, Edit, RotateCcw, ArrowRight } from 'lucide-react';
 
 export default function VendorInventoryPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([
     { id: 1, name: 'Hybrid Cotton Seed Mahyco 7351', category: 'Seeds', stock: 120, min_threshold: 20, batch: 'B-2026-90', expiry: '2027-06' },
     { id: 2, name: 'Organic NPK Bio-Fertilizer (50kg)', category: 'Fertilizers', stock: 15, min_threshold: 30, batch: 'B-2026-12', expiry: '2026-11' },
@@ -21,14 +23,25 @@ export default function VendorInventoryPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white font-['Outfit'] flex items-center gap-3">
-          <Boxes className="text-[#4ade80]" size={32} />
-          Stock Inventory & Batch Manager
-        </h1>
-        <p className="text-[#86efac]/70 mt-1 text-sm">
-          Track warehouse stock quantities, set low-stock alert thresholds, and manage batch expiry dates.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-white font-['Outfit'] flex items-center gap-3">
+            <Boxes className="text-[#4ade80]" size={32} />
+            Stock Inventory & Batch Manager
+          </h1>
+          <p className="text-[#86efac]/70 mt-1 text-sm">
+            Track warehouse stock quantities, set low-stock alert thresholds, and manage batch expiry dates.
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate('/vendor-dashboard/stock-returns')}
+          className="px-4 py-2.5 bg-[#143820] hover:bg-[#1a4a2b] text-[#4ade80] border border-[#86efac]/30 rounded-xl text-xs font-bold transition flex items-center gap-2 w-fit"
+        >
+          <RotateCcw size={16} />
+          Returns & Damage Audits
+          <ArrowRight size={14} />
+        </button>
       </div>
 
       <div style={{ background: 'rgba(8, 24, 12, 0.85)', border: '1px solid rgba(134, 239, 172, 0.15)', borderRadius: '1.25rem' }} className="overflow-x-auto shadow-2xl">

@@ -143,8 +143,8 @@ function RequirementFormModal({ isOpen, onClose, onSave, requirement = null }) {
                 <label style={labelStyle}>Crop Name *</label>
                 <select style={{ ...inputStyle, cursor: 'pointer' }}
                   value={form.crop_name} onChange={e => update('crop_name', e.target.value)}>
-                  <option value="" style={{ background: '#0d1b2a' }}>Select Crop</option>
-                  {CROP_OPTIONS.map(c => <option key={c} value={c} style={{ background: '#0d1b2a' }}>{c}</option>)}
+                  <option value="" style={{ background: '#0d1b2a', color: '#ffffff' }}>Select Crop</option>
+                  {CROP_OPTIONS.map(c => <option key={c} value={c} style={{ background: '#0d1b2a', color: '#ffffff' }}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -165,7 +165,7 @@ function RequirementFormModal({ isOpen, onClose, onSave, requirement = null }) {
                 <select style={{ ...inputStyle, cursor: 'pointer' }}
                   value={form.quantity_unit} onChange={e => update('quantity_unit', e.target.value)}>
                   {['quintal', 'tonne', 'kg'].map(u =>
-                    <option key={u} value={u} style={{ background: '#0d1b2a' }}>{u}</option>
+                    <option key={u} value={u} style={{ background: '#0d1b2a', color: '#ffffff' }}>{u}</option>
                   )}
                 </select>
               </div>
@@ -173,9 +173,9 @@ function RequirementFormModal({ isOpen, onClose, onSave, requirement = null }) {
                 <label style={labelStyle}>Quality Grade</label>
                 <select style={{ ...inputStyle, cursor: 'pointer' }}
                   value={form.quality_grade} onChange={e => update('quality_grade', e.target.value)}>
-                  <option value="" style={{ background: '#0d1b2a' }}>Any</option>
+                  <option value="" style={{ background: '#0d1b2a', color: '#ffffff' }}>Any</option>
                   {['A Grade', 'B Grade', 'FAQ', 'Standard', 'Premium'].map(g =>
-                    <option key={g} value={g} style={{ background: '#0d1b2a' }}>{g}</option>
+                    <option key={g} value={g} style={{ background: '#0d1b2a', color: '#ffffff' }}>{g}</option>
                   )}
                 </select>
               </div>
@@ -243,11 +243,11 @@ function RequirementFormModal({ isOpen, onClose, onSave, requirement = null }) {
                 <label style={labelStyle}>Payment Terms</label>
                 <select style={{ ...inputStyle, cursor: 'pointer' }}
                   value={form.payment_terms} onChange={e => update('payment_terms', e.target.value)}>
-                  <option value="on_pickup" style={{ background: '#0d1b2a' }}>On Pickup (Instant)</option>
-                  <option value="t_plus_1" style={{ background: '#0d1b2a' }}>T+1 (Next Day)</option>
-                  <option value="t_plus_3" style={{ background: '#0d1b2a' }}>T+3 (3 Days)</option>
-                  <option value="t_plus_7" style={{ background: '#0d1b2a' }}>T+7 (7 Days)</option>
-                  <option value="advance_balance" style={{ background: '#0d1b2a' }}>Advance + Balance</option>
+                  <option value="on_pickup" style={{ background: '#0d1b2a', color: '#ffffff' }}>On Pickup (Instant)</option>
+                  <option value="t_plus_1" style={{ background: '#0d1b2a', color: '#ffffff' }}>T+1 (Next Day)</option>
+                  <option value="t_plus_3" style={{ background: '#0d1b2a', color: '#ffffff' }}>T+3 (3 Days)</option>
+                  <option value="t_plus_7" style={{ background: '#0d1b2a', color: '#ffffff' }}>T+7 (7 Days)</option>
+                  <option value="advance_balance" style={{ background: '#0d1b2a', color: '#ffffff' }}>Advance + Balance</option>
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
