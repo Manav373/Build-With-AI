@@ -307,11 +307,14 @@ export default function SatellitePage() {
   const [kvkStateStats, setKvkStateStats] = useState(null);
   const [loadingKvk, setLoadingKvk] = useState(false);
 
-  const fetchNearestKvk = useCallback(async (lat, lon) => {
+  const fetchNearestKvk = useCallback(async (lat, lon, district = null, state = null) => {
     try {
       setLoadingKvk(true);
       const backendUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
-      const res = await fetch(`${backendUrl}/api/kvk/nearest?lat=${lat}&lon=${lon}`);
+      let url = `${backendUrl}/api/kvk/nearest?lat=${lat}&lon=${lon}`;
+      if (district) url += `&district=${encodeURIComponent(district)}`;
+      if (state) url += `&state=${encodeURIComponent(state)}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setKvkData(data);
@@ -380,6 +383,9 @@ export default function SatellitePage() {
       if (data.address?.state) parts.push(data.address.state);
       setLocationName(parts.join(', ') || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
 
+      const district = data.address?.county || data.address?.state_district || data.address?.district || '';
+      const state = data.address?.state || '';
+
       // Detect Land Type for Visual Fusion (Vision-AI Simulation)
       let type = 'farmland';
       const cat = data.category?.toLowerCase() || '';
@@ -406,10 +412,10 @@ export default function SatellitePage() {
         type = 'forest';
       }
 
-      return type;
+      return { type, district, state };
     } catch {
       setLocationName(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
-      return 'farmland';
+      return { type: 'farmland', district: '', state: '' };
     }
   }, []);
 
@@ -421,11 +427,12 @@ export default function SatellitePage() {
     setSatelliteData(null);
     setIsOffline(false);
 
-    // Fetch nearest KVK and agricultural scientists
-    fetchNearestKvk(coords.lat, coords.lng);
+    // 1. Get high-precision land type & location context
+    const geoInfo = await reverseGeocode(coords.lat, coords.lng);
+    const detectedLandType = geoInfo?.type || 'farmland';
 
-    // 1. Get high-precision land type first
-    const detectedLandType = await reverseGeocode(coords.lat, coords.lng);
+    // 2. Fetch nearest KVK and agricultural scientists with district/state context
+    fetchNearestKvk(coords.lat, coords.lng, geoInfo?.district, geoInfo?.state);
 
     try {
       const backendUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');

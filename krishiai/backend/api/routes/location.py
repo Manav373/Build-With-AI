@@ -269,14 +269,20 @@ def export_locations_csv(db: Session = Depends(get_db), user_data: dict = Depend
 # ---------------------------------------------------------------------------
 
 @router.get("/kvk/nearest")
-async def get_nearest_kvk_endpoint(lat: float, lon: float, limit: int = 3):
+async def get_nearest_kvk_endpoint(
+    lat: float,
+    lon: float,
+    district: Optional[str] = None,
+    state: Optional[str] = None,
+    limit: int = 3
+):
     """
     Returns the nearest Krishi Vigyan Kendra (KVK) and specialized agricultural scientists
     to the farmer's GPS coordinates, including full contact and advisory details.
     """
     from app.services.kvk_service import kvk_service
     try:
-        return kvk_service.get_nearest_kvk(lat=lat, lon=lon, limit=limit)
+        return kvk_service.get_nearest_kvk(lat=lat, lon=lon, district=district, state=state, limit=limit)
     except Exception as e:
         logger.error(f"[KVK] Failed to fetch nearest KVK for ({lat},{lon}): {e}")
         raise HTTPException(status_code=500, detail="Error fetching nearest KVK.")
