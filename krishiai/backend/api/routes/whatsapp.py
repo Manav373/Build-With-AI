@@ -37,40 +37,40 @@ USER_STATES = {}        # phone -> state (AWAITING_LANGUAGE, IDLE)
 WEATHER_KEYWORDS = [
     "weather", "forecast", "temperature", "rain", "humidity", "climate",
     "barish", "mausam", "baarish", "garmi", "thand", "sardi",
-    "હવામાન", "वातावरण", "पाऊस", "मौसम",
+    "હવામાન", "વાતાવરણ", "વરસાદ", "પાऊस", "मौसम", "बारिश",
 ]
 MARKET_KEYWORDS = [
     "price", "rate", "mandi", "market", "bhav", "daam", "mol",
-    "ભાવ", "मंडी", "भाव", "दाम", "बाजार", "किमत",
+    "ભાવ", "બજાર ભાવ", "મંડી", "માર્કેટ યાર્ડ", "યાર્ડ", "ડુંગળી", "दाम", "बाजार", "किमत",
 ]
 SCHEME_KEYWORDS = [
     "scheme", "yojana", "subsidy", "pm-kisan", "pmkisan", "pmfby", "kcc",
     "kisan credit", "fasal bima", "sarkari", "government",
-    "યોજના", "योजना", "सरकारी", "अनुदान",
+    "યોજના", "સરકારી યોજના", "योजना", "सरकारी", "अनुदान",
 ]
 YIELD_KEYWORDS = [
     "yield", "production", "harvest", "paidavar", "utpadan",
-    "ઉત્પાદન", "उत्पादन", "पैदावार",
+    "ઉત્પાદન", "પાક ઉત્પાદન", "અંદાજ", "उत्पादन", "पैदावार",
 ]
 SOIL_KEYWORDS = [
     "soil", "mitti", "bhumi", "land", "fertilizer", "khad", "npk", "urea",
-    "માટી", "खाद", "मिट्टी", "जमीन",
+    "માટી", "ખાતર", "જમીન", "ખાત", "खाद", "मिट्टी", "जमीन",
 ]
 PEST_KEYWORDS = [
     "pest", "insect", "kida", "keeda", "bug", "fungus", "blight",
-    "કીટક", "कीट", "कीड़ा", "फफूंद",
+    "કીટક", "જીવાત", "રોગ", "ઇયળ", "कीट", "कीड़ा", "फफूंद",
 ]
 IRRIGATION_KEYWORDS = [
     "irrigation", "water", "sinchai", "paani", "drip", "sprinkler",
-    "સિંચાઈ", "सिंचाई", "पानी",
+    "સિંચાઈ", "પાણી", "સિંચાઈ પદ્ધતિ", "सिंचाई", "पानी",
 ]
 MENU_KEYWORDS = [
     "menu", "help", "features", "kya kar sakte", "options",
-    "मेनू", "मदद", "સહાય", "ਮੇਨੂ", "మెనూ", "மெனு", "মেনু",
+    "મેનુ", "મેનૂ", "સુવિધાઓ", "સહાય", "મેન્યુ", "मेनू", "मदद", "ਸਹાય", "ਮੇਨੂ", "మెనూ", "மெனு", "মেনু",
 ]
 TRENDS_KEYWORDS = [
     "trend", "history", "graph", "chart", "pichle", "itihaas", "rujhan",
-    "વલણ", "ઇતિહાસ", "इतिहास", "रुझान",
+    "વલણ", "બજાર વલણ", "ઇતિહાસ", "इतिहास", "रुझान",
 ]
 
 def _has_keyword(text: str, keywords: list) -> bool:
@@ -78,7 +78,7 @@ def _has_keyword(text: str, keywords: list) -> bool:
     return any(kw in text_lower for kw in keywords)
 
 
-# ── Single source-of-truth menu (English) ──────────────────────────────
+# ── Native Menus for Supported Languages ─────────────────────────────
 MENU_TEMPLATE_EN = (
     "🌾 *KrishiAI — All Features*\n\n"
     "Type a number or just describe what you need:\n\n"
@@ -97,33 +97,170 @@ MENU_TEMPLATE_EN = (
     "📍 Share your *location* for local advice!"
 )
 
-# Translation cache: lang -> translated menu string
-MENU_CACHE: Dict[str, str] = {"English": MENU_TEMPLATE_EN}
+MENU_TEMPLATE_GU = (
+    "🌾 *કૃષિએઆઈ — તમામ સુવિધાઓ*\n\n"
+    "નંબર લખો અથવા તમને જે જરૂર હોય તે જણાવો:\n\n"
+    "1️⃣ *હવામાન આગાહી* — \"આજનું હવામાન કેવું રહેશે?\"\n"
+    "2️⃣ *બજાર ભાવ* — \"મહુવામાં ડુંગળીનો ભાવ\"\n"
+    "3️⃣ *પાક સલાહ* — \"ઘઉંની ખેતી કેવી રીતે કરવી?\"\n"
+    "4️⃣ *રોગ-જીવાત તપાસ* — પાકનો ફોટો મોકલો 📷\n"
+    "5️⃣ *ઉત્પાદન અંદાજ* — \"૫ એકરમાં ઘઉંનું કેટલું ઉત્પાદન થશે?\"\n"
+    "6️⃣ *સરકારી યોજનાઓ* — \"પીએમ-કિસાન યોજનાની માહિતી\"\n"
+    "7️⃣ *જમીન ચકાસણી* — \"કપાસ માટે શ્રેષ્ઠ ખાતર કયું?\"\n"
+    "8️⃣ *જીવાત ચેતવણી* — \"ટામેટામાં જીવાતનું જોખમ\"\n"
+    "9️⃣ *સિંચાઈ સલાહ* — \"ડાંગરના પાક માટે પાણીની જરૂરિયાત\"\n"
+    "🔟 *નજીકના માર્કેટ યાર્ડ* — તમારું લોકેશન શેર કરો 📍\n"
+    "📈 *બજાર વલણ* — \"ઘઉંના ભાવનું વલણ\"\n\n"
+    "🎙️ તમે કોઈપણ ભાષામાં *વૉઇસ નોટ* (બોલીને) પણ મોકલી શકો છો!\n"
+    "📍 સ્થાનિક સલાહ માટે તમારું *લોકેશન* શેર કરો!"
+)
+
+MENU_TEMPLATE_HI = (
+    "🌾 *कृषिAI — सभी सुविधाएँ*\n\n"
+    "नंबर भेजें या अपनी ज़रूरत लिखें:\n\n"
+    "1️⃣ *मौसम पूर्वानुमान* — \"आज मौसम कैसा रहेगा?\"\n"
+    "2️⃣ *मंडी भाव* — \"नासिक में प्याज का भाव\"\n"
+    "3️⃣ *फसल सलाह* — \"गेहूं की खेती कैसे करें?\"\n"
+    "4️⃣ *रोग पहचान* — फसल की फोटो भेजें 📷\n"
+    "5️⃣ *पैदावार अनुमान* — \"5 एकड़ में गेहूं की पैदावार\"\n"
+    "6️⃣ *सरकारी योजनाएं* — \"पीएम-किसान पात्रता\"\n"
+    "7️⃣ *मिट्टी परीक्षण* — \"कपास के लिए सबसे अच्छा खाद\"\n"
+    "8️⃣ *कीट चेतावनी* — \"टमाटर में कीट का खतरा\"\n"
+    "9️⃣ *सिंचाई सलाह* — \"धान के लिए पानी की जरूरत\"\n"
+    "🔟 *नजदीकी मंडी* — अपनी लोकेशन भेजें 📍\n"
+    "📈 *बाज़ार रुझान* — \"गेहूं का भाव रुझान\"\n\n"
+    "🎙️ आप किसी भी भाषा में *वॉइस नोट* (बोलकर) भी भेज सकते हैं!\n"
+    "📍 सटीक सलाह के लिए अपनी *लोकेशन* शेयर करें!"
+)
+
+MENU_TEMPLATE_MR = (
+    "🌾 *कृषीAI — सर्व वैशिष्ट्ये*\n\n"
+    "क्रमांक पाठवा किंवा आपली गरज लिहा:\n\n"
+    "1️⃣ *हवामान अंदाज* — \"आजचे हवामान कसे आहे?\"\n"
+    "2️⃣ *बाजार भाव* — \"नाशिकमध्ये कांद्याचा भाव\"\n"
+    "3️⃣ *पीक सल्ला* — \"गव्हाची शेती कशी करावी?\"\n"
+    "4️⃣ *रोग निदान* — पिकाचा फोटो पाठवा 📷\n"
+    "5️⃣ *उत्पादन अंदाज* — \"५ एकरात गव्हाचे उत्पादन\"\n"
+    "6️⃣ *शासकीय योजना* — \"पीएम-किसान पात्रता\"\n"
+    "7️⃣ *माती परीक्षण* — \"कापसासाठी उत्तम खत कोणते?\"\n"
+    "8️⃣ *कीड नियंत्रण* — \"टोमॅटोवरील कीड जोखीम\"\n"
+    "9️⃣ *सिंचन सल्ला* — \"भातासाठी पाण्याची गरज\"\n"
+    "🔟 *जवळची बाजार समिती* — तुमचे लोकेशन पाठवा 📍\n"
+    "📈 *बाजार कल* — \"गव्हाचा दर कल\"\n\n"
+    "🎙️ तुम्ही कोणत्याही भाषेत *व्हॉइस नोट* (बोलून) पाठवू शकता!\n"
+    "📍 स्थानिक सल्ल्यासाठी तुमचे *लोकेशन* शेअर करा!"
+)
+
+MENU_TEMPLATE_TA = (
+    "🌾 *கிருஷிAI — அனைத்து சேவைகள்*\n\n"
+    "எண்ணை உள்ளிடவும் அல்லது உங்களுக்கு தேவையானதை தெரிவிக்கவும்:\n\n"
+    "1️⃣ *வானிலை முன்னறிவிப்பு* — \"இன்றைய வானிலை எப்படி?\"\n"
+    "2️⃣ *சந்தை விலை* — \"வெங்காயத்தின் விலை நிலவரம்\"\n"
+    "3️⃣ *பயிர் ஆலோசனை* — \"கோதுமை சாகுபடி முறை\"\n"
+    "4️⃣ *நோய் கண்டறிதல்* — பயிர் புகைப்படத்தை அனுப்பவும் 📷\n"
+    "5️⃣ *விளைச்சல் கணிப்பு* — \"5 ஏக்கர் நிலத்தில் விளைச்சல் எவ்வளவு?\"\n"
+    "6️⃣ *அரசு திட்டங்கள்* — \"பிஎம்-கிசான் தகுதி விவரம்\"\n"
+    "7️⃣ *மண் பரிசோதனை* — \"பருத்திக்கு சிறந்த உரம் எது?\"\n"
+    "8️⃣ *பூச்சி தாக்குதல் எச்சரிக்கை* — \"தக்காளி பூச்சி தாக்குதல்\"\n"
+    "9️⃣ *பாசன ஆலோசனை* — \"நெல் பயிருக்கு தேவையான நீர்\"\n"
+    "🔟 *அருகிலுள்ள சந்தைகள்* — உங்கள் இருப்பிடத்தை பகிரவும் 📍\n"
+    "📈 *சந்தை போக்குகள்* — \"கோதுமை விலை போக்கு\"\n\n"
+    "🎙️ எந்த மொழியிலும் *குரல் பதிவு* (வாய்ஸ் நோட்) அனுப்பலாம்!\n"
+    "📍 உள்ளூர் ஆலோசனைக்கு உங்கள் *இருப்பிடத்தை* பகிரவும்!"
+)
+
+MENU_TEMPLATE_TE = (
+    "🌾 *కృషిAI — అన్ని సేవలు*\n\n"
+    "సంఖ్యను పంపండి లేదా మీ అవసరాన్ని తెలపండి:\n\n"
+    "1️⃣ *వాతావరణ సమాచారం* — \"నేటి వాతావరణం ఎలా ఉంది?\"\n"
+    "2️⃣ *మార్కెట్ ధరలు* — \"ఉల్లిపాయ తాజా ధర\"\n"
+    "3️⃣ *పంట సలహా* — \"గోధుమ సాగు పద్ధతి\"\n"
+    "4️⃣ *రోగ నిర్ధారణ* — పంట ఫోటో పంపండి 📷\n"
+    "5️⃣ *దిగుబడి అంచనా* — \"5 ఎకరాలలో గోధుమ దిగుబడి\"\n"
+    "6️⃣ *ప్రభుత్వ పథకాలు* — \"పీఎం-కిసాన్ అర్హత\"\n"
+    "7️⃣ *నేల పరీక్ష* — \"పత్తికి ఉత్తమ ఎరువులు\"\n"
+    "8️⃣ *కీటక హెచ్చరిక* — \"టమోటాలో కీటకాల సమస్య\"\n"
+    "9️⃣ *నీటిపారుదల సలహా* — \"వరి పంటకు నీటి అవసరం\"\n"
+    "🔟 *సమీప మార్కెట్లు* — మీ లొకేషన్ షేర్ చేయండి 📍\n"
+    "📈 *మార్కెట్ ట్రెండ్స్* — \"గోధుమ ధర ట్రెండ్\"\n\n"
+    "🎙️ మీరు ఏదైనా భాషలో *వాయిస్ నోట్* కూడా పంపవచ్చు!\n"
+    "📍 స్థానిక సలహా కోసం మీ *లొకేషన్* షేర్ చేయండి!"
+)
+
+MENU_TEMPLATE_BN = (
+    "🌾 *কৃষিAI — সমস্ত সুবিধাসমূহ*\n\n"
+    "একটি নম্বর লিখুন অথবা আপনার প্রয়োজনীয় তথ্য জানান:\n\n"
+    "1️⃣ *আবহাওয়ার পূর্বাভাস* — \"আজকের আবহাওয়া কেমন?\"\n"
+    "2️⃣ *বাজার দর* — \"পেঁয়াজের বর্তমান দাম\"\n"
+    "3️⃣ *ফসল পরামর্শ* — \"গম চাষ কীভাবে করবেন?\"\n"
+    "4️⃣ *রোগ শনাক্তকরণ* — ফসলের ছবি পাঠান 📷\n"
+    "5️⃣ *ফলন অনুমান* — \"৫ একরে গম উৎপাদন কতটা হবে?\"\n"
+    "6️⃣ *সরকারি প্রকল্প* — \"পিএম-কিসান যোগ্যতা\"\n"
+    "7️⃣ *মাটি পরীক্ষা* — \"তুলার জন্য সেরা সার কোনটি?\"\n"
+    "8️⃣ *কীটপতঙ্গ সতর্কতা* — \"টমেটোতে পোকার আক্রমণ\"\n"
+    "9️⃣ *সেচ পরামর্শ* — \"ধানের জন্য জলের প্রয়োজনীয়তা\"\n"
+    "🔟 *নিকটস্থ মাণ্ডি* — আপনার লোকেশন শেয়ার করুন 📍\n"
+    "📈 *বাজারের প্রবণতা* — \"গমের দামের ধারা\"\n\n"
+    "🎙️ আপনি যেকোনো ভাষায় *ভয়েস নোট* পাঠাতে পারেন!\n"
+    "📍 স্থানীয় পরামর্শের জন্য আপনার *লোকেশন* শেয়ার করুন!"
+)
+
+MENU_TEMPLATE_PA = (
+    "🌾 *ਕ੍ਰਿਸ਼ੀAI — ਸਾਰੀਆਂ ਸਹੂਲਤਾਂ*\n\n"
+    "ਕੋਈ ਨੰਬਰ ਲਿਖੋ ਜਾਂ ਆਪਣੀ ਲੋੜ ਦੱਸੋ:\n\n"
+    "1️⃣ *ਮੌਸਮ ਦੀ ਜਾਣਕਾਰੀ* — \"ਅੱਜ ਦਾ ਮੌਸਮ ਕਿਵੇਂ ਰਹੇਗਾ?\"\n"
+    "2️⃣ *ਮੰਡੀ ਭਾਅ* — \"ਪਿਆਜ਼ ਦਾ ਤਾਜ਼ਾ ਭਾਅ\"\n"
+    "3️⃣ *ਫ਼ਸਲ ਸਲਾਹ* — \"ਕਣਕ ਦੀ ਖੇਤੀ ਕਿਵੇਂ ਕਰੀਏ?\"\n"
+    "4️⃣ *ਬਿਮਾਰੀ ਦੀ ਜਾਂਚ* — ਫ਼ਸਲ ਦੀ ਫੋਟੋ ਭੇਜੋ 📷\n"
+    "5️⃣ *ਝਾੜ ਦਾ ਅੰਦਾਜ਼ਾ* — \"5 ਏਕੜ ਕਣਕ ਦਾ ਝਾੜ\"\n"
+    "6️⃣ *ਸਰਕਾਰੀ ਸਕੀਮਾਂ* — \"ਪੀਐਮ-ਕਿਸਾਨ ਯੋਗਤਾ\"\n"
+    "7️⃣ *ਮਿੱਟੀ ਦੀ ਪਰਖ* — \"ਨਰਮੇ ਲਈ ਸਭ ਤੋਂ ਵਧੀਆ ਖਾਦ\"\n"
+    "8️⃣ *ਕੀੜੇ-ਮਕੌੜੇ ਚੇਤਾਵਨੀ* — \"ਟਮਾਟਰ ਵਿੱਚ ਕੀੜੇ ਦਾ ਖ਼ਤਰਾ\"\n"
+    "9️⃣ *ਸਿੰਚਾਈ ਸਲਾਹ* — \"ਝੋਨੇ ਲਈ ਪਾਣੀ ਦੀ ਲੋੜ\"\n"
+    "🔟 *ਨੇੜਲੀਆਂ ਮੰਡੀਆਂ* — ਆਪਣੀ ਲੋਕੇਸ਼ਨ ਭੇਜੋ 📍\n"
+    "📈 *ਮੰਡੀ ਰੁਝਾਨ* — \"ਕਣਕ ਦੇ ਭਾਅ ਦਾ ਰੁਝਾਨ\"\n\n"
+    "🎙️ ਤੁਸੀਂ ਕਿਸੇ ਵੀ ਭਾਸ਼ਾ ਵਿੱਚ *ਵੌਇਸ ਨੋਟ* ਵੀ ਭੇਜ ਸਕਦੇ ਹੋ!\n"
+    "📍 ਸਹੀ ਸਲਾਹ ਲਈ ਆਪਣੀ *ਲੋਕੇਸ਼ਨ* ਸਾਂਝੀ ਕਰੋ!"
+)
+
+# Registry of verified native templates
+MENU_TEMPLATES: Dict[str, str] = {
+    "English": MENU_TEMPLATE_EN,
+    "Gujarati": MENU_TEMPLATE_GU,
+    "Hindi": MENU_TEMPLATE_HI,
+    "Marathi": MENU_TEMPLATE_MR,
+    "Tamil": MENU_TEMPLATE_TA,
+    "Telugu": MENU_TEMPLATE_TE,
+    "Bengali": MENU_TEMPLATE_BN,
+    "Punjabi": MENU_TEMPLATE_PA,
+}
+
+# Translation cache initialized with all native menus
+MENU_CACHE: Dict[str, str] = dict(MENU_TEMPLATES)
 
 
 async def _get_menu(lang: str) -> str:
-    """Return the feature menu translated into `lang`.
-    English is returned instantly. Other languages are auto-translated via
-    Groq on first call and cached for the rest of the process lifetime.
+    """Return the feature menu in `lang`.
+    Supported languages return instant native templates.
+    Unrecognized languages fall back to dynamic translation via Groq.
     """
     if lang in MENU_CACHE:
         return MENU_CACHE[lang]
 
     groq_api_key = os.getenv("GROQ_API_KEY")
     if not groq_api_key:
-        # Groq unavailable – fall back to English
         return MENU_TEMPLATE_EN
 
     try:
         from groq import AsyncGroq
         client = AsyncGroq(api_key=groq_api_key)
         prompt = (
-            f"Translate the following WhatsApp menu message EXACTLY into {lang}.\n"
+            f"Translate the following WhatsApp menu message accurately into {lang}.\n"
             "Rules:\n"
-            "- Keep ALL emojis exactly as-is (do not move or remove them).\n"
+            "- Keep ALL emojis exactly as-is.\n"
             "- Keep WhatsApp *bold* markers (*…*) exactly as-is.\n"
             "- Keep numbered list format (1️⃣ 2️⃣ …) exactly as-is.\n"
-            "- Translate ONLY the human-readable text words.\n"
+            "- Use natural, authentic agricultural terms used by local farmers.\n"
             "- Output ONLY the translated message, nothing else.\n\n"
             + MENU_TEMPLATE_EN
         )
@@ -131,16 +268,17 @@ async def _get_menu(lang: str) -> str:
             model="openai/gpt-oss-20b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
-            max_tokens=800,
+            max_tokens=1500,
         )
         translated = resp.choices[0].message.content.strip()
         MENU_CACHE[lang] = translated
-        logger.info(f"[WA] Menu translated and cached for language: {lang}")
+        logger.info(f"[WA] Menu dynamically translated for language: {lang}")
         return translated
     except Exception as e:
         logger.error(f"[WA] Menu translation failed for {lang}: {e}")
-        MENU_CACHE[lang] = MENU_TEMPLATE_EN  # cache fallback to avoid retry spam
+        MENU_CACHE[lang] = MENU_TEMPLATE_EN
         return MENU_TEMPLATE_EN
+
 
 
 
