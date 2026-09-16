@@ -56,11 +56,7 @@ async def chat_endpoint(payload: dict, request: Request, db: Session = Depends(g
         history = payload.get("history", [])
         channel = payload.get("channel") or ("voice" if payload.get("phone_id") == "voice_user" else "web")
 
-<<<<<<< HEAD
-        # --- STEP 1: Analytics Integrity (Save Raw Location with fast non-blocking lookup) ---
-=======
         # --- STEP 1: Analytics Integrity & Smart Location Resolution ---
->>>>>>> origin/main
         if lat and lon:
             try:
                 res_village = village
@@ -92,13 +88,8 @@ async def chat_endpoint(payload: dict, request: Request, db: Session = Depends(g
                     district=res_district,
                     city=res_city or "Manual",
                     state=res_state or "Manual",
-<<<<<<< HEAD
                     pincode=res_pincode,
-                    source="chat", timestamp=datetime.utcnow()
-=======
-                    pincode=loc.get("pincode"),
                     source=channel, timestamp=datetime.utcnow()
->>>>>>> origin/main
                 )
                 db.add(record)
                 db.commit()
@@ -170,17 +161,22 @@ async def chat_endpoint(payload: dict, request: Request, db: Session = Depends(g
         language = payload.get("language")
         logger.info(f"Frontend ({channel}) query from {user_data.get('sub', 'unknown')} (masked len: {len(message)}, lang_pref: {language})")
         
-<<<<<<< HEAD
-        # Process the masked query with safe 45s timeout
+        # Process the masked query with channel-appropriate prompt and auto-language mirroring, with safe 45s timeout
         try:
-            ai_reply = await asyncio.wait_for(process_web_query(message, history=history), timeout=45.0)
+            ai_reply = await asyncio.wait_for(
+                process_web_query(message, history=history, channel=channel, language_preference=language),
+                timeout=45.0
+            )
         except asyncio.TimeoutError:
             logger.warning("Web query exceeded 45s threshold, providing fallback advisory")
-            ai_reply = "🌱 **KrishiAI Advisor Notice**:\n\nOur agricultural models took slightly longer than expected to analyze satellite and market feeds. Here is immediate guidance for your query:\n\n- Ensure proper field drainage and soil moisture.\n- Monitor for early signs of pests or nutritional deficiencies.\n\nPlease feel free to ask a specific follow-up question (e.g. crop pricing, weather forecast, or fertilizer dosage)!"
-=======
-        # Process the masked query with channel-appropriate prompt and auto-language mirroring
-        ai_reply = await process_web_query(message, history=history, channel=channel, language_preference=language)
->>>>>>> origin/main
+            ai_reply = """🌱 **KrishiAI Advisor Notice**:
+
+Our agricultural models took slightly longer than expected to analyze satellite and market feeds. Here is immediate guidance for your query:
+
+- Ensure proper field drainage and soil moisture.
+- Monitor for early signs of pests or nutritional deficiencies.
+
+Please feel free to ask a specific follow-up question (e.g. crop pricing, weather forecast, or fertilizer dosage)!"""
         
         # --- STEP 3: Detokenize Reply (Restore Context) ---
         final_reply = pii_service.unmask(ai_reply, token_map)

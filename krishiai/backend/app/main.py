@@ -21,11 +21,8 @@ from api.routes.schemes import router as schemes_router
 from api.routes.community import router as community_router
 from api.routes.auth import router as auth_router
 from api.routes.vendor import router as vendor_router
-<<<<<<< HEAD
 from api.routes.admin import router as admin_router
-=======
 from api.routes.iot import router as iot_router, devices_router
->>>>>>> origin/main
 from app.db.database import engine, Base
 from app.services.gee_service import gee_service
 import app.models.location  # noqa
@@ -187,14 +184,12 @@ app.include_router(auth_router)
 # Include Vendor Marketplace endpoints
 app.include_router(vendor_router)
 
-<<<<<<< HEAD
 # Include Admin Master Command endpoints
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
-=======
+
 # Include IoT Smart Farm endpoints
 app.include_router(iot_router)
 app.include_router(devices_router)
->>>>>>> origin/main
 
 logger.info("KrishiAI MCP Server starting up...")
 
