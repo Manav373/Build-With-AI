@@ -1,6 +1,5 @@
 {
   "outputDirectory": "dist",
-  "cleanUrls": true,
   "rewrites": [
     { "source": "/admin/:path*", "destination": "/admin/index.html" },
     { "source": "/admin", "destination": "/admin/index.html" },
@@ -13,6 +12,6 @@
     { "source": "/vendors", "destination": "/vendor/index.html" },
     { "source": "/vendor/:path*", "destination": "/vendor/index.html" },
     { "source": "/vendor", "destination": "/vendor/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
