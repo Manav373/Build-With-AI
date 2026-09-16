@@ -26,7 +26,7 @@ export default function FirebaseConnectModal({
   if (!isOpen) return null;
 
   const [dbUrl, setDbUrl] = useState(firebaseConfig?.databaseUrl || 'https://krishiai-iot-default-rtdb.firebaseio.com');
-  const [devicePath, setDevicePath] = useState(firebaseConfig?.devicePath || '/devices/krishiai-node-01');
+  const [devicePath, setDevicePath] = useState(firebaseConfig?.devicePath || '/krishiAI');
   const [enabled, setEnabled] = useState(Boolean(firebaseConfig?.enabled));
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -244,7 +244,7 @@ void loop() {
                 type="text"
                 value={devicePath}
                 onChange={(e) => setDevicePath(e.target.value)}
-                placeholder="/devices/krishiai-node-01"
+                placeholder="/krishiAI"
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-orange-500 font-mono transition"
               />
             </div>

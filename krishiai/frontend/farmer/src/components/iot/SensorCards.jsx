@@ -14,7 +14,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-export default function SensorCards({ telemetry, device, onOpenPumpModal, onEmergencyStop }) {
+export default function SensorCards({ telemetry, device, onOpenPumpModal, onStartPump, onEmergencyStop }) {
   const moisture = telemetry?.soilMoisture ?? 0;
   const rawAdc = telemetry?.soilRaw ?? 2450;
   const tempC = telemetry?.temperature ?? 28;
@@ -34,11 +34,30 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onEmer
 
   const soilBadge = getSoilBadge(moisture);
 
-  // Dew point calculation
+  // Accurate Magnus-Tetens Dew point calculation (°C)
   const a = 17.27;
   const b = 237.7;
   const alpha = ((a * tempC) / (b + tempC)) + Math.log(humidity / 100.0);
   const dewPoint = ((b * alpha) / (a - alpha)).toFixed(1);
+
+  // Accurate NOAA Steadman Heat Index (°C)
+  const calculateHeatIndex = (t, rh) => {
+    if (t < 20) return t;
+    const tf = (t * 9) / 5 + 32;
+    const hiF = 0.5 * (tf + 61.0 + ((tf - 68.0) * 1.2) + (rh * 0.094));
+    if (hiF < 80) return Number((((hiF - 32) * 5) / 9).toFixed(1));
+    const c1 = -42.379, c2 = 2.04901523, c3 = 10.14333127, c4 = -0.22475541;
+    const c5 = -0.00683783, c6 = -0.05481717, c7 = 0.00122874, c8 = 0.00085282, c9 = -0.00000199;
+    const rhi = c1 + (c2 * tf) + (c3 * rh) + (c4 * tf * rh) + (c5 * tf * tf) + (c6 * rh * rh) + (c7 * tf * tf * rh) + (c8 * tf * rh * rh) + (c9 * tf * tf * rh * rh);
+    return Number((((rhi - 32) * 5) / 9).toFixed(1));
+  };
+  const heatIndex = calculateHeatIndex(tempC, humidity);
+
+  // Accurate Agronomic Vapor Pressure Deficit (VPD in kPa)
+  const vpSat = 0.61078 * Math.exp((17.27 * tempC) / (tempC + 237.3));
+  const vpAct = vpSat * (humidity / 100);
+  const vpd = Number((vpSat - vpAct).toFixed(2));
+  const vpdStatus = vpd < 0.4 ? 'Low' : vpd <= 1.2 ? 'Ideal' : 'High';
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -73,9 +92,9 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onEmer
         </div>
 
         <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Dry Limit: 3200</span>
+          <span>Dry Air: ~4000</span>
           <span>Target: 65%</span>
-          <span>Wet Limit: 1400</span>
+          <span>Wet Soil: ~1400</span>
         </div>
       </div>
 
@@ -103,7 +122,7 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onEmer
         </p>
 
         <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Heat Index: {tempC}°C</span>
+          <span>Heat Index: {heatIndex}°C</span>
           <span>Sensor: GPIO 25</span>
         </div>
       </div>
@@ -133,7 +152,7 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onEmer
         </div>
 
         <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>VPD: Good</span>
+          <span>VPD: {vpd} kPa ({vpdStatus})</span>
           <span>Fungal Risk: {humidity > 80 ? 'High' : 'Low'}</span>
         </div>
       </div>
@@ -234,17 +253,17 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onEmer
           {isPumpActive ? (
             <button
               onClick={onEmergencyStop}
-              className="flex-1 py-1.5 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-lg shadow-red-600/30"
+              className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-lg shadow-red-600/30 active:scale-[0.98]"
             >
               <AlertCircle size={14} /> EMERGENCY STOP
             </button>
           ) : (
             <button
-              onClick={onOpenPumpModal}
+              onClick={() => onStartPump ? onStartPump() : (onOpenPumpModal && onOpenPumpModal())}
               disabled={isRaining}
-              className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20"
+              className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20 active:scale-[0.98]"
             >
-              <Droplet size={14} /> START IRRIGATION
+              <Droplet size={14} /> START IRRIGATION (ACTUATE)
             </button>
           )}
         </div>

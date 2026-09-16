@@ -179,8 +179,9 @@ async def get_latest_telemetry(deviceId: str = DEFAULT_DEVICE_ID):
 
 
 @router.post("/telemetry")
-async def ingest_telemetry(payload: TelemetryPayload):
-    deviceId = payload.deviceId or DEFAULT_DEVICE_ID
+@router.post("/devices/{device_id}/telemetry")
+async def ingest_telemetry(payload: TelemetryPayload, device_id: Optional[str] = None):
+    deviceId = device_id or payload.deviceId or DEFAULT_DEVICE_ID
     if deviceId not in device_store:
         device_store[deviceId] = {
             "id": deviceId,
@@ -323,3 +324,16 @@ async def get_history(deviceId: str = DEFAULT_DEVICE_ID, range: str = "24h"):
 @router.get("/alerts")
 async def get_alerts(deviceId: str = DEFAULT_DEVICE_ID):
     return {"success": True, "alerts": alerts_store}
+
+
+# Dedicated alias router for /api/devices/{device_id}/telemetry
+devices_router = APIRouter(prefix="/api/devices", tags=["IoT Devices"])
+
+@devices_router.post("/{device_id}/telemetry")
+async def ingest_device_telemetry(device_id: str, payload: TelemetryPayload):
+    return await ingest_telemetry(payload, device_id=device_id)
+
+@devices_router.get("/{device_id}/telemetry")
+async def get_device_telemetry(device_id: str):
+    return await get_latest_telemetry(deviceId=device_id)
+

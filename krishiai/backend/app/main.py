@@ -21,7 +21,7 @@ from api.routes.schemes import router as schemes_router
 from api.routes.community import router as community_router
 from api.routes.auth import router as auth_router
 from api.routes.vendor import router as vendor_router
-from api.routes.iot import router as iot_router
+from api.routes.iot import router as iot_router, devices_router
 from app.db.database import engine, Base
 from app.services.gee_service import gee_service
 import app.models.location  # noqa
@@ -183,6 +183,7 @@ app.include_router(vendor_router)
 
 # Include IoT Smart Farm endpoints
 app.include_router(iot_router)
+app.include_router(devices_router)
 
 logger.info("KrishiAI MCP Server starting up...")
 

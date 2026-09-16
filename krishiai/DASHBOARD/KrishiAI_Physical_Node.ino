@@ -1,336 +1,418 @@
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include <addons/TokenHelper.h>
+#include <addons/RTDBHelper.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
 
-// =====================================================
-// KRISHIAI SENSOR NODE — ESP32 (HARDWARE NODE 01)
-// ESP32 + SOIL + DHT11 + RAIN + LIGHT + LCD + RELAY + WIFI
-// =====================================================
+// ================= FIREBASE =================
 
-// =====================================================
-// 1. WI-FI & DASHBOARD CONFIGURATION
-// =====================================================
-const char* ssid     = "YOUR_WIFI_NAME";      // Enter your Wi-Fi SSID
-const char* password = "YOUR_WIFI_PASSWORD";  // Enter your Wi-Fi Password
+#define API_KEY "AIzaSyBgLKAQSdNkjPXJOOBDcCH6Ane85PAlD64"
+#define DATABASE_URL "https://krishiai-iot-default-rtdb.firebaseio.com"
 
-// Laptop / Backend Server IP & Port
-const char* serverUrl = "http://192.168.0.107:5000/api/devices/krishiai-node-01/telemetry";
+#define FIREBASE_EMAIL "manavpanchal373@gmail.com"
+#define FIREBASE_PASSWORD "manav373"
 
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
 
-// =====================================================
-// 2. PIN DEFINITIONS (PRD Section 2)
-// =====================================================
-#define SOIL_PIN 5
+// ================= WIFI =================
+
+#define WIFI_SSID "Hackathon-A211"
+#define WIFI_PASSWORD "admin@211"
+
+// ================= PINS =================
+
+#define SOIL_PIN 34
 #define DHT_PIN 25
+#define DHT_TYPE DHT11
+
 #define RAIN_PIN 27
-#define LIGHT_PIN 34
+#define LIGHT_PIN 32
 #define RELAY_PIN 26
 
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-#define DHT_TYPE DHT11
-
-// =====================================================
-// 3. LCD & DHT INSTANCES
-// =====================================================
 #define LCD_ADDRESS 0x27
+
+// ================= SETTINGS =================
+
+#define DRY_VALUE 3200
+#define WET_VALUE 1500
+
+#define MOTOR_ON_PERCENT 65
+#define MOTOR_OFF_PERCENT 47
+
+// Update every 1 second
+#define SENSOR_INTERVAL 1000
+
+// ---- Tunable step sizes for blocking waits ----
+#define WIFI_RETRY_STEP_MS 100
+#define WIFI_MAX_ATTEMPTS 50
+#define FIREBASE_RETRY_STEP_MS 20
+#define FIREBASE_WAIT_TIMEOUT_MS 3000
+
+// ================= OBJECTS =================
+
 LiquidCrystal_I2C lcd(LCD_ADDRESS, 16, 2);
 DHT dht(DHT_PIN, DHT_TYPE);
 
-// =====================================================
-// 4. SOIL CALIBRATION (PRD Section 24)
-// =====================================================
-#define SOIL_DRY 3200
-#define SOIL_WET 1400
+// ================= VARIABLES =================
 
-// =====================================================
-// 5. SENSOR VARIABLES
-// =====================================================
-int soilRaw;
-int soilPercent;
+unsigned long lastUpdateMillis = 0;
+
+enum ControlMode {
+  AUTO_MODE,
+  MANUAL_MODE
+};
+
+ControlMode mode = AUTO_MODE;
+
+bool manualMotorCommand = false;
+bool motorState = false;
+
+int soilRaw = 0;
+
+float moisturePercent = 0;
 float temperature = 0;
 float humidity = 0;
-int rainState;
-int lightState;
 
-// =====================================================
-// 6. RELAY & SCREEN STATE
-// =====================================================
-bool relayState = false;
-unsigned long lastScreenChange = 0;
-int screenNumber = 0;
+bool raining = false;
+bool bright = false;
 
-unsigned long lastSendTime = 0;
-const unsigned long sendInterval = 4000; // Send telemetry every 4 seconds
+// ================= MOTOR =================
 
-// =====================================================
-// SETUP
-// =====================================================
+void motorON() {
+  if (motorState) return;
+  digitalWrite(RELAY_PIN, LOW); // Active LOW relay
+  motorState = true;
+  Serial.println("[ACTUATION] MOTOR ON");
+
+  if (Firebase.ready()) {
+    Firebase.RTDB.setBool(
+      &fbdo,
+      "krishiAI/status/motor",
+      true
+    );
+  }
+}
+
+void motorOFF() {
+  if (!motorState) return;
+  digitalWrite(RELAY_PIN, HIGH); // Active LOW relay
+  motorState = false;
+  Serial.println("[ACTUATION] MOTOR OFF");
+
+  if (Firebase.ready()) {
+    Firebase.RTDB.setBool(
+      &fbdo,
+      "krishiAI/status/motor",
+      false
+    );
+  }
+}
+
+// ================= SOIL =================
+
+float calculateMoisture(int raw) {
+  float moisture =
+    ((float)(DRY_VALUE - raw) * 100.0) /
+    ((float)(DRY_VALUE - WET_VALUE));
+
+  if (moisture < 0)
+    moisture = 0;
+
+  if (moisture > 100)
+    moisture = 100;
+
+  return moisture;
+}
+
+// ================= SENSORS =================
+
+void readSensors() {
+  soilRaw = analogRead(SOIL_PIN);
+  moisturePercent = calculateMoisture(soilRaw);
+
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+
+  if (!isnan(t))
+    temperature = t;
+
+  if (!isnan(h))
+    humidity = h;
+
+  raining = digitalRead(RAIN_PIN) == LOW;
+  bright = digitalRead(LIGHT_PIN) == LOW;
+}
+
+// ================= FIREBASE CONTROL =================
+
+void readControlsFromFirebase() {
+  if (!Firebase.ready())
+    return;
+
+  // MODE
+  if (Firebase.RTDB.getString(&fbdo, "krishiAI/control/mode")) {
+    String modeString = fbdo.stringData();
+    modeString.trim();
+    modeString.toUpperCase();
+
+    if (modeString == "MANUAL") {
+      mode = MANUAL_MODE;
+    } else {
+      mode = AUTO_MODE;
+    }
+  }
+
+  // MOTOR COMMAND
+  if (Firebase.RTDB.getBool(&fbdo, "krishiAI/control/motorCommand")) {
+    manualMotorCommand = fbdo.boolData();
+  }
+}
+
+// ================= AUTO =================
+
+void automaticIrrigation() {
+  if (mode != AUTO_MODE)
+    return;
+
+  // Rain protection
+  if (raining) {
+    motorOFF();
+    return;
+  }
+
+  // Soil dry (trigger irrigation)
+  if (moisturePercent <= MOTOR_OFF_PERCENT) {
+    motorON();
+    return;
+  }
+
+  // Soil wet (reach target hydration)
+  if (moisturePercent >= MOTOR_ON_PERCENT) {
+    motorOFF();
+    return;
+  }
+}
+
+// ================= MANUAL =================
+
+void manualIrrigation() {
+  if (mode != MANUAL_MODE)
+    return;
+
+  // Rain safety lock
+  if (raining && manualMotorCommand) {
+    motorOFF();
+    return;
+  }
+
+  if (manualMotorCommand) {
+    motorON();
+  } else {
+    motorOFF();
+  }
+}
+
+// ================= SEND DATA =================
+
+void sendDataToFirebase() {
+  if (!Firebase.ready())
+    return;
+
+  FirebaseJson json;
+  json.set("soilRaw", soilRaw);
+  json.set("moisture", moisturePercent);
+  json.set("temperature", temperature);
+  json.set("humidity", humidity);
+  json.set("rain", raining);
+  json.set("light", bright);
+
+  if (Firebase.RTDB.updateNode(&fbdo, "krishiAI/sensors", &json)) {
+    Firebase.RTDB.setBool(&fbdo, "krishiAI/status/motor", motorState);
+    Firebase.RTDB.setBool(&fbdo, "krishiAI/status/online", true);
+  } else {
+    Serial.print("Firebase Error: ");
+    Serial.println(fbdo.errorReason());
+  }
+}
+
+// ================= LCD =================
+
+void updateLCD() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+
+  if (mode == AUTO_MODE)
+    lcd.print("AUTO ");
+  else
+    lcd.print("MANUAL ");
+
+  lcd.print(moisturePercent, 0);
+  lcd.print("%");
+
+  lcd.setCursor(0, 1);
+  if (raining) {
+    lcd.print("RAIN MOTOR OFF");
+  } else if (motorState) {
+    lcd.print("MOTOR ON");
+  } else {
+    lcd.print("MOTOR OFF");
+  }
+}
+
+// ================= SERIAL =================
+
+void printSensorData() {
+  Serial.print("MODE: ");
+  Serial.print(mode == AUTO_MODE ? "AUTO" : "MANUAL");
+  Serial.print(" | SOIL: ");
+  Serial.print(soilRaw);
+  Serial.print(" | MOISTURE: ");
+  Serial.print(moisturePercent, 1);
+  Serial.print("% | TEMP: ");
+  Serial.print(temperature, 1);
+  Serial.print("C | HUM: ");
+  Serial.print(humidity, 1);
+  Serial.print("% | RAIN: ");
+  Serial.print(raining ? "YES" : "NO");
+  Serial.print(" | MOTOR: ");
+  Serial.println(motorState ? "ON" : "OFF");
+}
+
+// ================= SYSTEM =================
+
+void updateSystem() {
+  // Get latest dashboard command first
+  readControlsFromFirebase();
+
+  // Read sensors
+  readSensors();
+
+  // Control motor
+  if (mode == AUTO_MODE)
+    automaticIrrigation();
+  else
+    manualIrrigation();
+
+  // Send sensor data
+  sendDataToFirebase();
+
+  // LCD
+  updateLCD();
+
+  // Serial
+  printSensorData();
+}
+
+// ================= SETUP =================
+
 void setup() {
   Serial.begin(115200);
-  delay(500);
 
-  // I2C Pins
-  Wire.begin(SDA_PIN, SCL_PIN);
-
-  // Sensor Pins
-  pinMode(SOIL_PIN, INPUT);
-  pinMode(RAIN_PIN, INPUT_PULLUP);
+  // Pins
+  pinMode(RAIN_PIN, INPUT);
   pinMode(LIGHT_PIN, INPUT);
-
-  // Relay (Safety Rule: Start strictly in OFF state)
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, HIGH); // HIGH = Relay OFF (Active LOW)
-  relayState = false;
 
-  // Initialize DHT
+  // Motor initial state: OFF (Active LOW)
+  digitalWrite(RELAY_PIN, HIGH);
+  motorState = false;
+
+  // ADC resolution
+  analogReadResolution(12);
+  analogSetPinAttenuation(SOIL_PIN, ADC_11db);
+
+  // DHT & I2C LCD
   dht.begin();
-
-  // Initialize LCD
+  Wire.begin(SDA_PIN, SCL_PIN);
   lcd.init();
   lcd.backlight();
+
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("KRISHIAI");
   lcd.setCursor(0, 1);
-  lcd.print("SMART FARM NODE");
-  delay(1500);
+  lcd.print("WIFI CONNECTING");
 
-  // Connect to Wi-Fi
-  Serial.println("\nConnecting to Wi-Fi: " + String(ssid));
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Connecting WiFi..");
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  // Wi-Fi
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting WiFi");
 
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 15) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && attempts < WIFI_MAX_ATTEMPTS) {
+    delay(WIFI_RETRY_STEP_MS);
     Serial.print(".");
     attempts++;
   }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[WIFI] Connected! Node IP: " + WiFi.localIP().toString());
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("KrishiAI Online");
-    lcd.setCursor(0, 1);
-    lcd.print(WiFi.localIP().toString());
-  } else {
-    Serial.println("\n[WIFI] Not connected. Running in Serial / Local mode.");
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Serial Mode");
-  }
-
-  delay(1500);
-  lcd.clear();
-}
-
-// =====================================================
-// READ SENSORS
-// =====================================================
-void readSensors() {
-  // Soil
-  soilRaw = analogRead(SOIL_PIN);
-  soilPercent = map(soilRaw, SOIL_DRY, SOIL_WET, 0, 100);
-  soilPercent = constrain(soilPercent, 0, 100);
-
-  // DHT11
-  float newTemperature = dht.readTemperature();
-  float newHumidity = dht.readHumidity();
-
-  if (!isnan(newTemperature)) {
-    temperature = newTemperature;
-  }
-  if (!isnan(newHumidity)) {
-    humidity = newHumidity;
-  }
-
-  // Rain (FC-37 active LOW)
-  rainState = digitalRead(RAIN_PIN);
-
-  // Light (HW-072 active LOW)
-  lightState = digitalRead(LIGHT_PIN);
-}
-
-// =====================================================
-// STATUS STRING HELPERS
-// =====================================================
-String getSoilStatus() {
-  if (soilPercent < 25) return "VERY DRY";
-  else if (soilPercent < 40) return "DRY";
-  else if (soilPercent < 70) return "GOOD";
-  else return "WET";
-}
-
-String getRainStatus() {
-  return (rainState == LOW) ? "RAIN" : "NO RAIN";
-}
-
-String getLightStatus() {
-  return (lightState == LOW) ? "LIGHT" : "DARK";
-}
-
-// =====================================================
-// RELAY CONTROL FUNCTIONS
-// =====================================================
-void relayON() {
-  digitalWrite(RELAY_PIN, LOW); // Active LOW relay ON
-  relayState = true;
-  Serial.println("RELAY -> ON");
-}
-
-void relayOFF() {
-  digitalWrite(RELAY_PIN, HIGH); // Active LOW relay OFF
-  relayState = false;
-  Serial.println("RELAY -> OFF");
-}
-
-// =====================================================
-// SERIAL MONITOR & JSON TELEMETRY DISPATCH
-// =====================================================
-void sendTelemetry() {
-  // 1. Human Readable Serial Monitor
   Serial.println();
-  Serial.println("----------------------------------------");
-  Serial.print("Soil Raw      : "); Serial.println(soilRaw);
-  Serial.print("Soil Moisture : "); Serial.print(soilPercent); Serial.println("%");
-  Serial.print("Soil Status   : "); Serial.println(getSoilStatus());
-  Serial.print("Temperature   : "); Serial.print(temperature, 1); Serial.println(" C");
-  Serial.print("Humidity      : "); Serial.print(humidity, 0); Serial.println(" %");
-  Serial.print("Rain          : "); Serial.println(getRainStatus());
-  Serial.print("Light         : "); Serial.println(getLightStatus());
-  Serial.print("Relay         : "); Serial.println(relayState ? "ON" : "OFF");
-  Serial.println("----------------------------------------");
 
-  // 2. Build JSON Packet for Dashboard
-  StaticJsonDocument<256> doc;
-  doc["deviceId"] = "krishiai-node-01";
-  doc["soilMoisture"] = soilPercent;
-  doc["soilRaw"] = soilRaw;
-  doc["temperature"] = temperature;
-  doc["humidity"] = humidity;
-  doc["rain"] = (rainState == LOW);
-  doc["light"] = (lightState == LOW);
-  doc["pump"] = relayState;
-
-  String jsonPayload;
-  serializeJson(doc, jsonPayload);
-
-  // Print JSON for Web Serial stream
-  Serial.println(jsonPayload);
-
-  // 3. Send via Wi-Fi HTTP to Dashboard Backend
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
+    Serial.println("WiFi Connected");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
 
-    int httpResponseCode = http.POST(jsonPayload);
-    if (httpResponseCode > 0) {
-      String response = http.getString();
-      StaticJsonDocument<384> resDoc;
-      if (!deserializeJson(resDoc, response)) {
-        if (resDoc.containsKey("pumpCommand")) {
-          bool desiredState = resDoc["pumpCommand"].as<bool>();
-          if (desiredState && !relayState) {
-            relayON();
-          } else if (!desiredState && relayState) {
-            relayOFF();
-          }
-        }
-      }
-    }
-    http.end();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("WIFI CONNECTED");
+  } else {
+    Serial.println("WiFi FAILED");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("WIFI FAILED");
   }
-}
 
-// =====================================================
-// LCD SCREENS (PRD Section 2)
-// =====================================================
-void screenSoilRain() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Soil:");
-  lcd.print(soilPercent);
-  lcd.print("% ");
-  lcd.print(getSoilStatus());
+  // Firebase Config
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  auth.user.email = FIREBASE_EMAIL;
+  auth.user.password = FIREBASE_PASSWORD;
 
-  lcd.setCursor(0, 1);
-  lcd.print("Rain:");
-  lcd.print(getRainStatus());
-}
+  Firebase.reconnectWiFi(true);
+  fbdo.setResponseSize(1024);
 
-void screenClimate() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Temp:");
-  lcd.print(temperature, 1);
-  lcd.print("C");
+  Serial.println("Starting Firebase...");
+  Firebase.begin(&config, &auth);
+  Serial.println("Firebase Started");
 
-  lcd.setCursor(0, 1);
-  lcd.print("Humidity:");
-  lcd.print((int)humidity);
-  lcd.print("%");
-}
+  unsigned long start = millis();
+  while (!Firebase.ready() && millis() - start < FIREBASE_WAIT_TIMEOUT_MS) {
+    delay(FIREBASE_RETRY_STEP_MS);
+    Serial.print(".");
+  }
+  Serial.println();
 
-void screenLight() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Light:");
-  lcd.print(getLightStatus());
+  if (Firebase.ready()) {
+    Serial.println("Firebase READY");
+    Firebase.RTDB.setBool(&fbdo, "krishiAI/status/online", true);
+    Firebase.RTDB.setBool(&fbdo, "krishiAI/status/motor", false);
+  } else {
+    Serial.println("Firebase NOT READY");
+    Serial.println(fbdo.errorReason());
+  }
 
-  lcd.setCursor(0, 1);
-  lcd.print("Sensor:");
-  lcd.print(lightState);
-}
-
-void screenRelay() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("KRISHIAI RELAY");
-
-  lcd.setCursor(0, 1);
-  lcd.print("Pump:");
-  lcd.print(relayState ? "ON" : "OFF");
-}
-
-// =====================================================
-// MAIN LOOP
-// =====================================================
-void loop() {
+  // Initial read & control
   readSensors();
+  automaticIrrigation();
+  updateLCD();
 
-  unsigned long currentMillis = millis();
+  Serial.println("KRISHIAI READY");
+}
 
-  // Send Telemetry every 4 seconds
-  if (currentMillis - lastSendTime >= sendInterval) {
-    lastSendTime = currentMillis;
-    sendTelemetry();
+// ================= LOOP =================
+
+void loop() {
+  unsigned long now = millis();
+  if (now - lastUpdateMillis >= SENSOR_INTERVAL) {
+    lastUpdateMillis = now;
+    updateSystem();
   }
-
-  // Rotate LCD screens every 3 seconds
-  if (currentMillis - lastScreenChange >= 3000) {
-    lastScreenChange = currentMillis;
-    screenNumber++;
-    if (screenNumber > 3) {
-      screenNumber = 0;
-    }
-  }
-
-  // Display active screen
-  if (screenNumber == 0) screenSoilRain();
-  else if (screenNumber == 1) screenClimate();
-  else if (screenNumber == 2) screenLight();
-  else if (screenNumber == 3) screenRelay();
-
-  delay(500);
+  yield();
 }
