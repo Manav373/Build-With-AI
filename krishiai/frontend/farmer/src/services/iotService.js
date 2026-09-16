@@ -41,13 +41,13 @@ export const INITIAL_DEVICE = {
   uptimeMinutes: 0,
   ip: '—',
   settings: {
-    criticalMoisture: 25,
-    targetMoisture: 65,
+    criticalMoisture: 65, // >=65% is DRY
+    targetMoisture: 45,   // ~45% is SORTED
     autoMaxDurationMinutes: 15,
     manualMaxDurationMinutes: 30,
     rainInterlock: true,
-    soilDryAdc: 2300,
-    soilWetAdc: 1200
+    soilDryAdc: 3200,
+    soilWetAdc: 1500
   }
 };
 
@@ -148,28 +148,26 @@ export function evaluateDecision(telemetry, device = INITIAL_DEVICE, cropConfig 
     reason = `Rain sensor detects natural precipitation. Irrigation pump locked out to protect ${cropDef.name} from waterlogging.`;
     fertilizerAdvice = '⚠️ HOLD FERTILIZER: Do not apply top-dressing (Urea/NPK) during active rain to prevent surface runoff and nutrient leaching.';
     shouldAutoIrrigate = false;
-  } else if (yesterdayRained && moisture >= critical + 5) {
-    action = 'HOLD_RECENT_RAIN';
-    reason = `Recent rainfall (${rainHistory.totalRainMm}mm) provides adequate moisture buffer. Pump operation held offline to prevent root rot.`;
-    fertilizerAdvice = 'Delay nitrogen top-dressing by 24h until saturated surface water drains.';
+  } else if (moisture <= 0) {
+    action = 'NOT_ON_SOIL';
+    reason = 'Sensor reading 0% (Sensor not detected or not inserted into soil). Automated pump held in safe standby.';
     shouldAutoIrrigate = false;
-  } else if (moisture < critical) {
+  } else if (moisture >= 65) {
     action = 'IRRIGATE_NOW';
-    reason = `Moisture (${moisture}%) dropped below critical threshold (${critical}%) for ${cropDef.name} ${currentStage.name}. Immediate irrigation recommended.`;
+    reason = `Moisture at ${moisture}% (≥65% is DRY). Immediate irrigation triggered for ${cropDef.name}.`;
     shouldAutoIrrigate = true;
     recommendedPumpWindow = light ? 'Immediate Cycle: Low solar noon or late afternoon' : 'Immediate Night Cycle: Optimal deep root absorption';
-  } else if (moisture < target - 12 && !pump) {
+  } else if (moisture > 48) {
     action = 'RECOMMEND_IRRIGATION';
-    reason = `Moisture at ${moisture}%. Scheduled irrigation window recommended for ${currentStage.name} before moisture stress occurs.`;
-    recommendedPumpWindow = 'Tomorrow 06:00 AM – 07:30 AM (Minimal evaporation window)';
+    reason = `Moisture at ${moisture}% (Dry deficit range 49–64%). Soil drying towards 65% trigger.`;
     shouldAutoIrrigate = false;
-  } else if (pump && moisture >= target) {
+  } else if (pump && moisture <= 47) {
     action = 'STOP_OPTIMAL';
-    reason = `Target soil hydration (${target}%) achieved for ${cropDef.name}. De-energize pump to conserve water and power.`;
+    reason = `Moisture reached ~45% (${moisture}%). Soil is SORTED. Pump turned OFF.`;
     shouldAutoIrrigate = false;
   } else {
     action = 'STANDBY';
-    reason = `Soil moisture stable at ${moisture}%. Sensor telemetry monitoring active for ${cropDef.name}.`;
+    reason = `Soil moisture stable at ${moisture}% (~45% is SORTED). Soil hydration optimal for ${cropDef.name}.`;
     shouldAutoIrrigate = false;
   }
 
@@ -245,22 +243,17 @@ export function parseFirebasePayload(incoming) {
         ? Number(incoming.soilMoisture) 
         : (incoming.moisture !== undefined ? Number(incoming.moisture) : undefined));
 
-  // Calibrate moisture from raw ADC if available:
-  // Capacitive Soil Moisture Sensor v1.2 on ESP32 (3.3V logic):
-  // Dry Air / Dry Soil = ~2300 ADC (0-10% moisture, CRITICAL DRY)
-  // Wet Soil / Water = ~1200 ADC (100% moisture)
-  if (soilRaw !== undefined && soilRaw > 0) {
-    const dryLimit = 2300;
-    const wetLimit = 1200;
-    if (soilRaw >= dryLimit) {
-      soilMoisture = 0;
-    } else if (soilRaw <= wetLimit) {
-      soilMoisture = 100;
-    } else {
-      soilMoisture = Math.round(((dryLimit - soilRaw) / (dryLimit - wetLimit)) * 100);
-    }
+  // User Calibration:
+  // 0% -> Not on soil
+  // ~45% -> Sorted
+  // >=65% -> Dry
+  if (soilMoisture === undefined && soilRaw !== undefined && soilRaw > 0) {
+    const dryLimit = 3200;
+    const wetLimit = 1500;
+    const calibrated = Math.round(((dryLimit - soilRaw) / (dryLimit - wetLimit)) * 100);
+    soilMoisture = Math.max(0, Math.min(100, calibrated));
   } else if (soilMoisture !== undefined) {
-    soilMoisture = Math.round(soilMoisture);
+    soilMoisture = Math.round(Number(soilMoisture) * 10) / 10;
   }
 
   const result = {};

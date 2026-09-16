@@ -25,13 +25,40 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onStar
   const isDaylight = Boolean(telemetry?.light);
   const isPumpActive = Boolean(telemetry?.pump);
 
-  // Soil status badge logic
+  // Soil status badge logic based on user's calibrated hardware:
+  // 0% -> Not on soil (sensor not placed in soil)
+  // ~45% (<=48%) -> Sorted (optimal moisture)
+  // 49% - 64% -> Dry / Deficit (approaching dry mark)
+  // 65% and up -> Dry (soil dry, irrigation required)
   const getSoilBadge = (val) => {
-    if (isOffline) return { label: 'OFFLINE / DISCONNECTED', bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30' };
-    if (val < 25) return { label: 'CRITICAL DRY (<25%)', bg: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' };
-    if (val < 40) return { label: 'DEFICIT (25–39%)', bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' };
-    if (val < 70) return { label: 'OPTIMAL (40–69%)', bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' };
-    return { label: 'SATURATED (70–100%)', bg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30' };
+    if (isOffline) {
+      return { 
+        label: 'OFFLINE / DISCONNECTED', 
+        bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30' 
+      };
+    }
+    if (val <= 0) {
+      return { 
+        label: 'NOT ON SOIL (0%)', 
+        bg: 'bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/30' 
+      };
+    }
+    if (val >= 65) {
+      return { 
+        label: 'DRY (≥65%)', 
+        bg: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30' 
+      };
+    }
+    if (val > 48) {
+      return { 
+        label: 'DRY (DEFICIT 49–64%)', 
+        bg: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' 
+      };
+    }
+    return { 
+      label: 'SORTED (~45%)', 
+      bg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+    };
   };
 
   const soilBadge = getSoilBadge(moisture);
@@ -85,19 +112,19 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onStar
         <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-3 p-0.5 border border-slate-200 dark:border-slate-700/50">
           <div 
             className={`h-full rounded-full transition-all duration-500 ${
-              moisture < 25 ? 'bg-gradient-to-r from-red-500 to-amber-500' :
-              moisture < 40 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
-              moisture < 70 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
-              'bg-gradient-to-r from-teal-400 to-blue-500'
+              moisture <= 0 ? 'bg-slate-400 dark:bg-slate-600' :
+              moisture >= 65 ? 'bg-gradient-to-r from-red-500 to-rose-600' :
+              moisture > 48 ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+              'bg-gradient-to-r from-emerald-500 to-teal-400'
             }`}
-            style={{ width: `${Math.min(100, Math.max(5, moisture))}%` }}
+            style={{ width: `${moisture <= 0 ? 4 : Math.min(100, Math.max(5, moisture))}%` }}
           />
         </div>
 
         <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Dry Air: ~2300</span>
-          <span>Target: 65%</span>
-          <span>Wet Soil: ~1200</span>
+          <span>0%: Not on Soil</span>
+          <span>~45%: Sorted</span>
+          <span>≥65%: Dry</span>
         </div>
       </div>
 

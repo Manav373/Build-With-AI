@@ -41,8 +41,8 @@ export default function HardwareSimulator({
       case 'DRY':
         onUpdateTelemetry({
           ...telemetry,
-          soilMoisture: 10,
-          soilRaw: 2200,
+          soilMoisture: 68,
+          soilRaw: 2044,
           rain: false,
           temperature: 32.5,
           humidity: 42
@@ -59,8 +59,8 @@ export default function HardwareSimulator({
       case 'OPTIMAL':
         onUpdateTelemetry({
           ...telemetry,
-          soilMoisture: 55,
-          soilRaw: 1695,
+          soilMoisture: 45,
+          soilRaw: 2435,
           rain: false,
           temperature: 27.5,
           humidity: 62
@@ -69,10 +69,11 @@ export default function HardwareSimulator({
       case 'SATURATED':
         onUpdateTelemetry({
           ...telemetry,
-          soilMoisture: 85,
-          soilRaw: 1365,
+          soilMoisture: 0,
+          soilRaw: 0,
           rain: false,
-          humidity: 78
+          temperature: 28.0,
+          humidity: 50
         });
         break;
     }
