@@ -18,27 +18,27 @@ export default function DeviceHealthView({ device, telemetry, isFirebaseConnecte
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
           <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Controller Node</span>
           <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5 font-mono">
-            <Cpu size={15} className="text-emerald-600 dark:text-emerald-400" />
-            ESP32 DevKit V1
+            <Cpu size={15} className={device?.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'} />
+            ESP32 DevKit V1 {device?.status === 'online' ? '(Online)' : '(Offline)'}
           </span>
         </div>
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
           <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Wi-Fi & Cloud RSSI</span>
-          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-mono">
+          <span className={`text-sm font-bold flex items-center gap-1.5 font-mono ${device?.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
             <Wifi size={15} />
-            {device?.rssi || -64} dBm (Good)
+            {device?.status === 'online' ? `${device?.rssi || -65} dBm (Good)` : '— (Disconnected)'}
           </span>
         </div>
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
           <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Node Uptime</span>
           <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-            {Math.floor((device?.uptimeMinutes || 412) / 60)}h {(device?.uptimeMinutes || 412) % 60}m
+            {device?.status === 'online' && device?.uptimeMinutes ? `${Math.floor(device.uptimeMinutes / 60)}h ${device.uptimeMinutes % 60}m` : '0h 0m'}
           </span>
         </div>
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
           <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Data Channel</span>
-          <span className="text-sm font-bold text-orange-600 dark:text-orange-400 font-mono">
-            {isFirebaseConnected ? 'Firebase RTDB' : 'FastAPI REST / WS'}
+          <span className={`text-sm font-bold font-mono ${isFirebaseConnected ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400'}`}>
+            {isFirebaseConnected ? 'Firebase RTDB' : 'Standby / Disconnected'}
           </span>
         </div>
       </div>

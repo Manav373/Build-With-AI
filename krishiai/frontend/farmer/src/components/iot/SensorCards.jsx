@@ -15,17 +15,19 @@ import {
 } from 'lucide-react';
 
 export default function SensorCards({ telemetry, device, onOpenPumpModal, onStartPump, onEmergencyStop }) {
+  const isOffline = device?.status === 'offline' || (!telemetry?.timestamp && telemetry?.soilMoisture === 0 && telemetry?.temperature === 0);
   const moisture = telemetry?.soilMoisture ?? 0;
-  const rawAdc = telemetry?.soilRaw ?? 2450;
-  const tempC = telemetry?.temperature ?? 28;
-  const tempF = Number(((tempC * 9) / 5 + 32).toFixed(1));
-  const humidity = telemetry?.humidity ?? 60;
+  const rawAdc = telemetry?.soilRaw ?? 0;
+  const tempC = telemetry?.temperature ?? 0;
+  const tempF = tempC > 0 ? Number(((tempC * 9) / 5 + 32).toFixed(1)) : 0;
+  const humidity = telemetry?.humidity ?? 0;
   const isRaining = Boolean(telemetry?.rain);
   const isDaylight = Boolean(telemetry?.light);
   const isPumpActive = Boolean(telemetry?.pump);
 
   // Soil status badge logic
   const getSoilBadge = (val) => {
+    if (isOffline) return { label: 'OFFLINE / DISCONNECTED', bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30' };
     if (val < 25) return { label: 'CRITICAL DRY (<25%)', bg: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' };
     if (val < 40) return { label: 'DEFICIT (25–39%)', bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' };
     if (val < 70) return { label: 'OPTIMAL (40–69%)', bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' };
@@ -37,11 +39,12 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onStar
   // Accurate Magnus-Tetens Dew point calculation (°C)
   const a = 17.27;
   const b = 237.7;
-  const alpha = ((a * tempC) / (b + tempC)) + Math.log(humidity / 100.0);
-  const dewPoint = ((b * alpha) / (a - alpha)).toFixed(1);
+  const alpha = (tempC > 0 && humidity > 0) ? (((a * tempC) / (b + tempC)) + Math.log(humidity / 100.0)) : 0;
+  const dewPoint = (tempC > 0 && humidity > 0) ? ((b * alpha) / (a - alpha)).toFixed(1) : '0.0';
 
   // Accurate NOAA Steadman Heat Index (°C)
   const calculateHeatIndex = (t, rh) => {
+    if (!t || !rh || t <= 0) return 0;
     if (t < 20) return t;
     const tf = (t * 9) / 5 + 32;
     const hiF = 0.5 * (tf + 61.0 + ((tf - 68.0) * 1.2) + (rh * 0.094));
@@ -54,10 +57,10 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onStar
   const heatIndex = calculateHeatIndex(tempC, humidity);
 
   // Accurate Agronomic Vapor Pressure Deficit (VPD in kPa)
-  const vpSat = 0.61078 * Math.exp((17.27 * tempC) / (tempC + 237.3));
+  const vpSat = tempC > 0 ? 0.61078 * Math.exp((17.27 * tempC) / (tempC + 237.3)) : 0;
   const vpAct = vpSat * (humidity / 100);
-  const vpd = Number((vpSat - vpAct).toFixed(2));
-  const vpdStatus = vpd < 0.4 ? 'Low' : vpd <= 1.2 ? 'Ideal' : 'High';
+  const vpd = (tempC > 0 && humidity > 0) ? Number((vpSat - vpAct).toFixed(2)) : 0;
+  const vpdStatus = isOffline ? 'Offline' : (vpd < 0.4 ? 'Low' : vpd <= 1.2 ? 'Ideal' : 'High');
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -112,13 +115,13 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onStar
 
         <div className="flex items-baseline gap-2 mb-3">
           <span className="text-4xl font-extrabold text-slate-900 dark:text-white font-mono">{tempC}°C</span>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center font-medium">
-            <ArrowUpRight size={14} /> Normal
+          <span className={`text-xs flex items-center font-medium ${isOffline ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {isOffline ? 'Node Offline' : <><ArrowUpRight size={14} /> Normal</>}
           </span>
         </div>
 
         <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1 mb-3">
-          {tempC > 35 ? '⚠️ High heat stress on crops' : tempC < 15 ? '❄️ Low temperature alert' : 'Optimal diurnal vegetative range'}
+          {isOffline ? 'Awaiting temperature telemetry from DHT11 sensor' : tempC > 35 ? '⚠️ High heat stress on crops' : tempC < 15 ? '❄️ Low temperature alert' : 'Optimal diurnal vegetative range'}
         </p>
 
         <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">

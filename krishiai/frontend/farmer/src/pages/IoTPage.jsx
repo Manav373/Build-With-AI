@@ -51,28 +51,7 @@ export default function IoTPage() {
   const [device, setDevice] = useState(INITIAL_DEVICE);
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   const [decision, setDecision] = useState(() => evaluateDecision(INITIAL_TELEMETRY, INITIAL_DEVICE));
-  const [irrigationHistory, setIrrigationHistory] = useState([
-    {
-      id: 'IRR-0102',
-      startTime: 'Today, 06:15 AM',
-      durationMinutes: 15,
-      mode: 'AUTO',
-      triggeredBy: 'AI Decision Engine (Critical Dry)',
-      startMoisture: 21,
-      endMoisture: 65,
-      status: 'COMPLETED'
-    },
-    {
-      id: 'IRR-0101',
-      startTime: 'Yesterday, 07:00 PM',
-      durationMinutes: 10,
-      mode: 'MANUAL',
-      triggeredBy: 'Farmer App (Evening Top-up)',
-      startMoisture: 32,
-      endMoisture: 58,
-      status: 'COMPLETED'
-    }
-  ]);
+  const [irrigationHistory, setIrrigationHistory] = useState([]);
 
   const [cropProfile, setCropProfile] = useState(() => getSavedCropProfile());
   const [isCropModalOpen, setIsCropModalOpen] = useState(() => !getSavedCropProfile().isConfigured);
@@ -143,6 +122,14 @@ export default function IoTPage() {
           if (!parsed) return;
           recordLiveTelemetry(parsed);
           setIsFirebaseConnected(true);
+
+          const isNodeOnline = parsed.online === true;
+          setDevice((prev) => ({
+            ...prev,
+            status: isNodeOnline ? 'online' : 'offline',
+            ...(parsed.mode ? { mode: parsed.mode } : {})
+          }));
+
           setTelemetry((prev) => {
             const updated = { ...prev };
             if (parsed.soilMoisture !== undefined) updated.soilMoisture = parsed.soilMoisture;
@@ -152,18 +139,17 @@ export default function IoTPage() {
             if (parsed.rain !== undefined) updated.rain = parsed.rain;
             if (parsed.light !== undefined) updated.light = parsed.light;
             if (parsed.pump !== undefined) updated.pump = parsed.pump;
-            updated.timestamp = Date.now();
+            updated.online = isNodeOnline;
+            updated.timestamp = isNodeOnline ? Date.now() : 0;
             return updated;
           });
-          if (parsed.mode) {
-            setDevice((prev) => (prev.mode !== parsed.mode ? { ...prev, mode: parsed.mode } : prev));
-          }
         }
       });
       fbClientRef.current = client;
       client.startListening();
     } else {
       setIsFirebaseConnected(false);
+      setDevice((prev) => ({ ...prev, status: 'offline' }));
     }
 
     return () => {
@@ -173,8 +159,13 @@ export default function IoTPage() {
     };
   }, [firebaseConfig.enabled, firebaseConfig.databaseUrl, firebaseConfig.devicePath]);
 
-  // Auto-connect & continuously sync live telemetry from FastAPI backend / ESP32 node
+  // Sync live telemetry from FastAPI backend ONLY if Firebase RTDB is disabled
   useEffect(() => {
+    if (firebaseConfig.enabled) {
+      // Firebase RTDB SSE is actively listening. Backend polling disabled to prevent data oscillation/fluctuation.
+      return;
+    }
+
     let isMounted = true;
     const fetchBackend = async () => {
       try {
@@ -200,12 +191,12 @@ export default function IoTPage() {
     };
 
     fetchBackend();
-    const pollTimer = setInterval(fetchBackend, 3000);
+    const pollTimer = setInterval(fetchBackend, 5000);
     return () => {
       isMounted = false;
       clearInterval(pollTimer);
     };
-  }, []);
+  }, [firebaseConfig.enabled]);
 
   // Pump control actions
   const startPump = async (durationMinutes = 30, reason = 'Farmer Web Portal') => {
@@ -359,9 +350,13 @@ export default function IoTPage() {
                 <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                   IoT Smart Farm & Kisan Alert
                 </h1>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  LIVE
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border transition-all ${
+                  device.status === 'online'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${device.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                  {device.status === 'online' ? 'NODE ONLINE' : 'NODE OFFLINE'}
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -400,7 +395,7 @@ export default function IoTPage() {
               }`}
             >
               <Flame size={15} className={isFirebaseConnected ? 'text-orange-500' : 'text-slate-400'} />
-              <span>{isFirebaseConnected ? 'Firebase Connected' : 'Connect Firebase'}</span>
+              <span>{isFirebaseConnected ? (device.status === 'online' ? 'Firebase RTDB (Live)' : 'Firebase RTDB (Standby)') : 'Connect Firebase'}</span>
             </button>
 
             {/* Hardware Simulator Drawer Button */}

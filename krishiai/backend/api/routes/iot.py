@@ -17,9 +17,9 @@ device_store: Dict[str, Any] = {
         "name": "Field Node 01 (ESP32)",
         "zone": "Zone A — Wheat Plot",
         "crop": "Wheat (HD-2967)",
-        "status": "online",
+        "status": "offline",
         "mode": "AUTO", # AUTO | MANUAL
-        "lastSeen": int(time.time()),
+        "lastSeen": 0,
         "settings": {
             "criticalMoisture": 25,
             "targetMoisture": 65,
@@ -35,17 +35,17 @@ device_store: Dict[str, Any] = {
 telemetry_store: Dict[str, Any] = {
     DEFAULT_DEVICE_ID: {
         "deviceId": DEFAULT_DEVICE_ID,
-        "soilMoisture": 38,
-        "soilRaw": 2450,
-        "temperature": 28.5,
-        "humidity": 62.0,
+        "soilMoisture": 0,
+        "soilRaw": 0,
+        "temperature": 0.0,
+        "humidity": 0.0,
         "rain": False,
-        "light": True,
+        "light": False,
         "pump": False,
         "pumpStartedAt": None,
         "pumpDurationMinutes": 0,
         "pumpStartedBy": None,
-        "timestamp": int(time.time())
+        "timestamp": 0
     }
 }
 
@@ -88,6 +88,23 @@ def evaluate_decision(telemetry: Dict[str, Any], device: Dict[str, Any]) -> Dict
     target = settings.get("targetMoisture", 65)
 
     sense_status = f"Moisture at {moisture}%, Rain: {'DETECTED' if rain else 'None'}, Light: {'Day' if light else 'Night'}"
+
+    if device.get("status") == "offline" or (telemetry.get("timestamp", 0) == 0 and moisture == 0):
+        return {
+            "action": "STANDBY",
+            "shouldAutoIrrigate": False,
+            "reason": "IoT Field Node is offline. Waiting for ESP32 hardware connection.",
+            "pipeline": {
+                "sense": "Node Offline — Awaiting telemetry packet from ESP32",
+                "understand": "Hardware is disconnected. Automated irrigation held in safe state.",
+                "decide": "System in safe standby mode.",
+                "act": "Relay GPIO 26 DE-ENERGIZED (Safe Standby)",
+                "learn": "Evapotranspiration model paused until hardware transmits."
+            },
+            "dryingRatePerHour": 0.0,
+            "hoursUntilCritical": 0.0,
+            "evaluatedAt": int(time.time())
+        }
 
     deficit = max(0, target - moisture)
     if rain:
@@ -165,6 +182,11 @@ class PumpControlPayload(BaseModel):
 async def get_latest_telemetry(deviceId: str = DEFAULT_DEVICE_ID):
     device = device_store.get(deviceId, device_store[DEFAULT_DEVICE_ID])
     telemetry = telemetry_store.get(deviceId, telemetry_store[DEFAULT_DEVICE_ID])
+
+    last_seen = device.get("lastSeen", 0)
+    if last_seen == 0 or (time.time() - last_seen > 45):
+        device["status"] = "offline"
+
     decision = evaluate_decision(telemetry, device)
     
     return {

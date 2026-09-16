@@ -14,20 +14,20 @@ export const DEFAULT_FIREBASE_CONFIG = {
   devicePath: '/krishiAI',
 };
 
-// Initial state baseline
+// Initial state baseline (0s when hardware not connected)
 export const INITIAL_TELEMETRY = {
   deviceId: 'krishiai-node-01',
-  soilMoisture: 38,
-  soilRaw: 2450,
-  temperature: 28.5,
-  humidity: 62.0,
+  soilMoisture: 0,
+  soilRaw: 0,
+  temperature: 0,
+  humidity: 0,
   rain: false,
-  light: true,
+  light: false,
   pump: false,
   pumpStartedAt: null,
   pumpDurationMinutes: 0,
   pumpStartedBy: null,
-  timestamp: Date.now()
+  timestamp: 0
 };
 
 export const INITIAL_DEVICE = {
@@ -35,11 +35,11 @@ export const INITIAL_DEVICE = {
   name: 'Field Node 01 (ESP32 DevKit)',
   zone: 'Zone A — Wheat Block 1',
   crop: 'Wheat (HD-2967)',
-  status: 'online',
+  status: 'offline', // Default to offline until hardware connects
   mode: 'AUTO', // AUTO | MANUAL
-  rssi: -64,
-  uptimeMinutes: 412,
-  ip: '192.168.1.107',
+  rssi: 0,
+  uptimeMinutes: 0,
+  ip: '—',
   settings: {
     criticalMoisture: 25,
     targetMoisture: 65,
@@ -68,11 +68,46 @@ export function evaluateDecision(telemetry, device = INITIAL_DEVICE, cropConfig 
   const cropDef = CROP_PROFILES[cropId] || CROP_PROFILES.wheat;
   const currentStage = cropDef.stages.find(s => s.id === activeCropConfig.stageId) || cropDef.stages[0];
 
-  const moisture = telemetry?.soilMoisture ?? 35;
+  const isOffline = device?.status === 'offline' || (!telemetry?.timestamp && telemetry?.soilMoisture === 0 && telemetry?.temperature === 0);
+  if (isOffline) {
+    return {
+      action: 'STANDBY',
+      shouldAutoIrrigate: false,
+      reason: 'IoT Field Node is offline. Waiting for ESP32 hardware connection.',
+      pipeline: {
+        sense: `Field Node Offline — Awaiting telemetry packet from ESP32 for ${cropDef.name}`,
+        understand: 'Hardware is disconnected. Automated irrigation held in safe standby state.',
+        decide: 'System in safe standby mode.',
+        act: 'Relay GPIO 26 DE-ENERGIZED (Safe Standby)',
+        learn: 'Evapotranspiration model paused until hardware transmits.'
+      },
+      dryingRatePerHour: 0,
+      hoursUntilCritical: 0,
+      vpd: 0,
+      crop: {
+        id: cropId,
+        name: cropDef.name,
+        variety: cropDef.variety,
+        icon: cropDef.icon,
+        stage: currentStage.name,
+        stageAdvice: currentStage.advice,
+        criticalMoisture: critical,
+        targetMoisture: target
+      },
+      rainHistory,
+      recommendedPumpWindow: 'Awaiting node connection',
+      fertilizerAdvice: currentStage.fertilizerAction,
+      diseaseWarning: 'Node offline — microclimate monitoring standby.',
+      isFungalRisk: false,
+      evaluatedAt: Date.now()
+    };
+  }
+
+  const moisture = telemetry?.soilMoisture ?? 0;
   const rain = Boolean(telemetry?.rain);
   const light = Boolean(telemetry?.light);
-  const temp = telemetry?.temperature ?? 28;
-  const humidity = telemetry?.humidity ?? 60;
+  const temp = telemetry?.temperature ?? 0;
+  const humidity = telemetry?.humidity ?? 0;
   const pump = Boolean(telemetry?.pump);
 
   // Dynamic Crop Thresholds
@@ -245,6 +280,12 @@ export function parseFirebasePayload(incoming) {
   }
   if (status.online !== undefined || incoming.online !== undefined) {
     result.online = Boolean(status.online ?? incoming.online);
+  }
+  if (status.lastSeen !== undefined || incoming.lastSeen !== undefined) {
+    result.lastSeen = Number(status.lastSeen ?? incoming.lastSeen);
+  }
+  if (incoming.timestamp !== undefined || sensors.timestamp !== undefined) {
+    result.timestamp = Number(incoming.timestamp ?? sensors.timestamp);
   }
   result.raw = incoming;
   return result;
