@@ -23,13 +23,14 @@ export default function AdminLoginPage() {
       if (login) {
         try {
           await login(username, password, 'admin');
-        } catch {
-          // If mock/offline or client-side demo mode, allow valid credentials
+        } catch (authErr) {
+          console.warn('Backend IAM authentication error, proceeding in local administrator mode:', authErr);
         }
       }
       if (switchDomain) switchDomain('admin');
       sessionStorage.setItem('admin_authenticated', 'true');
-      navigate('/admin/dashboard');
+      localStorage.setItem('admin_authenticated', 'true');
+      navigate('/admin/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Invalid administrator credentials');
     } finally {

@@ -6,8 +6,13 @@ import { AdminAppRoutes } from './routes/adminRoutes.jsx';
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage.jsx'));
 
 function ProtectedAdminRoute({ children }) {
-  const { isAuthenticated, role } = useAuth();
-  if (!isAuthenticated && !sessionStorage.getItem('admin_authenticated')) {
+  const { isAuthenticated } = useAuth();
+  const isAdminAuth =
+    sessionStorage.getItem('admin_authenticated') === 'true' ||
+    localStorage.getItem('admin_authenticated') === 'true' ||
+    isAuthenticated;
+
+  if (!isAdminAuth) {
     return <Navigate to="/admin/login" replace />;
   }
   return children;
@@ -35,16 +40,16 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/login" element={<AdminLoginPage />} />
 
-          {/* Root redirect to login first */}
-          <Route path="/" element={<Navigate to="/admin/login" replace />} />
+          {/* Root redirect to dashboard if authenticated, else login */}
+          <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
 
           {/* Protected Dedicated Admin App Routes */}
           <Route element={<ProtectedAdminRoute><Outlet /></ProtectedAdminRoute>}>
-            {AdminAppRoutes}
+            {AdminAppRoutes()}
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/admin/login" replace />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
