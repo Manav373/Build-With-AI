@@ -1,9 +1,18 @@
 {
-  "framework": "vite",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/admin/:path*", "destination": "/admin/index.html" },
+    { "source": "/admin", "destination": "/admin/index.html" },
+    { "source": "/vendor-dashboard/:path*", "destination": "/vendor/index.html" },
+    { "source": "/vendor-dashboard", "destination": "/vendor/index.html" },
+    { "source": "/vendor-sign-in", "destination": "/vendor/index.html" },
+    { "source": "/vendor-sign-up", "destination": "/vendor/index.html" },
+    { "source": "/vendor-type-select", "destination": "/vendor/index.html" },
+    { "source": "/vendor-onboarding", "destination": "/vendor/index.html" },
+    { "source": "/vendors", "destination": "/vendor/index.html" },
+    { "source": "/vendor/:path*", "destination": "/vendor/index.html" },
+    { "source": "/vendor", "destination": "/vendor/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
