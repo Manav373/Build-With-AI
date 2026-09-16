@@ -7,6 +7,7 @@ import {
   Clock, Truck, ChevronDown, AlertCircle, CheckCircle2, Loader2,
   ShieldCheck, FileCheck, FileCode, CheckCircle
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 const STEPS = [
   { id: 1, title: 'Business Profile', icon: Building2, description: 'Basic business information' },
@@ -206,7 +207,7 @@ export default function VendorOnboardingPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+      const baseUrl = getApiBaseUrl();
       const payload = {
         vendor_type: vendorType,
         ...form,

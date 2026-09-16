@@ -4,14 +4,14 @@ import {
   ShieldCheck, Check, X, AlertCircle, RefreshCw, Package, Building2, Eye, Tag
 } from 'lucide-react';
 
+import { API_BASE } from '../utils/apiConfig';
+
 export default function VendorAdminPage() {
   const [pendingProducts, setPendingProducts] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
   const [activeTab, setActiveTab] = useState('products'); // products | vendors
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState('');
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   useEffect(() => {
     fetchPendingItems();

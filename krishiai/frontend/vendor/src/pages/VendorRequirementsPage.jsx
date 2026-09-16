@@ -6,6 +6,7 @@ import {
   Truck, Clock, Users, Send, Eye, Edit3, X, Save, Loader2,
   CheckCircle2, AlertCircle, ChevronDown, ArrowRight, Pause, Play, Phone
 } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 const CROP_OPTIONS = [
   'Wheat', 'Rice', 'Cotton', 'Sugarcane', 'Soybean', 'Maize',
@@ -498,7 +499,7 @@ export default function VendorRequirementsPage() {
   const [editingReq, setEditingReq] = useState(null);
   const [selectedReqForApps, setSelectedReqForApps] = useState(null);
 
-  const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const API = API_BASE;
 
   const fetchRequirements = async () => {
     setLoading(true);

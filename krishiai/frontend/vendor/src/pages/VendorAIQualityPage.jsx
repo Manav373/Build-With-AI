@@ -3,14 +3,13 @@ import { motion } from 'framer-motion';
 import {
   Sparkles, Camera, CheckCircle2, AlertTriangle, Cpu, TrendingUp, RefreshCw, Layers
 } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 export default function VendorAIQualityPage() {
   const [cropName, setCropName] = useState('Wheat (Lok-1)');
   const [moisture, setMoisture] = useState('11.5');
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   const handleScan = async (e) => {
     e.preventDefault();

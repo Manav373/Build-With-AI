@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useClerk } from '@clerk/clerk-react';
+import { getApiBaseUrl } from '../utils/apiConfig';
 import {
   LayoutDashboard, Store, ClipboardList, Package, Boxes,
   ShoppingCart, Users, MessageSquare, Star, CreditCard, BarChart3,
@@ -87,8 +89,10 @@ function getMenuItems(vendorType, activeMode) {
 export default function VendorDashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const clerk = useClerk();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Vendor state & notification dot state
   const [vendor, setVendor] = useState(null);
@@ -96,12 +100,37 @@ export default function VendorDashboardLayout() {
   const [stats, setStats] = useState({});
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(true);
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      localStorage.removeItem('vendor_authenticated');
+      sessionStorage.removeItem('vendor_authenticated');
+      localStorage.removeItem('krishi_access_token');
+      localStorage.removeItem('krishi_refresh_token');
+      localStorage.removeItem('krishi_user_profile');
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('Storage clear error:', e);
+    }
+
+    try {
+      if (clerk && typeof clerk.signOut === 'function') {
+        await clerk.signOut({ redirectUrl: '/vendor-sign-in' });
+        return;
+      }
+    } catch (e) {
+      console.warn('Clerk signOut handled:', e);
+    }
+
+    window.location.href = '/vendor-sign-in';
+  };
+
   useEffect(() => {
     // Fetch vendor profile
     const fetchVendor = async () => {
       try {
-        const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
-        const resp = await fetch(`${API}api/vendor/me`);
+        const API = getApiBaseUrl();
+        const resp = await fetch(`${API}/api/vendor/me`);
         if (resp.ok) {
           const data = await resp.json();
           if (data.success && data.vendor) {
@@ -109,21 +138,21 @@ export default function VendorDashboardLayout() {
           }
         }
       } catch (e) {
-        console.error('Failed to fetch vendor:', e);
+        console.warn('Notice: Vendor profile fetch unavailable:', e?.message || e);
       }
     };
 
     // Fetch dashboard stats
     const fetchStats = async () => {
       try {
-        const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
-        const resp = await fetch(`${API}api/vendor/dashboard/stats`);
+        const API = getApiBaseUrl();
+        const resp = await fetch(`${API}/api/vendor/dashboard/stats`);
         if (resp.ok) {
           const data = await resp.json();
           if (data.success) setStats(data.stats || {});
         }
       } catch (e) {
-        console.error('Failed to fetch stats:', e);
+        console.warn('Notice: Dashboard stats fetch unavailable:', e?.message || e);
       }
     };
 
@@ -350,21 +379,18 @@ export default function VendorDashboardLayout() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              localStorage.removeItem('vendor_authenticated');
-              sessionStorage.removeItem('vendor_authenticated');
-              navigate('/vendor-sign-in');
-            }}
+            onClick={handleLogout}
+            disabled={isLoggingOut}
             title="Sign Out"
             style={{
               padding: '7px 10px', borderRadius: 8,
               background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
               color: '#f87171', fontSize: '0.72rem', fontWeight: 600,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              cursor: isLoggingOut ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
               transition: 'all 0.2s',
             }}
           >
-            <LogOut size={12} />
+            {isLoggingOut ? <RefreshCw size={12} className="animate-spin" /> : <LogOut size={12} />}
           </button>
         </div>
       </div>

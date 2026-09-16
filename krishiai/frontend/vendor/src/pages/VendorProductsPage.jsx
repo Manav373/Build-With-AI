@@ -7,6 +7,7 @@ import {
   X, Save, Send, ChevronDown, Tag, Boxes, Clock, ArrowRight,
   Loader2, MoreVertical, Camera, RefreshCw, Sparkles
 } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 const CATEGORIES = [
   'Seeds', 'Fertilizers', 'Pesticides', 'Farm Equipment',
@@ -704,7 +705,7 @@ export default function VendorProductsPage() {
     }
   });
 
-  const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const API = API_BASE;
 
   const fetchProducts = async () => {
     setLoading(true);

@@ -80,6 +80,8 @@ const INITIAL_VENDORS = [
 
 const CATEGORIES = ['All', 'Procurement Buyers', 'Seeds & Fertilizers', 'Organic Products', 'Farm Equipment', 'Nursery Plants'];
 
+import { API_BASE } from '../utils/apiConfig';
+
 export default function VendorMarketplacePage() {
   const navigate = useNavigate();
   const [vendors, setVendors] = useState(INITIAL_VENDORS);
@@ -87,8 +89,6 @@ export default function VendorMarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('rating');
   const [loading, setLoading] = useState(false);
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   useEffect(() => {
     fetchMarketplaceVendors();

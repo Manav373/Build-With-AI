@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Building2, Store, MapPin, Phone, Mail, Globe, ShieldCheck, Save, Clock, Truck } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 export default function VendorCompanyProfilePage() {
   const [profile, setProfile] = useState({
@@ -25,8 +26,6 @@ export default function VendorCompanyProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   useEffect(() => {
     fetchProfile();

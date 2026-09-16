@@ -8,13 +8,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
 
+import { API_BASE } from '../utils/apiConfig';
+
 export default function VendorAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMsg, setWithdrawMsg] = useState('');
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   useEffect(() => {
     fetchFinancials();

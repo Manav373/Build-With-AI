@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Truck, Navigation, MapPin, Phone, Shield, FileText, Plus, CheckCircle, RefreshCw, X
 } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 export default function VendorLogisticsPage() {
   const [shipments, setShipments] = useState([]);
@@ -17,8 +18,6 @@ export default function VendorLogisticsPage() {
   const [pickupAddr, setPickupAddr] = useState('Village Khed, Taluka Junnar, Pune');
   const [deliveryAddr, setDeliveryAddr] = useState('Krishi Warehouse #2, Hadapsar, Pune');
   const [msg, setMsg] = useState('');
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   useEffect(() => {
     fetchShipments();

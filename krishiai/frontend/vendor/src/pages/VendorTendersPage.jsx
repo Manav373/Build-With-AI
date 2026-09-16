@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileCheck, Plus, CheckCircle2, AlertCircle, Clock, Search, Filter, RefreshCw, X, ShieldCheck
 } from 'lucide-react';
+import { API_BASE } from '../utils/apiConfig';
 
 export default function VendorTendersPage() {
   const [tenders, setTenders] = useState([]);
@@ -18,8 +19,6 @@ export default function VendorTendersPage() {
   const [deadline, setDeadline] = useState('2026-09-30');
   const [destination, setDestination] = useState('Nagpur APMC Warehouse #4');
   const [msg, setMsg] = useState('');
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
 
   useEffect(() => {
     fetchData();
