@@ -10,7 +10,8 @@ export default function VendorAIQualityPage() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   const handleScan = async (e) => {
     e.preventDefault();

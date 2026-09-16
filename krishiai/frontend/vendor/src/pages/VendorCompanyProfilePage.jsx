@@ -4,29 +4,30 @@ import { Building2, Store, MapPin, Phone, Mail, Globe, ShieldCheck, Save, Clock,
 
 export default function VendorCompanyProfilePage() {
   const [profile, setProfile] = useState({
-    business_name: 'Culture Growing Pvt. Ltd.',
-    owner_name: 'Manav Panchal',
-    tagline: 'Cultural Future',
-    business_description: 'Leading integrated agricultural hub providing high-germination seeds, bio-fertilizers, and bulk farm-gate crop procurement services.',
-    gst_number: '27AAACM4829K1Z4',
-    trade_license_number: 'APMC-PUNE-2018-9482',
-    phone: '9823011482',
-    email: 'vendor_hybrid@krishiai.com',
-    website: 'https://culturegrowing.com',
-    street_address: 'Plot 42, APMC Market Yard',
-    district: 'Pune',
-    state: 'Maharashtra',
-    pincode: '411028',
-    store_open_time: '08:00 AM',
-    store_close_time: '08:00 PM',
-    delivery_available: true,
-    delivery_radius_km: 75
+    business_name: '',
+    owner_name: '',
+    tagline: '',
+    business_description: '',
+    gst_number: '',
+    trade_license_number: '',
+    phone: '',
+    email: '',
+    website: '',
+    street_address: '',
+    district: '',
+    state: '',
+    pincode: '',
+    store_open_time: '',
+    store_close_time: '',
+    delivery_available: false,
+    delivery_radius_km: 0
   });
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   useEffect(() => {
     fetchProfile();

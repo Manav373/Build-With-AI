@@ -17,16 +17,11 @@ export default function AdminUsersPage() {
     setLoading(true);
     try {
       const res = await adminApi.getUsers({ role: roleFilter === 'all' ? '' : roleFilter });
-      setUsers(res.data?.users || res.data || []);
-    } catch {
-      // Mock directory fallback
-      setUsers([
-        { id: 'usr_1', name: 'Ramesh Patel', phone: '+91 98234 11201', role: 'farmer', location: 'Nashik, Maharashtra', status: 'active', joined: '12 Jan 2026' },
-        { id: 'usr_2', name: 'Kisan Agro Chem Pvt Ltd', phone: '+91 94210 99881', role: 'vendor', location: 'Pune, Maharashtra', status: 'active', joined: '14 Feb 2026' },
-        { id: 'usr_3', name: 'Sunil Jadhav', phone: '+91 97654 32100', role: 'farmer', location: 'Kolhapur, Maharashtra', status: 'active', joined: '01 Mar 2026' },
-        { id: 'usr_4', name: 'GreenEarth Fertilizers', phone: '+91 91234 56789', role: 'vendor', location: 'Ahmedabad, Gujarat', status: 'suspended', joined: '18 Nov 2025' },
-        { id: 'usr_5', name: 'Dr. Priya Sharma', phone: '+91 98980 12345', role: 'admin', location: 'HQ New Delhi', status: 'active', joined: '01 Jan 2025' },
-      ]);
+      const list = res.data?.data?.users || res.data?.users || res.data || [];
+      setUsers(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminUsersPage] Error fetching users:', err);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -114,7 +109,14 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-500/10">
-                {filteredUsers.map((user) => (
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-emerald-200/50 text-sm">
+                      No registered users found matching the selected criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-[#07190c]/60 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-medium text-white">{user.name}</div>
@@ -172,7 +174,7 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

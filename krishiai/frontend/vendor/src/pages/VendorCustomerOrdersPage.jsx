@@ -16,20 +16,51 @@ export default function VendorCustomerOrdersPage() {
     }
   }, [location.pathname]);
 
-  const [orders, setOrders] = useState([
-    { id: 'ORD-901', customer: 'Ramesh Pawar', phone: '9822019482', product: 'Hybrid Cotton Seed (5 packets)', amount: '₹2,250', status: 'packed', tracking: 'TRK-PUNE-9081' },
-    { id: 'ORD-902', customer: 'Mahesh Jadhav', phone: '9423018899', product: 'Organic Bio-Fertilizer 50kg', amount: '₹1,450', status: 'dispatched', tracking: 'TRK-PUNE-9082' },
-    { id: 'ORD-903', customer: 'Aniket Deshmukh', phone: '9823011409', product: 'Drip Irrigation Pipe 100m Bundle', amount: '₹3,800', status: 'packed', tracking: 'TRK-PUNE-9083' },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [customers] = useState([
-    { id: 1, name: 'Ramesh Pawar', phone: '9822019482', location: 'Hadapsar, Pune', total_orders: 4, total_spent: '₹12,400' },
-    { id: 2, name: 'Mahesh Jadhav', phone: '9423018899', location: 'Shirur, Pune', total_orders: 2, total_spent: '₹5,800' },
-    { id: 3, name: 'Aniket Deshmukh', phone: '9823011409', location: 'Baramati, Pune', total_orders: 3, total_spent: '₹8,900' },
-  ]);
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
-  const updateOrderStatus = (id, newStatus) => {
+  useEffect(() => {
+    fetchOrdersAndCustomers();
+  }, []);
+
+  const fetchOrdersAndCustomers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}api/vendor/orders`);
+      if (res.ok) {
+        const json = await res.json();
+        setOrders(json.orders || []);
+        setCustomers(json.customers || []);
+      } else {
+        setOrders([]);
+        setCustomers([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch orders:', e);
+      setOrders([]);
+      setCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (id, newStatus) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    const target = orders.find(o => o.id === id);
+    if (!target) return;
+    try {
+      await fetch(`${API_BASE}api/vendor/orders/${target.order_id || target.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (e) {
+      console.error('Failed to update order status:', e);
+    }
   };
 
   const cardStyle = {
@@ -82,67 +113,88 @@ export default function VendorCustomerOrdersPage() {
       </div>
 
       {activeTab === 'orders' ? (
-        <div style={cardStyle} className="overflow-x-auto shadow-2xl">
-          <table className="w-full text-left text-sm text-gray-200">
-            <thead className="bg-[#0e2614] text-xs uppercase text-[#86efac]/80 border-b border-[#86efac]/10">
-              <tr>
-                <th className="p-4">Order ID</th>
-                <th className="p-4">Customer</th>
-                <th className="p-4">Product Details</th>
-                <th className="p-4">Total Amount</th>
-                <th className="p-4">Tracking Code</th>
-                <th className="p-4">Fulfillment Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#86efac]/10">
-              {orders.map(o => (
-                <tr key={o.id} className="hover:bg-[#143820]/40 transition">
-                  <td className="p-4 font-mono font-bold text-blue-400">{o.id}</td>
-                  <td className="p-4 text-white font-bold">{o.customer} ({o.phone})</td>
-                  <td className="p-4">{o.product}</td>
-                  <td className="p-4 font-bold text-[#4ade80]">{o.amount}</td>
-                  <td className="p-4 font-mono text-xs text-gray-400">{o.tracking}</td>
-                  <td className="p-4">
-                    <select
-                      value={o.status}
-                      onChange={e => updateOrderStatus(o.id, e.target.value)}
-                      style={{
-                        padding: '6px 10px',
-                        background: 'rgba(14, 38, 20, 0.9)',
-                        border: '1px solid rgba(134, 239, 172, 0.2)',
-                        borderRadius: '0.5rem', color: '#fff', fontSize: '0.78rem', fontWeight: 700
-                      }}
-                    >
-                      <option value="packed">Packed</option>
-                      <option value="dispatched">Dispatched</option>
-                      <option value="delivered">Delivered</option>
-                    </select>
-                  </td>
+        orders.length === 0 ? (
+          <div style={cardStyle} className="p-12 text-center space-y-3">
+            <ShoppingCart size={40} className="mx-auto text-[#86efac]/30" />
+            <h3 className="text-lg font-bold text-white font-['Outfit']">No Customer Orders Yet</h3>
+            <p className="text-xs text-[#86efac]/60 max-w-sm mx-auto">
+              When farmers or retail buyers order agricultural products from your store, their orders and tracking codes will appear here in real time.
+            </p>
+          </div>
+        ) : (
+          <div style={cardStyle} className="overflow-x-auto shadow-2xl">
+            <table className="w-full text-left text-sm text-gray-200">
+              <thead className="bg-[#0e2614] text-xs uppercase text-[#86efac]/80 border-b border-[#86efac]/10">
+                <tr>
+                  <th className="p-4">Order ID</th>
+                  <th className="p-4">Customer</th>
+                  <th className="p-4">Product Details</th>
+                  <th className="p-4">Total Amount</th>
+                  <th className="p-4">Tracking Code</th>
+                  <th className="p-4">Fulfillment Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[#86efac]/10">
+                {orders.map(o => (
+                  <tr key={o.id} className="hover:bg-[#143820]/40 transition">
+                    <td className="p-4 font-mono font-bold text-blue-400">{o.id}</td>
+                    <td className="p-4 text-white font-bold">{o.customer} ({o.phone})</td>
+                    <td className="p-4">{o.product}</td>
+                    <td className="p-4 font-bold text-[#4ade80]">{o.amount}</td>
+                    <td className="p-4 font-mono text-xs text-gray-400">{o.tracking}</td>
+                    <td className="p-4">
+                      <select
+                        value={o.status}
+                        onChange={e => updateOrderStatus(o.id, e.target.value)}
+                        style={{
+                          padding: '6px 10px',
+                          background: 'rgba(14, 38, 20, 0.9)',
+                          border: '1px solid rgba(134, 239, 172, 0.2)',
+                          borderRadius: '0.5rem', color: '#fff', fontSize: '0.78rem', fontWeight: 700
+                        }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="packed">Packed</option>
+                        <option value="dispatched">Dispatched</option>
+                        <option value="delivered">Delivered</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {customers.map(c => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={cardStyle}
-              className="p-6 space-y-3"
-            >
-              <h3 className="text-xl font-bold text-white font-['Outfit']">{c.name}</h3>
-              <p className="text-xs text-[#86efac]/70 flex items-center gap-1"><Phone size={14}/> {c.phone}</p>
-              <p className="text-xs text-[#86efac]/70 flex items-center gap-1"><MapPin size={14}/> {c.location}</p>
-              <div className="flex justify-between border-t border-[#86efac]/10 pt-3 text-xs">
-                <span>Total Orders: <strong className="text-white">{c.total_orders}</strong></span>
-                <span>Total Spent: <strong className="text-[#4ade80]">{c.total_spent}</strong></span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        customers.length === 0 ? (
+          <div style={cardStyle} className="p-12 text-center space-y-3">
+            <Users size={40} className="mx-auto text-[#86efac]/30" />
+            <h3 className="text-lg font-bold text-white font-['Outfit']">No Farmer Clients Recorded</h3>
+            <p className="text-xs text-[#86efac]/60 max-w-sm mx-auto">
+              Your registered farmer clients, their order history, and cumulative spend metrics will be compiled automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {customers.map(c => (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={cardStyle}
+                className="p-6 space-y-3"
+              >
+                <h3 className="text-xl font-bold text-white font-['Outfit']">{c.name}</h3>
+                <p className="text-xs text-[#86efac]/70 flex items-center gap-1"><Phone size={14}/> {c.phone}</p>
+                <p className="text-xs text-[#86efac]/70 flex items-center gap-1"><MapPin size={14}/> {c.location}</p>
+                <div className="flex justify-between border-t border-[#86efac]/10 pt-3 text-xs">
+                  <span>Total Orders: <strong className="text-white">{c.total_orders}</strong></span>
+                  <span>Total Spent: <strong className="text-[#4ade80]">₹{c.total_spent?.toLocaleString() || '0'}</strong></span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );

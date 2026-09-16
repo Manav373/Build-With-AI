@@ -6,100 +6,49 @@ import {
   Droplets, Boxes, Filter, Search, Clock, Trash2, X
 } from 'lucide-react';
 
-const INITIAL_WAREHOUSES = [
-  {
-    id: 'WH-01',
-    name: 'Hadapsar Central Cold Storage',
-    location: 'Hadapsar, Pune, Maharashtra',
-    capacity_mt: 10000,
-    bays_active: 8,
-    temperature: '18°C',
-    humidity: '55%',
-  },
-  {
-    id: 'WH-02',
-    name: 'APMC Grain Storage Bay #4',
-    location: 'Nagpur APMC, Maharashtra',
-    capacity_mt: 5000,
-    bays_active: 4,
-    temperature: '22°C',
-    humidity: '60%',
-  }
-];
-
-const INITIAL_STOCK_ITEMS = [
-  {
-    id: 'STK-101',
-    warehouseId: 'WH-01',
-    cropName: 'Sharbati Premium Wheat',
-    bay: 'Bay A-1 (Cold Zone)',
-    quantityMt: 2850,
-    unit: 'MT',
-    grade: 'Grade A-1',
-    lastUpdated: '10 minutes ago',
-  },
-  {
-    id: 'STK-102',
-    warehouseId: 'WH-01',
-    cropName: 'Yellow Soybean Grain',
-    bay: 'Bay A-3 (Grain Silo)',
-    quantityMt: 4000,
-    unit: 'MT',
-    grade: 'Super Grade',
-    lastUpdated: '1 hour ago',
-  },
-  {
-    id: 'STK-103',
-    warehouseId: 'WH-02',
-    cropName: 'Organic Long Staple Cotton',
-    bay: 'Bay B-2 (Dry Storage)',
-    quantityMt: 1400,
-    unit: 'MT',
-    grade: 'Grade A',
-    lastUpdated: '3 hours ago',
-  },
-  {
-    id: 'STK-104',
-    warehouseId: 'WH-02',
-    cropName: 'Hybrid Maize / Corn Grain',
-    bay: 'Bay B-4 (Grain Silo)',
-    quantityMt: 1000,
-    unit: 'MT',
-    grade: 'Grade B',
-    lastUpdated: '5 hours ago',
-  },
-];
-
-const INITIAL_LOGS = [
-  { id: 'LOG-1', type: 'inbound', item: 'Sharbati Premium Wheat', amountMt: 250, warehouse: 'Hadapsar Central', time: '10 mins ago', notes: 'Truck MH-12-VT-8819 arrived' },
-  { id: 'LOG-2', type: 'outbound', item: 'Yellow Soybean Grain', amountMt: 120, warehouse: 'Hadapsar Central', time: '1 hour ago', notes: 'Dispatched for Customer Order #ORD-902' },
-  { id: 'LOG-3', type: 'inbound', item: 'Organic Long Staple Cotton', amountMt: 300, warehouse: 'APMC Grain Storage Bay #4', time: '3 hours ago', notes: 'Procurement Batch #PROC-88' },
-];
-
 export default function VendorWarehousePage() {
   const [warehouses, setWarehouses] = useState(() => {
-    const saved = localStorage.getItem('vendor_warehouses');
-    return saved ? JSON.parse(saved) : INITIAL_WAREHOUSES;
+    try {
+      const saved = localStorage.getItem('vendor_warehouses');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [stockItems, setStockItems] = useState(() => {
-    const saved = localStorage.getItem('vendor_stock_items');
-    return saved ? JSON.parse(saved) : INITIAL_STOCK_ITEMS;
+    try {
+      const saved = localStorage.getItem('vendor_stock_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [movementLogs, setMovementLogs] = useState(() => {
-    const saved = localStorage.getItem('vendor_stock_logs');
-    return saved ? JSON.parse(saved) : INITIAL_LOGS;
+    try {
+      const saved = localStorage.getItem('vendor_stock_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showInboundModal, setShowInboundModal] = useState(false);
   const [showOutboundModal, setShowOutboundModal] = useState(false);
+  const [showAddWarehouseModal, setShowAddWarehouseModal] = useState(false);
   const [targetStockItem, setTargetStockItem] = useState(null);
 
+  // New warehouse form states
+  const [newWhName, setNewWhName] = useState('');
+  const [newWhLocation, setNewWhLocation] = useState('');
+  const [newWhCapacity, setNewWhCapacity] = useState('');
+  const [newWhBays, setNewWhBays] = useState('4');
+
   // Form states
-  const [formWarehouse, setFormWarehouse] = useState('WH-01');
+  const [formWarehouse, setFormWarehouse] = useState('');
   const [formCrop, setFormCrop] = useState('');
   const [formBay, setFormBay] = useState('');
   const [formQuantity, setFormQuantity] = useState('');
@@ -127,10 +76,10 @@ export default function VendorWarehousePage() {
   };
 
   // Total metrics
-  const totalCapacityMt = warehouses.reduce((sum, w) => sum + w.capacity_mt, 0);
-  const totalOccupiedMt = stockItems.reduce((sum, item) => sum + Number(item.quantityMt), 0);
-  const totalFreeMt = totalCapacityMt - totalOccupiedMt;
-  const overallOccupancyPercent = Math.round((totalOccupiedMt / totalCapacityMt) * 100);
+  const totalCapacityMt = warehouses.reduce((sum, w) => sum + (Number(w.capacity_mt) || 0), 0);
+  const totalOccupiedMt = stockItems.reduce((sum, item) => sum + Number(item.quantityMt || 0), 0);
+  const totalFreeMt = Math.max(0, totalCapacityMt - totalOccupiedMt);
+  const overallOccupancyPercent = totalCapacityMt > 0 ? Math.round((totalOccupiedMt / totalCapacityMt) * 100) : 0;
 
   // Filtered Stock Items
   const filteredItems = stockItems.filter(item => {
@@ -139,6 +88,30 @@ export default function VendorWarehousePage() {
                           item.bay.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesWarehouse && matchesSearch;
   });
+
+  // Handle Add New Warehouse
+  const handleAddWarehouseSubmit = (e) => {
+    e.preventDefault();
+    if (!newWhName || !newWhCapacity) {
+      alert('Please enter facility name and capacity.');
+      return;
+    }
+    const newFacility = {
+      id: `WH-0${warehouses.length + 1}`,
+      name: newWhName,
+      location: newWhLocation || 'Agro Storage Hub',
+      capacity_mt: Number(newWhCapacity),
+      bays_active: Number(newWhBays) || 4,
+      temperature: '20°C',
+      humidity: '58%',
+    };
+    setWarehouses(prev => [...prev, newFacility]);
+    if (!formWarehouse) setFormWarehouse(newFacility.id);
+    setShowAddWarehouseModal(false);
+    setNewWhName('');
+    setNewWhLocation('');
+    setNewWhCapacity('');
+  };
 
   // Handle Stock Increase (Inbound Arrival)
   const handleInboundSubmit = (e) => {
@@ -168,7 +141,7 @@ export default function VendorWarehousePage() {
       // Add new stock item
       const newItem = {
         id: `STK-${Date.now().toString().slice(-4)}`,
-        warehouseId: formWarehouse,
+        warehouseId: formWarehouse || (warehouses[0]?.id || 'WH-01'),
         cropName: formCrop,
         bay: formBay || 'Bay A-1',
         quantityMt: qtyMt,
@@ -179,15 +152,16 @@ export default function VendorWarehousePage() {
       updatedItems.unshift(newItem);
     }
 
-    const targetWh = warehouses.find(w => w.id === formWarehouse);
+    // Auto-create movement log
+    const whName = warehouses.find(w => w.id === formWarehouse)?.name || 'Central Silo';
     const newLog = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       type: 'inbound',
       item: cropTitle,
       amountMt: qtyMt,
-      warehouse: targetWh?.name || 'Warehouse',
+      warehouse: whName,
       time: 'Just now',
-      notes: formNotes || 'Manual Inbound Stock Addition',
+      notes: formNotes || 'Produce Inbound Arrival',
     };
 
     setStockItems(updatedItems);
@@ -199,35 +173,31 @@ export default function VendorWarehousePage() {
   // Handle Stock Decrease (Outbound Dispatch)
   const handleOutboundSubmit = (e) => {
     e.preventDefault();
-    if (!targetStockItem || !formQuantity || Number(formQuantity) <= 0) {
-      alert('Please enter a valid dispatch quantity.');
-      return;
-    }
+    if (!targetStockItem) return;
 
     const qtyMt = Number(formQuantity);
-    if (qtyMt > targetStockItem.quantityMt) {
-      alert(`Cannot dispatch ${qtyMt} MT. Only ${targetStockItem.quantityMt} MT available in stock.`);
+    if (!qtyMt || qtyMt <= 0 || qtyMt > targetStockItem.quantityMt) {
+      alert('Invalid dispatch quantity. Cannot exceed available batch stock.');
       return;
     }
 
-    const updatedItems = stockItems.map(item => {
-      if (item.id === targetStockItem.id) {
-        return {
-          ...item,
-          quantityMt: item.quantityMt - qtyMt,
-          lastUpdated: 'Just now',
-        };
-      }
-      return item;
-    }).filter(item => item.quantityMt > 0); // remove if zero
+    const updatedItems = stockItems
+      .map(item => {
+        if (item.id === targetStockItem.id) {
+          const remaining = item.quantityMt - qtyMt;
+          return remaining > 0 ? { ...item, quantityMt: remaining, lastUpdated: 'Just now' } : null;
+        }
+        return item;
+      })
+      .filter(Boolean);
 
-    const targetWh = warehouses.find(w => w.id === targetStockItem.warehouseId);
+    const whName = warehouses.find(w => w.id === targetStockItem.warehouseId)?.name || 'Central Silo';
     const newLog = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       type: 'outbound',
       item: targetStockItem.cropName,
       amountMt: qtyMt,
-      warehouse: targetWh?.name || 'Warehouse',
+      warehouse: whName,
       time: 'Just now',
       notes: formNotes || 'Outbound Stock Dispatch',
     };
@@ -267,10 +237,21 @@ export default function VendorWarehousePage() {
           </p>
         </div>
 
-        {/* Action Controls: Increase / Decrease Stock */}
+        {/* Action Controls: Increase / Decrease Stock / Add Warehouse */}
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setShowAddWarehouseModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/10 transition flex items-center gap-2"
+          >
+            <Plus size={16} /> Add Facility
+          </button>
+          <button
             onClick={() => {
+              if (warehouses.length === 0) {
+                alert('Please add a storage facility first.');
+                setShowAddWarehouseModal(true);
+                return;
+              }
               resetForm();
               setShowInboundModal(true);
             }}
@@ -334,18 +315,33 @@ export default function VendorWarehousePage() {
           🏭 Active Storage Facilities
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {warehouses.map(w => {
-            const occupiedMt = getWarehouseOccupiedMt(w.id);
-            const percent = Math.round((occupiedMt / w.capacity_mt) * 100);
-            return (
-              <motion.div
-                key={w.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={cardStyle}
-                className="p-6 space-y-4 relative overflow-hidden"
-              >
+        {warehouses.length === 0 ? (
+          <div style={cardStyle} className="p-8 text-center space-y-4">
+            <Warehouse size={40} className="mx-auto text-[#86efac]/40" />
+            <h3 className="text-lg font-bold text-white font-['Outfit']">No Storage Facilities Configured</h3>
+            <p className="text-xs text-[#86efac]/70 max-w-md mx-auto">
+              You haven&apos;t added any storage facilities yet. Click below to add your warehouse, silo, or cold storage facility.
+            </p>
+            <button
+              onClick={() => setShowAddWarehouseModal(true)}
+              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-gray-950 font-bold text-xs inline-flex items-center gap-2"
+            >
+              <Plus size={14} /> Add Facility
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {warehouses.map(w => {
+              const occupiedMt = getWarehouseOccupiedMt(w.id);
+              const percent = w.capacity_mt > 0 ? Math.round((occupiedMt / w.capacity_mt) * 100) : 0;
+              return (
+                <motion.div
+                  key={w.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={cardStyle}
+                  className="p-6 space-y-4 relative overflow-hidden"
+                >
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-[0.68rem] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
@@ -405,6 +401,7 @@ export default function VendorWarehousePage() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Live Warehouse Inventory Stock Table */}
@@ -448,13 +445,18 @@ export default function VendorWarehousePage() {
 
         {/* Stock Items List */}
         <div className="space-y-3">
-          {filteredItems.map(item => {
-            const parentWh = warehouses.find(w => w.id === item.warehouseId);
-            return (
-              <div
-                key={item.id}
-                className="p-4 rounded-xl bg-white/[0.02] border border-white/10 hover:border-emerald-500/30 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
+          {filteredItems.length === 0 ? (
+            <div style={cardStyle} className="p-8 text-center text-xs text-[#86efac]/60">
+              No crop batches currently stored. Click &apos;Stock Increase (Inbound)&apos; to record produce arrivals.
+            </div>
+          ) : (
+            filteredItems.map(item => {
+              const parentWh = warehouses.find(w => w.id === item.warehouseId);
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl bg-white/[0.02] border border-white/10 hover:border-emerald-500/30 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black text-lg flex items-center justify-center">
                     🌾
@@ -508,16 +510,9 @@ export default function VendorWarehousePage() {
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-
-          {filteredItems.length === 0 && (
-            <div className="text-center py-10 text-gray-400 space-y-2">
-              <Boxes size={40} className="mx-auto text-gray-600" />
-              <p className="text-sm font-semibold">No stock items found in this warehouse filter.</p>
-            </div>
-          )}
+                </div>
+              );
+            }))}
         </div>
       </div>
 
@@ -729,6 +724,98 @@ export default function VendorWarehousePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ADD NEW WAREHOUSE MODAL */}
+      <AnimatePresence>
+        {showAddWarehouseModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowAddWarehouseModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md bg-[#0a1a0d] border border-emerald-500/30 rounded-2xl p-6 space-y-4 text-white shadow-2xl"
+            >
+              <div className="flex justify-between items-center border-b border-emerald-500/20 pb-3">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 font-['Outfit']">
+                  🏭 Add Storage Facility
+                </h3>
+                <button onClick={() => setShowAddWarehouseModal(false)} className="text-gray-400 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddWarehouseSubmit} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Facility Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nashik Cold Storage Silo #1"
+                    value={newWhName}
+                    onChange={e => setNewWhName(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 font-bold mb-1">Location / District</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. APMC Mandi, Lasalgaon, Nashik"
+                    value={newWhLocation}
+                    onChange={e => setNewWhLocation(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-gray-400 font-bold mb-1">Max Capacity (MT) *</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 5000"
+                      value={newWhCapacity}
+                      onChange={e => setNewWhCapacity(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 font-bold mb-1">Active Bays</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 4"
+                      value={newWhBays}
+                      onChange={e => setNewWhBays(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddWarehouseModal(false)}
+                    className="w-1/2 py-2.5 rounded-xl border border-white/10 text-gray-300 font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-1/2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold shadow-lg"
+                  >
+                    Save Facility
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+

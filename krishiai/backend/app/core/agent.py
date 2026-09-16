@@ -8,6 +8,7 @@ with their own system prompt so each channel can be tuned independently.
 import json
 import os
 import time
+import inspect
 import logging
 from groq import AsyncGroq
 from pydantic import BaseModel
@@ -292,6 +293,17 @@ def _coerce_args(func_name: str, args: dict) -> dict:
                 coerced[k] = v
         else:
             coerced[k] = v
+    # Filter arguments against actual Python function signature if known
+    func = TOOL_FUNCTIONS_MAP.get(func_name)
+    if func:
+        try:
+            sig = inspect.signature(func)
+            has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+            if not has_var_kw:
+                coerced = {k: v for k, v in coerced.items() if k in sig.parameters}
+        except Exception:
+            pass
+
     return coerced
 
 
@@ -391,7 +403,7 @@ async def process_query_base(
     async def _groq_chat_completion_with_fallback(**kwargs):
         """Helper to call Groq model with smart fallback across models."""
         primary_model = kwargs.get("model", "openai/gpt-oss-20b")
-        fallback_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b"]
+        fallback_models = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
         
         try:
             return await client.chat.completions.create(**kwargs)

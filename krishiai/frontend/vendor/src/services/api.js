@@ -15,7 +15,7 @@ if (BASE_URL.endsWith('/')) {
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, 
+  timeout: 60000, 
   headers: {
     'ngrok-skip-browser-warning': 'true'
   }

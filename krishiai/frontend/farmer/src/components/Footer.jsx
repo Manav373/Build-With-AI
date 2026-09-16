@@ -32,7 +32,7 @@ export default function Footer() {
 
   const navLinks = {
     [ft.product]: [
-      { label: 'Agri Marketplace', href: '/vendors', isRoute: true },
+      { label: 'Agri Marketplace', href: '/sell-crops', isRoute: true },
       { label: 'Sell Crops Direct', href: '/sell-crops', isRoute: true },
       { label: 'AI Voice Assistant', href: '/voice-assistant', isRoute: true },
       { label: language === 'gu' ? 'ખેડૂત સમુદાય' : language === 'hi' ? 'किसान समुदाय' : language === 'mr' ? 'शेतकरी समुदाय' : 'Farmer Community', href: '/community', isRoute: true },

@@ -15,7 +15,7 @@ if (BASE_URL.endsWith('/')) {
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, 
+  timeout: 60000, 
   headers: {
     'ngrok-skip-browser-warning': 'true'
   }
@@ -44,7 +44,7 @@ export const sendChatQuery = async (phoneId, message, lat = null, lon = null, hi
     if (state) payload.state = state;
     if (village) payload.village = village;
     if (taluka) payload.taluka = taluka;
-    const response = await apiClient.post('/api/web/chat', payload, { headers });
+    const response = await apiClient.post('/api/web/chat', payload, { headers, timeout: 60000 });
     return response.data;
   } catch (error) {
     console.error('API Chat Error:', error);
@@ -99,7 +99,7 @@ export const sendVoiceQuery = async (phoneId, file, lat = null, lon = null, hist
     }));
     formData.append('history', JSON.stringify(processedHistory));
 
-    const response = await apiClient.post('/api/web/audio', formData, { headers });
+    const response = await apiClient.post('/api/web/audio', formData, { headers, timeout: 60000 });
     return response.data;
   } catch (error) {
     console.error('API Voice Error:', error);

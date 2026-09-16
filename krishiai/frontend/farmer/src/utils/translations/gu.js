@@ -227,6 +227,7 @@ export const gu = {
       disease: 'રોગ ઓળખ',
     },
     sidebar: {
+        iot: 'IoT સ્માર્ટ સિંચાઈ',
       newChat: 'નવી ચેટ',
       menu: 'મેનૂ',
       home: 'હોમ',

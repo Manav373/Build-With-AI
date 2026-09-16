@@ -28,6 +28,7 @@ function LayoutInner() {
     switch (actionId) {
       case 'home': navigate('/'); break;
       case 'dashboard': navigate('/chat'); break;
+      case 'iot': navigate('/iot'); break;
       case 'analytics': navigate('/analytics'); break;
       case 'mandi_map': navigate('/mandi-map'); break;
       case 'market_prices':

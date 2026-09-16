@@ -1281,7 +1281,7 @@ export default function FarmerAnalytics() {
 {
   stateData.length > 0 ? (
     <div className="w-full h-60 sm:h-64">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minHeight={220} minWidth={100}>
         <BarChart data={stateData} margin={{ top: 10, right: 5, left: -25, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? '#f1f5f9' : '#1e293b'} />
           <XAxis
@@ -1335,7 +1335,7 @@ export default function FarmerAnalytics() {
 {
   trendData.length > 0 ? (
     <div className="w-full h-60 sm:h-64">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minHeight={220} minWidth={100}>
         <AreaChart data={trendData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
           <defs>
             <linearGradient id="analyticsAreaGrad3" x1="0" y1="0" x2="0" y2="1">
@@ -1392,7 +1392,7 @@ export default function FarmerAnalytics() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-3">
               <div className="w-full h-52">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={180} minWidth={100}>
                   <PieChart>
                     <Pie
                       data={pieData}

@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Tag, Plus, CheckCircle2, Percent, Calendar } from 'lucide-react';
 
 export default function VendorPromotionsPage() {
-  const [promos, setPromos] = useState([
-    { id: 1, code: 'KHARIF15', discount: '15% OFF', min_order: '₹1,000', valid_till: '2026-09-30', status: 'active' },
-    { id: 2, code: 'ORGANIC10', discount: '10% OFF', min_order: '₹500', valid_till: '2026-10-15', status: 'active' }
-  ]);
+  const [promos, setPromos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vendor_promotions');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   const [code, setCode] = useState('');
   const [discount, setDiscount] = useState('');
   const [minOrder, setMinOrder] = useState('');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vendor_promotions', JSON.stringify(promos));
+    } catch (e) { }
+  }, [promos]);
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -105,29 +115,39 @@ export default function VendorPromotionsPage() {
       </form>
 
       {/* Active Coupons Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {promos.map(p => (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={cardStyle}
-            className="p-6 space-y-3"
-          >
-            <div className="flex justify-between items-start">
-              <span className="px-3 py-1 text-sm font-mono font-extrabold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                {p.code}
-              </span>
-              <span className="text-xs text-[#4ade80] font-bold uppercase">{p.status}</span>
-            </div>
-            <p className="text-2xl font-extrabold text-white font-['Outfit']">{p.discount}</p>
-            <div className="flex justify-between text-xs text-[#86efac]/70 border-t border-[#86efac]/10 pt-3">
-              <span>Min Order: <strong className="text-white">{p.min_order}</strong></span>
-              <span>Valid Till: <strong className="text-white">{p.valid_till}</strong></span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {promos.length === 0 ? (
+        <div style={cardStyle} className="p-12 text-center space-y-3">
+          <Tag size={40} className="mx-auto text-amber-400/30" />
+          <h3 className="text-lg font-bold text-white font-['Outfit']">No Active Promotions</h3>
+          <p className="text-xs text-[#86efac]/60 max-w-sm mx-auto">
+            Create promotional coupon codes above to provide discounts for farmer bulk purchases.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {promos.map(p => (
+            <motion.div
+              key={p.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={cardStyle}
+              className="p-6 space-y-3"
+            >
+              <div className="flex justify-between items-start">
+                <span className="px-3 py-1 text-sm font-mono font-extrabold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  {p.code}
+                </span>
+                <span className="text-xs text-[#4ade80] font-bold uppercase">{p.status}</span>
+              </div>
+              <p className="text-2xl font-extrabold text-white font-['Outfit']">{p.discount}</p>
+              <div className="flex justify-between text-xs text-[#86efac]/70 border-t border-[#86efac]/10 pt-3">
+                <span>Min Order: <strong className="text-white">{p.min_order}</strong></span>
+                <span>Valid Till: <strong className="text-white">{p.valid_till}</strong></span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

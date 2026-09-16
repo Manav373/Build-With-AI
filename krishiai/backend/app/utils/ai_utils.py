@@ -36,7 +36,7 @@ async def fetch_structured_agri_data(prompt: str, model: str = "openai/gpt-oss-2
         return json.loads(content)
     except Exception as e:
         if "429" in str(e) or "rate_limit" in str(e).lower():
-            fallback_model = "openai/gpt-oss-20b"
+            fallback_model = "openai/gpt-oss-120b"
             logger.warning(f"Rate limit hit for {model}. Falling back to {fallback_model}.")
             try:
                 response = await client.chat.completions.create(

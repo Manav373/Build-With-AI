@@ -12,44 +12,11 @@ export default function AdminOrdersPage() {
     setLoading(true);
     try {
       const res = await adminApi.getOrders({ type: filterType });
-      setOrders(res.data?.orders || res.data || []);
-    } catch {
-      // Cross-domain mock transactions
-      setOrders([
-        {
-          id: 'ORD-9921',
-          type: 'Procurement (Vendor <- Farmer)',
-          buyer: 'AgroMill Foods Ltd (Vendor)',
-          seller: 'Ramesh Patel (Farmer)',
-          product: 'Durum Wheat (50 Quintals)',
-          amount: '₹1,25,000',
-          escrowStatus: 'Held in Escrow',
-          fulfillment: 'In Transit',
-          date: '08 Mar 2026',
-        },
-        {
-          id: 'ORD-9918',
-          type: 'Supplies (Farmer <- Vendor)',
-          buyer: 'Sunil Jadhav (Farmer)',
-          seller: 'Kisan Agro Supplies (Vendor)',
-          product: 'Drip Irrigation Pipes & Sprinklers',
-          amount: '₹34,800',
-          escrowStatus: 'Released to Vendor',
-          fulfillment: 'Delivered',
-          date: '07 Mar 2026',
-        },
-        {
-          id: 'ORD-9912',
-          type: 'Procurement (Vendor <- Farmer)',
-          buyer: 'Kisan Agro Chem (Vendor)',
-          seller: 'Anil Deshmukh (Farmer)',
-          product: 'Organic Soybean (30 Quintals)',
-          amount: '₹1,44,000',
-          escrowStatus: 'Quality Check Pending',
-          fulfillment: 'At Warehouse',
-          date: '06 Mar 2026',
-        },
-      ]);
+      const list = res.data?.data?.orders || res.data?.orders || res.data || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminOrdersPage] Error fetching orders:', err);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -89,7 +56,14 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-500/10">
-                {orders.map((ord) => (
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-emerald-200/50 text-sm">
+                      No transactions recorded in the ecosystem yet.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map((ord) => (
                   <tr key={ord.id} className="hover:bg-[#07190c]/60 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">{ord.id}</td>
                     <td className="py-3.5 px-4">
@@ -112,7 +86,7 @@ export default function AdminOrdersPage() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

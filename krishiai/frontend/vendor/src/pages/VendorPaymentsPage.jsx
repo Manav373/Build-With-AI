@@ -8,81 +8,6 @@ import {
   ChevronRight, Sparkles, FileText, Lock
 } from 'lucide-react';
 
-const INITIAL_TRANSACTIONS = [
-  {
-    id: 'TXN-9842',
-    type: 'procurement',
-    title: 'Procurement Bid Settlement (500 MT Organic Wheat)',
-    source: 'Green Harvest Farmer Collective',
-    amount: 145000,
-    direction: 'in',
-    status: 'completed',
-    date: '2026-08-18 14:30',
-    method: 'NEFT Escrow Payout',
-    reference: 'ESC-8849-WHEAT',
-  },
-  {
-    id: 'TXN-9841',
-    type: 'escrow',
-    title: 'Escrow Locked Payment (200 Bags Bio-Fertilizer)',
-    source: 'Rajesh Patel (Farmer #442)',
-    amount: 82000,
-    direction: 'in',
-    status: 'in_escrow',
-    date: '2026-08-17 11:15',
-    method: 'KrishiAI Smart Escrow',
-    reference: 'ESC-7721-FERT',
-  },
-  {
-    id: 'TXN-9840',
-    type: 'withdrawal',
-    title: 'Withdrawal to Primary HDFC Bank Account',
-    source: 'HDFC Bank (A/C ****4912)',
-    amount: 100000,
-    direction: 'out',
-    status: 'completed',
-    date: '2026-08-15 09:45',
-    method: 'IMPS Direct Transfer',
-    reference: 'UTR-9938102941',
-  },
-  {
-    id: 'TXN-9839',
-    type: 'customer_sale',
-    title: 'Customer Order #ORD-901 Payout',
-    source: 'Suresh Patil (Retail Customer)',
-    amount: 18400,
-    direction: 'in',
-    status: 'completed',
-    date: '2026-08-14 16:20',
-    method: 'UPI Auto-Settlement',
-    reference: 'UPI-7738210492',
-  },
-  {
-    id: 'TXN-9838',
-    type: 'procurement',
-    title: 'Tender Contract Milestone #2 Release',
-    source: 'State Seed Corp Procurement',
-    amount: 250000,
-    direction: 'in',
-    status: 'completed',
-    date: '2026-08-12 18:00',
-    method: 'RTGS Contract Release',
-    reference: 'ESC-4402-SEED',
-  },
-  {
-    id: 'TXN-9837',
-    type: 'escrow',
-    title: 'Escrow Pending Quality Inspection',
-    source: 'Aniket Deshmukh (Procurement #108)',
-    amount: 42000,
-    direction: 'in',
-    status: 'in_escrow',
-    date: '2026-08-10 10:10',
-    method: 'KrishiAI Quality Escrow',
-    reference: 'ESC-3310-SOYA',
-  },
-];
-
 const STATUS_CONFIG = {
   completed: { label: 'Completed', bg: 'rgba(74, 222, 128, 0.15)', color: '#4ade80', border: 'rgba(74, 222, 128, 0.3)' },
   in_escrow: { bg: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: 'rgba(251, 191, 36, 0.3)', label: 'Locked in Escrow' },
@@ -94,26 +19,11 @@ export default function VendorPaymentsPage() {
   const context = useOutletContext() || {};
   const { vendor, config = {} } = context;
 
-  const [transactions, setTransactions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('vendor_transactions');
-      return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-    } catch (e) {
-      return INITIAL_TRANSACTIONS;
-    }
-  });
-
-  const [availableBalance, setAvailableBalance] = useState(() => {
-    try {
-      const saved = localStorage.getItem('vendor_available_balance');
-      return saved ? parseFloat(saved) : 485250;
-    } catch (e) {
-      return 485250;
-    }
-  });
-
-  const [escrowBalance, setEscrowBalance] = useState(124000);
-  const [totalEarnings, setTotalEarnings] = useState(1850000);
+  const [transactions, setTransactions] = useState([]);
+  const [availableBalance, setAvailableBalance] = useState(0.0);
+  const [escrowBalance, setEscrowBalance] = useState(0.0);
+  const [totalEarnings, setTotalEarnings] = useState(0.0);
+  const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,14 +33,51 @@ export default function VendorPaymentsPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [receiptModalTxn, setReceiptModalTxn] = useState(null);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('vendor_transactions', JSON.stringify(transactions));
-      localStorage.setItem('vendor_available_balance', availableBalance.toString());
-    } catch (e) { }
-  }, [transactions, availableBalance]);
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
-  const handleWithdraw = (e) => {
+  useEffect(() => {
+    fetchFinancials();
+  }, []);
+
+  const fetchFinancials = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}api/vendor/financials/overview`);
+      if (res.ok) {
+        const json = await res.json();
+        setAvailableBalance(json.wallet_balance || 0.0);
+        setEscrowBalance(json.pending_settlement || 0.0);
+        setTotalEarnings(json.total_earned || 0.0);
+
+        const realTxns = (json.payouts || []).map(p => ({
+          id: p.payout_code || `PAY-${p.id}`,
+          type: 'withdrawal',
+          title: `Settlement Payout (${(p.payout_type || 'bank_transfer').replace(/_/g, ' ')})`,
+          source: vendor?.bank_name || 'Registered Bank Account',
+          amount: p.amount || 0,
+          direction: 'out',
+          status: p.status === 'processed' ? 'completed' : 'processing',
+          date: p.processed_at ? p.processed_at.replace('T', ' ').substring(0, 16) : 'Recently',
+          method: 'Direct Bank Settlement',
+          reference: p.utr_number || p.payout_code || 'PENDING',
+        }));
+        setTransactions(realTxns);
+      } else {
+        setAvailableBalance(0.0);
+        setEscrowBalance(0.0);
+        setTotalEarnings(0.0);
+        setTransactions([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch real financials:', e);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdraw = async (e) => {
     e.preventDefault();
     const amount = parseFloat(withdrawAmount);
     if (!amount || amount <= 0) {
@@ -143,26 +90,28 @@ export default function VendorPaymentsPage() {
     }
 
     setWithdrawing(true);
-    setTimeout(() => {
-      const newTxn = {
-        id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-        type: 'withdrawal',
-        title: withdrawMethod === 'bank' ? 'Withdrawal to Primary HDFC Bank' : 'Instant UPI Payout Transfer',
-        source: withdrawMethod === 'bank' ? 'HDFC Bank (A/C ****4912)' : 'UPI (vendor@okaxis)',
-        amount: amount,
-        direction: 'out',
-        status: 'processing',
-        date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        method: withdrawMethod === 'bank' ? 'IMPS Direct Payout' : 'UPI Instant Transfer',
-        reference: `WDR-${Date.now().toString().slice(-8)}`,
-      };
-
-      setTransactions(prev => [newTxn, ...prev]);
-      setAvailableBalance(prev => prev - amount);
+    try {
+      const res = await fetch(`${API_BASE}api/vendor/financials/payout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amount,
+          payout_type: withdrawMethod === 'bank' ? 'sales_settlement' : 'instant_upi'
+        })
+      });
+      if (res.ok) {
+        await fetchFinancials();
+        setShowWithdrawModal(false);
+        setWithdrawAmount('');
+      } else {
+        alert('Failed to initiate payout. Please ensure your bank details are configured.');
+      }
+    } catch (err) {
+      console.error('Payout failed:', err);
+      alert('Failed to connect to payout service.');
+    } finally {
       setWithdrawing(false);
-      setShowWithdrawModal(false);
-      setWithdrawAmount('');
-    }, 800);
+    }
   };
 
   const filteredTransactions = transactions.filter(txn => {

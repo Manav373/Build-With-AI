@@ -73,6 +73,8 @@ function RequirementFormModal({ isOpen, onClose, onSave, requirement = null }) {
         max_price: parseFloat(form.max_price) || 0,
         max_moisture_percent: form.max_moisture_percent ? parseFloat(form.max_moisture_percent) : null,
         pickup_radius_km: parseInt(form.pickup_radius_km) || 50,
+        status: 'active',
+        publish_immediately: true,
       });
       onClose();
     } catch (e) {
@@ -498,7 +500,8 @@ export default function VendorRequirementsPage() {
   const [editingReq, setEditingReq] = useState(null);
   const [selectedReqForApps, setSelectedReqForApps] = useState(null);
 
-  const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   const fetchRequirements = async () => {
     setLoading(true);

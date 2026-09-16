@@ -15,42 +15,11 @@ export default function AdminVendorVerificationPage() {
     setLoading(true);
     try {
       const res = await adminApi.getPendingVendors();
-      setPendingVendors(res.data?.vendors || res.data || []);
-    } catch {
-      // Mock pending queue
-      setPendingVendors([
-        {
-          id: 'vnd_01',
-          name: 'Shree Balaji Krishi Kendra',
-          owner: 'Vikas Deshmukh',
-          type: 'Dealer / Retailer',
-          gstNumber: '27AABCU9603R1ZM',
-          seedLicense: 'MH-NAS-2024-8841',
-          pesticideLicense: 'MH-PEST-9092',
-          location: 'Nashik, Maharashtra',
-          appliedDate: '06 Mar 2026',
-          documents: [
-            { title: 'GST Certificate', url: '#' },
-            { title: 'Fertilizer Retail License', url: '#' },
-            { title: 'Bank Account Cancelled Cheque', url: '#' },
-          ],
-        },
-        {
-          id: 'vnd_02',
-          name: 'AgriTech Seed Producers LLP',
-          owner: 'Naveen Reddy',
-          type: 'Seed Producer',
-          gstNumber: '36AAACE1124L1ZZ',
-          seedLicense: 'TS-HYD-2025-0012',
-          pesticideLicense: 'N/A',
-          location: 'Warangal, Telangana',
-          appliedDate: '07 Mar 2026',
-          documents: [
-            { title: 'Seed Production Authorization', url: '#' },
-            { title: 'GST Registration', url: '#' },
-          ],
-        },
-      ]);
+      const list = res.data?.data?.vendors || res.data?.vendors || res.data || [];
+      setPendingVendors(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminVendorVerification] Error fetching pending vendors:', err);
+      setPendingVendors([]);
     } finally {
       setLoading(false);
     }

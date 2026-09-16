@@ -581,7 +581,7 @@ export default function MarketPricePage() {
                             <span className="text-xs font-bold text-emerald-500/40">Generating projection...</span>
                           </div>
                         ) : (
-                          <ResponsiveContainer width="100%" height="100%">
+                          <ResponsiveContainer width="100%" height="100%" minHeight={260} minWidth={100}>
                             <AreaChart data={normalizedTrend}>
                               <defs>
                                 <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">

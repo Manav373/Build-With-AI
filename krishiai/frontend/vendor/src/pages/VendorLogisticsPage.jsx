@@ -18,7 +18,8 @@ export default function VendorLogisticsPage() {
   const [deliveryAddr, setDeliveryAddr] = useState('Krishi Warehouse #2, Hadapsar, Pune');
   const [msg, setMsg] = useState('');
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   useEffect(() => {
     fetchShipments();
@@ -32,25 +33,11 @@ export default function VendorLogisticsPage() {
         const json = await res.json();
         setShipments(json.shipments || []);
       } else {
-        setShipments([
-          {
-            id: 1,
-            shipment_code: 'SHP-2026-08-102',
-            vehicle_number: 'MH-12-PQ-9082',
-            vehicle_type: 'Pickup Bolero',
-            driver_name: 'Sanjay Patil',
-            driver_phone: '9822401829',
-            pickup_address: 'Baramati Farmer Hub, Cluster 3',
-            delivery_address: 'Pune Central Cold Storage',
-            status: 'in_transit',
-            total_distance_km: 42.5,
-            eway_bill_number: 'EWAY-IN-94820194',
-            created_at: '2026-08-13T10:30:00'
-          }
-        ]);
+        setShipments([]);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch shipments:', e);
+      setShipments([]);
     } finally {
       setLoading(false);
     }
@@ -112,8 +99,17 @@ export default function VendorLogisticsPage() {
       </div>
 
       {/* Active Shipments Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {shipments.map((s) => (
+      {shipments.length === 0 ? (
+        <div style={cardStyle} className="p-12 text-center space-y-3">
+          <Truck size={40} className="mx-auto text-emerald-400/30" />
+          <h3 className="text-lg font-bold text-white font-['Outfit']">No Active Logistics Shipments</h3>
+          <p className="text-xs text-[#86efac]/60 max-w-sm mx-auto">
+            You currently have no active freight or pickup vehicle movements. Click &apos;Dispatch New Shipment&apos; to assign a truck and generate an e-Way bill.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {shipments.map((s) => (
           <motion.div
             key={s.id}
             initial={{ opacity: 0, y: 15 }}
@@ -175,6 +171,7 @@ export default function VendorLogisticsPage() {
           </motion.div>
         ))}
       </div>
+      )}
 
       {/* Dispatch Modal */}
       <AnimatePresence>

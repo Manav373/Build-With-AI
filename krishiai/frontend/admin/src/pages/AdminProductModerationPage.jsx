@@ -11,44 +11,11 @@ export default function AdminProductModerationPage() {
     setLoading(true);
     try {
       const res = await adminApi.getPendingProducts();
-      setPendingProducts(res.data?.products || res.data || []);
-    } catch {
-      // Mock pending products
-      setPendingProducts([
-        {
-          id: 'prod_101',
-          name: 'Chlorpyrifos 20% EC 1L',
-          vendor: 'Kisan Agro Supplies',
-          category: 'Pesticides',
-          price: '₹550',
-          mrp: '₹650',
-          stock: 450,
-          complianceFlag: 'Restricted chemical check required',
-          submittedDate: '07 Mar 2026',
-        },
-        {
-          id: 'prod_102',
-          name: 'High-Yield Hybrid Cotton Seeds BG-II (450g)',
-          vendor: 'AgriTech Seed Producers',
-          category: 'Seeds',
-          price: '₹860',
-          mrp: '₹950',
-          stock: 1200,
-          complianceFlag: null,
-          submittedDate: '08 Mar 2026',
-        },
-        {
-          id: 'prod_103',
-          name: 'Bio-NPK Liquid Fertilizer Consortium (1L)',
-          vendor: 'GreenEarth Organics',
-          category: 'Bio-Fertilizer',
-          price: '₹390',
-          mrp: '₹480',
-          stock: 300,
-          complianceFlag: null,
-          submittedDate: '08 Mar 2026',
-        },
-      ]);
+      const list = res.data?.data?.products || res.data?.products || res.data || [];
+      setPendingProducts(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminProductModeration] Error fetching pending products:', err);
+      setPendingProducts([]);
     } finally {
       setLoading(false);
     }

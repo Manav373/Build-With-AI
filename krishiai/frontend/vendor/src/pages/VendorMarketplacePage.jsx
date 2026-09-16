@@ -6,89 +6,19 @@ import {
   ShieldCheck, Building2, Calendar, Phone, Award, Truck, CheckCircle2,
   Tag, ArrowRight, ExternalLink, Sparkles, RefreshCw
 } from 'lucide-react';
-import { sampleVendorData } from '../components/vendor/sampleVendorData';
-
-const INITIAL_VENDORS = [
-  sampleVendorData,
-  {
-    vendorId: "vendor-002",
-    vendorName: "Organic Farming Store",
-    businessName: "Organic Farming Initiative Ltd.",
-    tagline: "Certified Bio-Fertilizers & Organic Seeds for Sustainable Yields",
-    profileImage: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
-    coverImage: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&h=400&fit=crop",
-    location: "Satara, Maharashtra",
-    district: "Satara",
-    rating: 4.8,
-    totalReviews: 203,
-    yearsExperience: 10,
-    totalProducts: 52,
-    farmersServed: 2100,
-    isVerified: true,
-    isTrusted: true,
-    isPremium: true,
-    vendorType: "seller",
-    businessCategory: "Organic Products",
-    gstNumber: "27AAACO9081F1Z8",
-    topTags: ["Bio-Fertilizers", "Vermicompost", "Neem Oil"],
-  },
-  {
-    vendorId: "vendor-003",
-    vendorName: "Kisan Equipment & Machinery Hub",
-    businessName: "Kisan Machinery Enterprises",
-    tagline: "Advanced Tractors, Harvesters & Solar Irrigation Systems",
-    profileImage: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-    coverImage: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&h=400&fit=crop",
-    location: "Aurangabad, Maharashtra",
-    district: "Aurangabad",
-    rating: 4.6,
-    totalReviews: 156,
-    yearsExperience: 15,
-    totalProducts: 28,
-    farmersServed: 3200,
-    isVerified: true,
-    isTrusted: true,
-    isPremium: true,
-    vendorType: "seller",
-    businessCategory: "Farm Equipment",
-    gstNumber: "27AAACK1092K1Z2",
-    topTags: ["Solar Pumps", "Rotavators", "Drip Irrigation"],
-  },
-  {
-    vendorId: "vendor-004",
-    vendorName: "Green Agro Nursery & Seedlings",
-    businessName: "Green Agro Nursery",
-    tagline: "High-Yield Tissue Culture Fruit Plants & Vegetable Seedlings",
-    profileImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
-    coverImage: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=1200&h=400&fit=crop",
-    location: "Nashik, Maharashtra",
-    district: "Nashik",
-    rating: 4.9,
-    totalReviews: 312,
-    yearsExperience: 8,
-    totalProducts: 64,
-    farmersServed: 1800,
-    isVerified: true,
-    isTrusted: true,
-    isPremium: false,
-    vendorType: "seller",
-    businessCategory: "Nursery Plants",
-    gstNumber: "27AAACG4091M1Z5",
-    topTags: ["Pomegranate Plants", "Grape Seedlings", "Onion Seeds"],
-  }
-];
-
 const CATEGORIES = ['All', 'Procurement Buyers', 'Seeds & Fertilizers', 'Organic Products', 'Farm Equipment', 'Nursery Plants'];
 
 export default function VendorMarketplacePage() {
   const navigate = useNavigate();
-  const [vendors, setVendors] = useState(INITIAL_VENDORS);
+  const [vendors, setVendors] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedLocation, setSelectedLocation] = useState('All');
   const [sortBy, setSortBy] = useState('rating');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   useEffect(() => {
     fetchMarketplaceVendors();
@@ -108,29 +38,37 @@ export default function VendorMarketplacePage() {
             tagline: v.tagline || 'Verified Agricultural Vendor & Supply Hub',
             profileImage: v.profile_image || "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop",
             coverImage: v.cover_image || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&h=400&fit=crop",
-            location: `${v.district || 'Pune'}, ${v.state || 'Maharashtra'}`,
-            district: v.district || 'Pune',
-            rating: v.rating || 4.8,
-            totalReviews: v.total_reviews || 42,
-            yearsExperience: v.years_in_business || 5,
-            totalProducts: v.total_products || 18,
-            farmersServed: v.farmers_served || 850,
-            isVerified: v.is_verified ?? true,
-            isTrusted: true,
+            location: `${v.district || v.village_city || 'Registered'}, ${v.state || 'India'}`,
+            district: v.district || v.village_city || '',
+            rating: v.rating || 0.0,
+            totalReviews: v.total_reviews || 0,
+            yearsExperience: v.years_in_business || (v.year_established ? (new Date().getFullYear() - parseInt(v.year_established)) : 1),
+            totalProducts: v.total_products || 0,
+            farmersServed: v.farmers_served || 0,
+            isVerified: v.is_verified ?? false,
+            isTrusted: v.is_trusted ?? false,
+            isPremium: v.is_premium ?? false,
             vendorType: v.vendor_type || 'hybrid',
             businessCategory: v.business_category || (v.vendor_type === 'procurement' ? 'Procurement Buyers' : 'Seeds & Fertilizers'),
-            gstNumber: v.gst_number || '27AAACM4829K1Z4',
-            topTags: v.vendor_type === 'procurement' ? ['Cotton Buyer', 'Soybean Procurement', 'Cash Payout'] : ['Certified Seeds', 'Bio-Fertilizer', 'Doorstep Delivery']
+            gstNumber: v.gst_number || 'N/A',
+            topTags: v.vendor_type === 'procurement' ? ['Crop Procurement', 'Direct Payout'] : ['Agri Inputs', 'Verified Supply']
           }));
-          setVendors([...apiVendors, ...INITIAL_VENDORS]);
+          setVendors(apiVendors);
+        } else {
+          setVendors([]);
         }
+      } else {
+        setVendors([]);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch marketplace vendors:', e);
+      setVendors([]);
     } finally {
       setLoading(false);
     }
   };
+
+  const availableLocations = ['All', ...new Set(vendors.map(v => v.district).filter(Boolean))];
 
   const filteredVendors = vendors.filter(v => {
     const query = searchTerm.toLowerCase();
@@ -145,8 +83,10 @@ export default function VendorMarketplacePage() {
     } else if (selectedCategory !== 'All') {
       matchesCat = v.businessCategory === selectedCategory;
     }
+
+    const matchesLoc = selectedLocation === 'All' || v.location.toLowerCase().includes(selectedLocation.toLowerCase());
     
-    return matchesSearch && matchesCat;
+    return matchesSearch && matchesCat && matchesLoc;
   }).sort((a, b) => {
     if (sortBy === 'rating') return b.rating - a.rating;
     if (sortBy === 'reviews') return b.totalReviews - a.totalReviews;
@@ -312,6 +252,34 @@ export default function VendorMarketplacePage() {
               </button>
             ))}
           </div>
+
+          {/* Specific Location Filter Bar */}
+          {availableLocations.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[#86efac]/10">
+              <span className="text-xs text-[#86efac]/70 font-semibold flex items-center gap-1 mr-1">
+                <MapPin size={13} className="text-emerald-400" /> Filter Location:
+              </span>
+              {availableLocations.map(loc => (
+                <button
+                  key={loc}
+                  onClick={() => setSelectedLocation(loc)}
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: selectedLocation === loc ? 'rgba(52, 211, 153, 0.2)' : 'rgba(255,255,255,0.03)',
+                    color: selectedLocation === loc ? '#6ee7b7' : 'rgba(255,255,255,0.5)',
+                    border: selectedLocation === loc ? '1px solid #34d399' : '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  {loc === 'All' ? 'All Locations' : loc}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Vendors Grid */}

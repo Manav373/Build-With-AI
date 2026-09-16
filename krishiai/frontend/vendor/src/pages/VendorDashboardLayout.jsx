@@ -100,7 +100,8 @@ export default function VendorDashboardLayout() {
     // Fetch vendor profile
     const fetchVendor = async () => {
       try {
-        const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+        const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
         const resp = await fetch(`${API}api/vendor/me`);
         if (resp.ok) {
           const data = await resp.json();
@@ -116,7 +117,8 @@ export default function VendorDashboardLayout() {
     // Fetch dashboard stats
     const fetchStats = async () => {
       try {
-        const API = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+        const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
         const resp = await fetch(`${API}api/vendor/dashboard/stats`);
         if (resp.ok) {
           const data = await resp.json();

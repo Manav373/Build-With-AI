@@ -14,7 +14,8 @@ export default function VendorAnalyticsPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMsg, setWithdrawMsg] = useState('');
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   useEffect(() => {
     fetchFinancials();
@@ -28,27 +29,25 @@ export default function VendorAnalyticsPage() {
         const json = await res.json();
         setData(json);
       } else {
-        // Fallback mockup if backend is starting
         setData({
-          wallet_balance: 142850.0,
-          total_earned: 485000.0,
-          pending_settlement: 34500.0,
-          chart_data: [
-            { month: 'Jan', revenue: 120000, procurement: 450000 },
-            { month: 'Feb', revenue: 185000, procurement: 620000 },
-            { month: 'Mar', revenue: 240000, procurement: 890000 },
-            { month: 'Apr', revenue: 310000, procurement: 1150000 },
-            { month: 'May', revenue: 290000, procurement: 980000 },
-            { month: 'Jun', revenue: 420000, procurement: 1420000 },
-          ],
-          payouts: [
-            { id: 1, payout_code: 'PAY-2026-08-01', amount: 85000, payout_type: 'sales_settlement', status: 'processed', utr_number: 'NEFT482910482', processed_at: '2026-08-10' },
-            { id: 2, payout_code: 'PAY-2026-08-02', amount: 150000, payout_type: 'procurement_advance', status: 'processed', utr_number: 'NEFT921048210', processed_at: '2026-08-04' }
-          ]
+          wallet_balance: 0.0,
+          total_earned: 0.0,
+          pending_settlement: 0.0,
+          total_procurement: 0.0,
+          chart_data: [],
+          payouts: []
         });
       }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to fetch real financials:', e);
+      setData({
+        wallet_balance: 0.0,
+        total_earned: 0.0,
+        pending_settlement: 0.0,
+        total_procurement: 0.0,
+        chart_data: [],
+        payouts: []
+      });
     } finally {
       setLoading(false);
     }

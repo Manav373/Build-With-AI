@@ -19,7 +19,8 @@ export default function VendorTendersPage() {
   const [destination, setDestination] = useState('Nagpur APMC Warehouse #4');
   const [msg, setMsg] = useState('');
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/';
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
 
   useEffect(() => {
     fetchData();

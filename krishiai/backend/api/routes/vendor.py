@@ -166,6 +166,8 @@ class BuyingRequirementCreate(BaseModel):
     payment_terms: str = "on_pickup"
     transport_provided: bool = False
     special_instructions: Optional[str] = None
+    status: Optional[str] = "active"
+    publish_immediately: bool = True
 
 
 class FarmerApplicationCreate(BaseModel):
@@ -186,6 +188,18 @@ class AdminVerifyRequest(BaseModel):
 
 
 # ─── Helper ──────────────────────────────────────────────────
+
+def get_vendor_for_user(db: Session, current_user: str) -> Optional[Vendor]:
+    """Retrieve vendor for the current user, falling back to first vendor for dev/guest preview."""
+    if current_user and current_user != "guest_user":
+        v = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+        if v:
+            return v
+    guest_v = db.query(Vendor).filter(Vendor.clerk_user_id == "guest_user").first()
+    if guest_v:
+        return guest_v
+    return db.query(Vendor).first()
+
 
 def vendor_to_dict(v: Vendor) -> dict:
     """Convert a Vendor ORM object to a JSON-serializable dict."""
@@ -312,6 +326,11 @@ def requirement_to_dict(r: BuyingRequirement) -> dict:
         "special_instructions": r.special_instructions,
         "total_applications": r.total_applications,
         "quantity_fulfilled": r.quantity_fulfilled,
+        "target_price_per_qtl": r.max_price,
+        "quantity_needed_qtl": r.quantity_required,
+        "preferred_districts": r.pickup_district or r.procurement_location or "All Regions",
+        "logistics_option": "vendor_pickup" if r.transport_provided else "hub_delivery",
+        "expiry_date": r.valid_to.strftime("%Y-%m-%d") if r.valid_to else None,
         "created_at": r.created_at.isoformat() if r.created_at else None,
     }
 
@@ -423,7 +442,7 @@ async def get_my_vendor_profile(
     current_user: str = Depends(get_current_user)
 ):
     """Get the current user's vendor profile."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         return {"success": False, "vendor": None, "message": "No vendor account found."}
     return {"success": True, "vendor": vendor_to_dict(vendor)}
@@ -436,7 +455,7 @@ async def update_my_vendor_profile(
     current_user: str = Depends(get_current_user)
 ):
     """Update the current vendor's profile."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -582,7 +601,7 @@ async def create_product(
     current_user: str = Depends(get_current_user)
 ):
     """Create a new product listing."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
     if vendor.vendor_type == VendorType.PROCUREMENT:
@@ -634,7 +653,7 @@ async def list_my_products(
     current_user: str = Depends(get_current_user)
 ):
     """List the current vendor's products."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -660,7 +679,7 @@ async def update_product(
     current_user: str = Depends(get_current_user)
 ):
     """Update a product."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     product = db.query(Product).filter(Product.id == product_id, Product.vendor_id == vendor.id).first()
@@ -684,7 +703,7 @@ async def submit_product_for_review(
     current_user: str = Depends(get_current_user)
 ):
     """Submit a draft product for admin review."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     product = db.query(Product).filter(Product.id == product_id, Product.vendor_id == vendor.id).first()
@@ -706,7 +725,7 @@ async def delete_product(
     current_user: str = Depends(get_current_user)
 ):
     """Delete a product (soft delete → discontinued)."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     product = db.query(Product).filter(Product.id == product_id, Product.vendor_id == vendor.id).first()
@@ -773,13 +792,13 @@ async def create_buying_requirement(
     current_user: str = Depends(get_current_user)
 ):
     """Create a new buying requirement."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     if vendor.vendor_type == VendorType.SELLER:
         raise HTTPException(403, "Seller vendors cannot create buying requirements.")
-    if vendor.status != VendorStatus.VERIFIED:
-        raise HTTPException(403, "Your vendor account must be verified.")
+    if vendor.status in [VendorStatus.SUSPENDED, VendorStatus.REJECTED]:
+        raise HTTPException(403, "Your vendor account is suspended or rejected.")
 
     # Validate price range (max spread 40%)
     if req.max_price > 0 and req.min_price > 0:
@@ -787,18 +806,17 @@ async def create_buying_requirement(
         if spread > 0.4:
             raise HTTPException(400, "Price range spread cannot exceed 40%.")
 
-    # Check active requirement limit (max 10)
-    active_count = db.query(BuyingRequirement).filter(
-        BuyingRequirement.vendor_id == vendor.id,
-        BuyingRequirement.status == RequirementStatus.ACTIVE
-    ).count()
-    if active_count >= 10:
-        raise HTTPException(400, "Maximum 10 active buying requirements allowed.")
+    # Determine initial status - default to ACTIVE so vendor request reflects to farmers immediately
+    init_status = RequirementStatus.ACTIVE
+    if req.status and req.status.lower() == "draft":
+        init_status = RequirementStatus.DRAFT
+    elif not getattr(req, "publish_immediately", True):
+        init_status = RequirementStatus.DRAFT
 
     requirement = BuyingRequirement(
         vendor_id=vendor.id,
         requirement_code=generate_code("BR"),
-        status=RequirementStatus.DRAFT,
+        status=init_status,
         crop_name=req.crop_name,
         crop_variety=req.crop_variety,
         quantity_required=req.quantity_required,
@@ -832,7 +850,7 @@ async def publish_requirement(
     current_user: str = Depends(get_current_user)
 ):
     """Publish a draft buying requirement to make it visible to farmers."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
     requirement = db.query(BuyingRequirement).filter(
@@ -858,7 +876,7 @@ async def list_my_requirements(
     current_user: str = Depends(get_current_user)
 ):
     """List the current vendor's buying requirements."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
 
@@ -879,6 +897,7 @@ async def browse_buying_requirements(
     crop: Optional[str] = None,
     district: Optional[str] = None,
     state: Optional[str] = None,
+    location: Optional[str] = None,
     min_price: Optional[float] = None,
     sort_by: str = "newest",
     page: int = 1,
@@ -891,12 +910,20 @@ async def browse_buying_requirements(
         BuyingRequirement.valid_to >= datetime.utcnow()
     )
 
-    if crop:
+    loc_filter = location or district
+    if crop and crop.lower() != "all":
         query = query.filter(BuyingRequirement.crop_name.ilike(f"%{crop}%"))
-    if district:
-        query = query.filter(BuyingRequirement.pickup_district.ilike(f"%{district}%"))
-    if state:
-        query = query.filter(BuyingRequirement.pickup_state.ilike(f"%{state}%"))
+    if loc_filter and loc_filter.lower() != "all":
+        query = query.filter(or_(
+            BuyingRequirement.pickup_district.ilike(f"%{loc_filter}%"),
+            BuyingRequirement.procurement_location.ilike(f"%{loc_filter}%"),
+            BuyingRequirement.pickup_state.ilike(f"%{loc_filter}%")
+        ))
+    if state and state.lower() != "all":
+        query = query.filter(or_(
+            BuyingRequirement.pickup_state.ilike(f"%{state}%"),
+            BuyingRequirement.procurement_location.ilike(f"%{state}%")
+        ))
     if min_price:
         query = query.filter(BuyingRequirement.max_price >= min_price)
 
@@ -993,7 +1020,7 @@ async def list_farmer_applications(
     current_user: str = Depends(get_current_user)
 ):
     """Vendor: List all farmer applications for their buying requirements."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
 
@@ -1048,7 +1075,7 @@ async def respond_to_application(
     current_user: str = Depends(get_current_user)
 ):
     """Vendor responds to a farmer application."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
 
@@ -1197,7 +1224,7 @@ async def get_dashboard_stats(
     current_user: str = Depends(get_current_user)
 ):
     """Get dashboard KPI stats for the current vendor."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor not found.")
 
@@ -1301,7 +1328,7 @@ async def create_bulk_rfq_tender(
     current_user: str = Depends(get_current_user)
 ):
     """Create a high-capacity bulk crop procurement tender."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -1356,7 +1383,7 @@ async def create_contract_farming(
     current_user: str = Depends(get_current_user)
 ):
     """Create a long-term Contract Farming Agreement."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -1428,7 +1455,7 @@ async def dispatch_logistics(
     current_user: str = Depends(get_current_user)
 ):
     """Dispatch transport vehicle for farm-gate crop collection."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -1457,7 +1484,7 @@ async def list_logistics_shipments(
     current_user: str = Depends(get_current_user)
 ):
     """Get active pickup shipments for vendor."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -1496,7 +1523,7 @@ async def run_ai_crop_inspection(
     current_user: str = Depends(get_current_user)
 ):
     """Analyze crop sample quality using AI model scan simulation."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -1552,29 +1579,76 @@ class PayoutRequest(BaseModel):
     payout_type: str = "sales_settlement"
 
 
+class OrderStatusUpdate(BaseModel):
+    status: str
+    tracking_id: Optional[str] = None
+
+
+class ProcurementStatusUpdate(BaseModel):
+    status: str
+    actual_weight: Optional[float] = None
+    quality_grade: Optional[str] = None
+    final_amount: Optional[float] = None
+    inspection_notes: Optional[str] = None
+
+
+class ReviewReplyRequest(BaseModel):
+    reply: str
+
+
 @router.get("/financials/overview")
 async def get_financial_overview(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
-    """Get financial dashboard analytics and payout ledger."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    """Get financial dashboard analytics and payout ledger computed from real DB data."""
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
     payouts = db.query(VendorPayout).filter(VendorPayout.vendor_id == vendor.id).order_by(VendorPayout.processed_at.desc()).all()
-    
-    total_earned = sum(p.amount for p in payouts if p.status == "processed")
-    wallet_balance = round(random.uniform(25000, 185000), 2)
+    total_payouts = sum(p.amount for p in payouts if p.status == "processed")
 
-    chart_data = [
-        {"month": "Jan", "revenue": 120000, "procurement": 450000},
-        {"month": "Feb", "revenue": 185000, "procurement": 620000},
-        {"month": "Mar", "revenue": 240000, "procurement": 890000},
-        {"month": "Apr", "revenue": 310000, "procurement": 1150000},
-        {"month": "May", "revenue": 290000, "procurement": 980000},
-        {"month": "Jun", "revenue": 420000, "procurement": 1420000},
-    ]
+    # Real delivered orders revenue
+    delivered_orders = db.query(CustomerOrder).filter(
+        CustomerOrder.vendor_id == vendor.id,
+        CustomerOrder.status == OrderStatus.DELIVERED
+    ).all()
+    total_sales_revenue = sum(o.total_amount for o in delivered_orders)
+
+    # Real pending settlements (orders accepted/packed/dispatched but not yet settled)
+    pending_orders = db.query(CustomerOrder).filter(
+        CustomerOrder.vendor_id == vendor.id,
+        CustomerOrder.status.in_([OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PACKED, OrderStatus.DISPATCHED])
+    ).all()
+    pending_settlement = sum(o.total_amount for o in pending_orders)
+
+    # Real procurement spending
+    proc_orders = db.query(ProcurementOrder).filter(
+        ProcurementOrder.vendor_id == vendor.id,
+        ProcurementOrder.status == ProcurementOrderStatus.COMPLETED
+    ).all()
+    total_procurement = sum(po.final_amount or po.total_amount for po in proc_orders)
+
+    wallet_balance = max(0.0, round(total_sales_revenue - total_payouts, 2))
+    total_earned = round(total_sales_revenue, 2)
+
+    # Generate monthly real-time chart data for the past 6 months
+    now = datetime.utcnow()
+    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    chart_data = []
+    for i in range(5, -1, -1):
+        target_month = ((now.month - 1 - i) % 12) + 1
+        m_name = month_names[target_month - 1]
+        m_revenue = sum(
+            o.total_amount for o in delivered_orders
+            if o.created_at and o.created_at.month == target_month
+        )
+        m_proc = sum(
+            (po.final_amount or po.total_amount) for po in proc_orders
+            if po.created_at and po.created_at.month == target_month
+        )
+        chart_data.append({"month": m_name, "revenue": round(m_revenue, 2), "procurement": round(m_proc, 2)})
 
     payout_list = [{
         "id": p.id,
@@ -1582,15 +1656,16 @@ async def get_financial_overview(
         "amount": p.amount,
         "payout_type": p.payout_type,
         "status": p.status,
-        "utr_number": p.utr_number or f"UTR-{random.randint(100000, 999999)}",
+        "utr_number": p.utr_number or "PENDING",
         "processed_at": p.processed_at.isoformat() if p.processed_at else None
     } for p in payouts]
 
     return {
         "success": True,
         "wallet_balance": wallet_balance,
-        "total_earned": total_earned + wallet_balance,
-        "pending_settlement": 34500.0,
+        "total_earned": total_earned,
+        "pending_settlement": round(pending_settlement, 2),
+        "total_procurement": round(total_procurement, 2),
         "chart_data": chart_data,
         "payouts": payout_list
     }
@@ -1603,7 +1678,7 @@ async def request_vendor_payout(
     current_user: str = Depends(get_current_user)
 ):
     """Initiate payout settlement to vendor's registered bank account."""
-    vendor = db.query(Vendor).filter(Vendor.clerk_user_id == current_user).first()
+    vendor = get_vendor_for_user(db, current_user)
     if not vendor:
         raise HTTPException(404, "Vendor account not found.")
 
@@ -1613,11 +1688,361 @@ async def request_vendor_payout(
         amount=req.amount,
         payout_type=req.payout_type,
         status="processed",
-        bank_account_last4=vendor.bank_account_number[-4:] if vendor.bank_account_number and len(vendor.bank_account_number) >= 4 else "4821",
+        bank_account_last4=vendor.bank_account_number[-4:] if vendor.bank_account_number and len(vendor.bank_account_number) >= 4 else "0000",
         utr_number=f"NEFT{random.randint(100000000, 999999999)}"
     )
     db.add(payout)
     db.commit()
     db.refresh(payout)
-    return {"success": True, "message": f"Payout of ₹{req.amount:,.2f} transferred successfully.", "utr_number": payout.utr_number}
+    return {"success": True, "message": f"Payout of ₹{req.amount:,.2f} initiated successfully.", "utr_number": payout.utr_number, "payout": {
+        "id": payout.id,
+        "payout_code": payout.payout_code,
+        "amount": payout.amount,
+        "status": payout.status,
+        "utr_number": payout.utr_number,
+        "processed_at": payout.processed_at.isoformat() if payout.processed_at else None
+    }}
+
+
+# ══════════════════════════════════════════════════════════════
+# CUSTOMER ORDERS & FULFILLMENT
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/orders")
+async def list_customer_orders(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Vendor: List customer retail orders from real database."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    query = db.query(CustomerOrder).filter(CustomerOrder.vendor_id == vendor.id)
+    if status:
+        try:
+            query = query.filter(CustomerOrder.status == OrderStatus(status))
+        except ValueError:
+            pass
+
+    orders = query.order_by(CustomerOrder.created_at.desc()).all()
+    results = []
+    customers_map = {}
+
+    for o in orders:
+        c_id = o.customer_user_id or "anonymous"
+        if c_id not in customers_map:
+            customers_map[c_id] = {
+                "id": len(customers_map) + 1,
+                "user_id": c_id,
+                "name": o.customer_name or "Farmer Customer",
+                "phone": o.customer_phone or "N/A",
+                "location": o.delivery_address or "N/A",
+                "total_orders": 0,
+                "total_spent": 0.0
+            }
+        customers_map[c_id]["total_orders"] += 1
+        customers_map[c_id]["total_spent"] += o.total_amount
+
+        results.append({
+            "id": o.order_code or f"ORD-{o.id}",
+            "order_id": o.id,
+            "order_code": o.order_code,
+            "customer": o.customer_name or "Farmer Customer",
+            "phone": o.customer_phone or "N/A",
+            "delivery_address": o.delivery_address or "N/A",
+            "delivery_method": o.delivery_method,
+            "items": o.items,
+            "product": o.items[0].get("name", "Agricultural Input") if o.items and len(o.items) > 0 and isinstance(o.items[0], dict) else "Agricultural Product",
+            "amount": f"₹{o.total_amount:,.2f}",
+            "total_amount": o.total_amount,
+            "status": o.status.value if hasattr(o.status, "value") else str(o.status),
+            "tracking": o.tracking_id or (f"TRK-{o.order_code}" if o.order_code else "Pending"),
+            "payment_status": o.payment_status,
+            "created_at": o.created_at.isoformat() if o.created_at else None
+        })
+
+    return {
+        "success": True,
+        "total": len(results),
+        "orders": results,
+        "customers": list(customers_map.values())
+    }
+
+
+@router.put("/orders/{order_id}/status")
+async def update_customer_order_status(
+    order_id: int,
+    req: OrderStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Update order fulfillment status (packed, dispatched, delivered)."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id, CustomerOrder.vendor_id == vendor.id).first()
+    if not order:
+        raise HTTPException(404, "Order not found.")
+
+    try:
+        order.status = OrderStatus(req.status)
+    except ValueError:
+        raise HTTPException(400, f"Invalid status: {req.status}")
+
+    if req.tracking_id:
+        order.tracking_id = req.tracking_id
+    if req.status == "packed":
+        order.packed_at = datetime.utcnow()
+    elif req.status == "dispatched":
+        order.dispatched_at = datetime.utcnow()
+    elif req.status == "delivered":
+        order.delivered_at = datetime.utcnow()
+
+    order.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(order)
+    return {"success": True, "message": f"Order status updated to {req.status}", "order_id": order.id, "status": order.status.value}
+
+
+# ══════════════════════════════════════════════════════════════
+# PROCUREMENT ORDERS
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/procurement-orders")
+async def list_procurement_orders(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Vendor: List real B2B crop procurement orders."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    query = db.query(ProcurementOrder).filter(ProcurementOrder.vendor_id == vendor.id)
+    if status:
+        try:
+            query = query.filter(ProcurementOrder.status == ProcurementOrderStatus(status))
+        except ValueError:
+            pass
+
+    orders = query.order_by(ProcurementOrder.created_at.desc()).all()
+    results = []
+    for po in orders:
+        results.append({
+            "id": po.id,
+            "order_code": po.order_code or f"PO-{po.id}",
+            "farmer_user_id": po.farmer_user_id,
+            "crop_name": po.crop_name,
+            "agreed_qty": f"{po.agreed_quantity} {po.quantity_unit or 'quintal'}",
+            "agreed_price": f"₹{po.agreed_price:,.2f} / {po.quantity_unit or 'qtl'}",
+            "total_amount": f"₹{po.total_amount:,.2f}",
+            "raw_total_amount": po.total_amount,
+            "status": po.status.value if hasattr(po.status, "value") else str(po.status),
+            "pickup_date": po.pickup_date.strftime("%Y-%m-%d") if po.pickup_date else "Not scheduled",
+            "actual_weight": f"{po.actual_weight} {po.quantity_unit}" if po.actual_weight else "Pending weighing",
+            "quality_grade_received": po.quality_grade_received or "Pending inspection",
+            "warehouse_name": po.warehouse_name or "Central APMC Silo",
+            "created_at": po.created_at.isoformat() if po.created_at else None
+        })
+
+    return {"success": True, "total": len(results), "orders": results}
+
+
+@router.put("/procurement-orders/{order_id}/status")
+async def update_procurement_order_status(
+    order_id: int,
+    req: ProcurementStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Update procurement order status (weighing, inspection, completion)."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    order = db.query(ProcurementOrder).filter(ProcurementOrder.id == order_id, ProcurementOrder.vendor_id == vendor.id).first()
+    if not order:
+        raise HTTPException(404, "Procurement order not found.")
+
+    try:
+        order.status = ProcurementOrderStatus(req.status)
+    except ValueError:
+        raise HTTPException(400, f"Invalid status: {req.status}")
+
+    if req.actual_weight is not None:
+        order.actual_weight = req.actual_weight
+    if req.quality_grade:
+        order.quality_grade_received = req.quality_grade
+    if req.final_amount is not None:
+        order.final_amount = req.final_amount
+    if req.inspection_notes:
+        order.inspection_notes = req.inspection_notes
+
+    order.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(order)
+    return {"success": True, "message": f"Procurement order status updated to {req.status}"}
+
+
+# ══════════════════════════════════════════════════════════════
+# REVIEWS & FEEDBACK
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/reviews")
+async def list_vendor_reviews(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Vendor: List authentic reviews from real farmers."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    reviews = db.query(Review).filter(
+        Review.vendor_id == vendor.id,
+        Review.is_visible == True
+    ).order_by(Review.created_at.desc()).all()
+
+    results = []
+    for r in reviews:
+        results.append({
+            "id": r.id,
+            "farmer_name": r.reviewer_name or "Verified Farmer",
+            "rating": r.overall_rating,
+            "date": r.created_at.strftime("%Y-%m-%d") if r.created_at else None,
+            "comment": r.content or "",
+            "helpful": r.helpful_count or 0,
+            "vendor_reply": r.vendor_reply or "",
+            "review_type": r.review_type,
+            "is_verified_purchase": r.is_verified_purchase
+        })
+
+    avg_rating = round(sum(r.overall_rating for r in reviews) / len(reviews), 1) if reviews else vendor.rating or 0.0
+
+    return {
+        "success": True,
+        "total": len(results),
+        "average_rating": avg_rating,
+        "reviews": results
+    }
+
+
+@router.post("/reviews/{review_id}/reply")
+async def reply_to_review(
+    review_id: int,
+    req: ReviewReplyRequest,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Vendor replies to a farmer review."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    review = db.query(Review).filter(Review.id == review_id, Review.vendor_id == vendor.id).first()
+    if not review:
+        raise HTTPException(404, "Review not found.")
+
+    review.vendor_reply = req.reply
+    review.vendor_replied_at = datetime.utcnow()
+    review.updated_at = datetime.utcnow()
+    db.commit()
+    return {"success": True, "message": "Reply saved successfully.", "vendor_reply": req.reply}
+
+
+# ══════════════════════════════════════════════════════════════
+# REAL-TIME NOTIFICATIONS
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/notifications")
+async def list_vendor_notifications(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Vendor: Get real-time system and activity notifications."""
+    vendor = get_vendor_for_user(db, current_user)
+    if not vendor:
+        raise HTTPException(404, "Vendor not found.")
+
+    # 1. Fetch persistent notifications stored in DB
+    db_notifs = db.query(VendorNotification).filter(
+        or_(VendorNotification.vendor_id == vendor.id, VendorNotification.user_id == current_user)
+    ).order_by(VendorNotification.created_at.desc()).limit(20).all()
+
+    notif_list = []
+    for n in db_notifs:
+        notif_list.append({
+            "id": f"NOTIF-{n.id}",
+            "title": n.title,
+            "message": n.message,
+            "category": n.notification_type,
+            "type": n.notification_type,
+            "timestamp": n.created_at.strftime("%Y-%m-%d %H:%M") if n.created_at else "Recently",
+            "read": n.is_read,
+            "actionText": "View Details",
+            "actionPath": "/vendor-dashboard/notifications"
+        })
+
+    # 2. Add dynamic notifications generated from live database events
+    # Check pending applications
+    pending_apps = db.query(FarmerApplication).join(BuyingRequirement).filter(
+        BuyingRequirement.vendor_id == vendor.id,
+        FarmerApplication.status == ApplicationStatus.PENDING
+    ).count()
+    if pending_apps > 0:
+        notif_list.append({
+            "id": f"DYN-APP-{vendor.id}",
+            "title": f"{pending_apps} Farmer Offer(s) Pending",
+            "message": f"You have {pending_apps} farmer application(s) awaiting your review or negotiation response.",
+            "category": "procurement",
+            "type": "procurement",
+            "timestamp": "Active Now",
+            "read": False,
+            "actionText": "Review Applications",
+            "actionPath": "/vendor-dashboard/applications"
+        })
+
+    # Check pending orders
+    pending_orders_count = db.query(CustomerOrder).filter(
+        CustomerOrder.vendor_id == vendor.id,
+        CustomerOrder.status == OrderStatus.PENDING
+    ).count()
+    if pending_orders_count > 0:
+        notif_list.append({
+            "id": f"DYN-ORD-{vendor.id}",
+            "title": f"{pending_orders_count} Customer Order(s) Awaiting Packing",
+            "message": f"You have {pending_orders_count} customer order(s) waiting for fulfillment and dispatch.",
+            "category": "orders",
+            "type": "order",
+            "timestamp": "Active Now",
+            "read": False,
+            "actionText": "Fulfill Orders",
+            "actionPath": "/vendor-dashboard/orders"
+        })
+
+    # Check low stock products
+    low_stock_prods = db.query(Product).filter(
+        Product.vendor_id == vendor.id,
+        Product.stock_quantity <= 10,
+        Product.status == ProductStatus.PUBLISHED
+    ).all()
+    for p in low_stock_prods[:3]:
+        notif_list.append({
+            "id": f"DYN-STK-{p.id}",
+            "title": f"Low Stock Alert: {p.name}",
+            "message": f"Only {p.stock_quantity} units remaining in stock. Restock soon to avoid stockout.",
+            "category": "inventory",
+            "type": "inventory",
+            "timestamp": "Needs Attention",
+            "read": False,
+            "actionText": "Update Inventory",
+            "actionPath": "/vendor-dashboard/inventory"
+        })
+
+    return {"success": True, "total": len(notif_list), "notifications": notif_list}
+
 

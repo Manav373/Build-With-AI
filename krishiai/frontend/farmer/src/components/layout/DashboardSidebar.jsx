@@ -69,7 +69,6 @@ export default function DashboardSidebar({ currentPath = '/chat', onAction, onCl
   ];
 
   const toolsItems = [
-    { id: 'vendors', icon: <Store size={18} />, label: 'Vendor Marketplace', path: '/vendors', active: currentPath === '/vendors' },
     { id: 'sell_crops', icon: <Wheat size={18} />, label: 'Sell Produce to Buyers', path: '/sell-crops', active: currentPath === '/sell-crops' },
     { id: 'market_prices', icon: <BarChart2 size={18} />, label: t.marketPrices, path: '/market-prices', active: currentPath === '/market-prices' },
     { id: 'analytics', icon: <LayoutDashboard size={18} />, label: t.analytics, path: '/analytics', active: currentPath === '/analytics' },

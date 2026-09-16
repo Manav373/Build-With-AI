@@ -21,6 +21,7 @@ from api.routes.schemes import router as schemes_router
 from api.routes.community import router as community_router
 from api.routes.auth import router as auth_router
 from api.routes.vendor import router as vendor_router
+from api.routes.admin import router as admin_router
 from app.db.database import engine, Base
 from app.services.gee_service import gee_service
 import app.models.location  # noqa
@@ -28,6 +29,7 @@ import app.models.market    # noqa – registers ORM models
 import app.models.vapi_model # noqa
 import app.models.community_model # noqa
 import app.models.vendor  # noqa – registers vendor ecosystem ORM models
+import app.models.admin_model # noqa – registers admin ecosystem ORM models
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -179,6 +181,9 @@ app.include_router(auth_router)
 
 # Include Vendor Marketplace endpoints
 app.include_router(vendor_router)
+
+# Include Admin Master Command endpoints
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
 
 logger.info("KrishiAI MCP Server starting up...")
 

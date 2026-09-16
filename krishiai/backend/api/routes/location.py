@@ -51,7 +51,7 @@ async def _reverse_geocode(lat: float, lon: float) -> dict:
             f"https://nominatim.openstreetmap.org/reverse"
             f"?lat={lat}&lon={lon}&format=json&addressdetails=1"
         )
-        async with httpx.AsyncClient(timeout=10, headers={"User-Agent": "KrishiAI/1.1"}) as client:
+        async with httpx.AsyncClient(timeout=3.0, headers={"User-Agent": "KrishiAI/1.1"}) as client:
             r = await client.get(url)
             if r.status_code == 200:
                 data = r.json()

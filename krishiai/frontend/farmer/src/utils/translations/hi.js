@@ -227,6 +227,7 @@ export const hi = {
       disease: 'रोग पहचान',
     },
     sidebar: {
+        iot: 'IoT स्मार्ट सिंचाई',
       newChat: 'नई चैट',
       menu: 'मेन्यू',
       home: 'होम',

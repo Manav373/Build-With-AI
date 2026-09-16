@@ -14,33 +14,11 @@ export default function AdminComplaintsPage() {
     setLoading(true);
     try {
       const res = await adminApi.getComplaints();
-      setComplaints(res.data?.complaints || res.data || []);
-    } catch {
-      // Mock complaints fallback
-      setComplaints([
-        {
-          id: 'CMP-401',
-          title: 'Moisture Grade Mismatch in Soybean Tender',
-          raisedBy: 'Ramesh Patel (Farmer)',
-          against: 'AgroMill Foods Ltd (Vendor)',
-          severity: 'High',
-          orderRef: 'ORD-9912',
-          status: 'Under Investigation',
-          description: 'Buyer deducted 8% saying moisture was 14.5%, but laboratory testing slip from APMC Mandi shows 11.8%.',
-          created: '07 Mar 2026',
-        },
-        {
-          id: 'CMP-398',
-          title: 'Delayed Delivery of Drip Irrigation Sprinklers',
-          raisedBy: 'Sunil Jadhav (Farmer)',
-          against: 'Kisan Agro Supplies (Vendor)',
-          severity: 'Medium',
-          orderRef: 'ORD-9880',
-          status: 'Pending Response',
-          description: 'Courier tracking shows stuck at regional hub for 6 days during sowing window.',
-          created: '05 Mar 2026',
-        },
-      ]);
+      const list = res.data?.data?.complaints || res.data?.complaints || res.data || [];
+      setComplaints(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminComplaintsPage] Error fetching complaints:', err);
+      setComplaints([]);
     } finally {
       setLoading(false);
     }

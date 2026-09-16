@@ -5,6 +5,7 @@ export default function CustomCursor() {
   const followerRef = useRef(null);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -21,33 +22,49 @@ export default function CustomCursor() {
   useEffect(() => {
     if (isMobile || !mounted) return;
     
-    let mouseX = 0;
-    let mouseY = 0;
-    let followerX = 0;
-    let followerY = 0;
+    let mouseX = -100;
+    let mouseY = -100;
+    let followerX = -100;
+    let followerY = -100;
+    let isTracking = false;
 
     const onMouseMove = (e) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
+      if (!isTracking) {
+        isTracking = true;
+        setVisible(true);
+        followerX = mouseX;
+        followerY = mouseY;
+      }
       if (cursorRef.current) {
         cursorRef.current.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
       }
     };
 
+    const onMouseLeave = () => {
+      setVisible(false);
+      isTracking = false;
+    };
+
     const animate = () => {
-      followerX += (mouseX - followerX) * 0.12;
-      followerY += (mouseY - followerY) * 0.12;
-      if (followerRef.current) {
-        followerRef.current.style.transform = `translate3d(${followerX}px, ${followerY}px, 0)`;
+      if (isTracking) {
+        followerX += (mouseX - followerX) * 0.15;
+        followerY += (mouseY - followerY) * 0.15;
+        if (followerRef.current) {
+          followerRef.current.style.transform = `translate3d(${followerX}px, ${followerY}px, 0)`;
+        }
       }
       requestAnimationFrame(animate);
     };
 
     window.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseleave', onMouseLeave);
     const animationFrame = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseleave', onMouseLeave);
       cancelAnimationFrame(animationFrame);
     };
   }, [isMobile, mounted]);
@@ -57,58 +74,44 @@ export default function CustomCursor() {
   return (
     <>
       <style>{`
-        @media (min-width: 769px) and (pointer: fine) {
-          * {
-            cursor: none !important;
-          }
-          
-          .custom-cursor-dot, .custom-cursor-follower {
-            display: block !important;
-          }
-        }
-
         .custom-cursor-dot {
-          display: none;
           position: fixed;
           top: 0; left: 0;
-          width: 8px; height: 8px;
+          width: 6px; height: 6px;
           background-color: #4ade80;
           border-radius: 50%;
           pointer-events: none;
           z-index: 999999;
           will-change: transform;
-          margin-left: -4px; margin-top: -4px;
+          margin-left: -3px; margin-top: -3px;
+          transition: opacity 0.2s ease;
         }
 
         .custom-cursor-follower {
-          display: none;
           position: fixed;
           top: 0; left: 0;
-          width: 36px; height: 36px;
+          width: 32px; height: 32px;
           border: 1.5px solid rgba(74, 222, 128, 0.4);
-          background-color: rgba(22, 101, 52, 0.05);
+          background-color: rgba(22, 101, 52, 0.04);
           border-radius: 50%;
           pointer-events: none;
           z-index: 999998;
           will-change: transform;
-          margin-left: -18px; margin-top: -18px;
+          margin-left: -16px; margin-top: -16px;
           backdrop-filter: blur(1px);
-          transition: width 0.25s ease-out, height 0.25s ease-out, background-color 0.2s;
-        }
-        
-        a:hover ~ .custom-cursor-follower,
-        button:hover ~ .custom-cursor-follower,
-        [role="button"]:hover ~ .custom-cursor-follower {
-          width: 54px;
-          height: 54px;
-          background-color: rgba(74, 222, 128, 0.15);
-          border-color: rgba(74, 222, 128, 0.6);
-          margin-left: -27px;
-          margin-top: -27px;
+          transition: opacity 0.25s ease, width 0.25s ease, height 0.25s ease;
         }
       `}</style>
-      <div ref={cursorRef} className="custom-cursor-dot"></div>
-      <div ref={followerRef} className="custom-cursor-follower"></div>
+      <div 
+        ref={cursorRef} 
+        className="custom-cursor-dot" 
+        style={{ opacity: visible ? 1 : 0 }}
+      ></div>
+      <div 
+        ref={followerRef} 
+        className="custom-cursor-follower" 
+        style={{ opacity: visible ? 1 : 0 }}
+      ></div>
     </>
   );
 }

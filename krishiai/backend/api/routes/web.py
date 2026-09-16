@@ -5,6 +5,7 @@ from typing import Optional
 from app.core.web_agent import process_web_query
 from app.services.weather import get_weather_by_coords
 from app.services.disease import analyze_image_bytes
+import asyncio
 import logging
 import base64
 import json
@@ -54,18 +55,29 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
         taluka = payload.get("taluka")
         history = payload.get("history", [])
 
-        # --- STEP 1: Analytics Integrity (Save Raw Location) ---
+        # --- STEP 1: Analytics Integrity (Save Raw Location with fast non-blocking lookup) ---
         if lat and lon:
             try:
-                from api.routes.location import _reverse_geocode
-                loc = await _reverse_geocode(float(lat), float(lon))
-                
-                # Use backend resolved data primarily, fallback to frontend data
-                res_village = loc.get("village") or village
-                res_taluka = loc.get("taluka") or taluka
-                res_district = loc.get("district")
-                res_city = loc.get("city") or city
-                res_state = loc.get("state") or state
+                res_village = village
+                res_taluka = taluka
+                res_district = None
+                res_city = city
+                res_state = state
+                res_pincode = None
+
+                # Only attempt reverse geocode if city or state is missing from frontend
+                if not res_city or res_city == "Unknown" or not res_state:
+                    try:
+                        from api.routes.location import _reverse_geocode
+                        loc = await asyncio.wait_for(_reverse_geocode(float(lat), float(lon)), timeout=2.5)
+                        res_village = loc.get("village") or village
+                        res_taluka = loc.get("taluka") or taluka
+                        res_district = loc.get("district")
+                        res_city = loc.get("city") or city
+                        res_state = loc.get("state") or state
+                        res_pincode = loc.get("pincode")
+                    except Exception:
+                        pass
                 
                 record = FarmerLocation(
                     user_id=user_data.get("sub"),
@@ -75,7 +87,7 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
                     district=res_district,
                     city=res_city or "Manual",
                     state=res_state or "Manual",
-                    pincode=loc.get("pincode"),
+                    pincode=res_pincode,
                     source="chat", timestamp=datetime.utcnow()
                 )
                 db.add(record)
@@ -99,8 +111,12 @@ async def chat_endpoint(payload: dict, db: Session = Depends(get_db), user_data:
 
         logger.info(f"Frontend query from {user_data.get('sub', 'unknown')} (masked len: {len(message)})")
         
-        # Process the masked query
-        ai_reply = await process_web_query(message, history=history)
+        # Process the masked query with safe 45s timeout
+        try:
+            ai_reply = await asyncio.wait_for(process_web_query(message, history=history), timeout=45.0)
+        except asyncio.TimeoutError:
+            logger.warning("Web query exceeded 45s threshold, providing fallback advisory")
+            ai_reply = "🌱 **KrishiAI Advisor Notice**:\n\nOur agricultural models took slightly longer than expected to analyze satellite and market feeds. Here is immediate guidance for your query:\n\n- Ensure proper field drainage and soil moisture.\n- Monitor for early signs of pests or nutritional deficiencies.\n\nPlease feel free to ask a specific follow-up question (e.g. crop pricing, weather forecast, or fertilizer dosage)!"
         
         # --- STEP 3: Detokenize Reply (Restore Context) ---
         final_reply = pii_service.unmask(ai_reply, token_map)

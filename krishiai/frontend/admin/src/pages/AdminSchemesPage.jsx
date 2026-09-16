@@ -19,38 +19,11 @@ export default function AdminSchemesPage() {
     setLoading(true);
     try {
       const res = await adminApi.getSchemes();
-      setSchemes(res.data?.schemes || res.data || []);
-    } catch {
-      // Mock schemes
-      setSchemes([
-        {
-          id: 'SCH-01',
-          name: 'PM Kisan Samman Nidhi Yojana',
-          department: 'Ministry of Agriculture & Farmers Welfare',
-          subsidyPercent: '100% Direct Transfer',
-          beneficiaries: '11.8 Crore Farmers',
-          deadline: 'Ongoing FY 2026-27',
-          status: 'Active',
-        },
-        {
-          id: 'SCH-02',
-          name: 'Pradhan Mantri Krishi Sinchayee Yojana (PMKSY)',
-          department: 'Department of Water Resources',
-          subsidyPercent: '55% subsidy on Drip & Sprinkler',
-          beneficiaries: 'Small & Marginal Farmers',
-          deadline: '31 March 2026',
-          status: 'Active',
-        },
-        {
-          id: 'SCH-03',
-          name: 'Paramparagat Krishi Vikas Yojana (PKVY)',
-          department: 'Organic Farming Promotion Board',
-          subsidyPercent: '₹50,000 / hectare over 3 yrs',
-          beneficiaries: 'Organic Farmer Clusters',
-          deadline: '30 June 2026',
-          status: 'Active',
-        },
-      ]);
+      const list = res.data?.data?.schemes || res.data?.schemes || res.data || [];
+      setSchemes(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminSchemesPage] Error fetching schemes:', err);
+      setSchemes([]);
     } finally {
       setLoading(false);
     }
@@ -96,6 +69,12 @@ export default function AdminSchemesPage() {
       {loading ? (
         <div className="flex justify-center p-12">
           <Loader text="Loading agricultural schemes..." />
+        </div>
+      ) : schemes.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl bg-[#0a1a0d]/60 border border-emerald-500/15">
+          <FileSpreadsheet className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-white">No Schemes Configured</h3>
+          <p className="text-xs text-emerald-200/60 mt-1">Publish new subsidy programs to make them active across the ecosystem.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

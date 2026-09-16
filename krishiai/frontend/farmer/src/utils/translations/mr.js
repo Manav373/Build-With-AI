@@ -181,6 +181,7 @@ export const mr = {
       disease: 'रोग ओळख',
     },
     sidebar: {
+        iot: 'IoT स्मार्ट सिंचन',
       newChat: 'नवीन चॅट',
       menu: 'मेनू',
       home: 'होम',

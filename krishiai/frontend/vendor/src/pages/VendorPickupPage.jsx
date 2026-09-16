@@ -12,69 +12,56 @@ export default function VendorPickupPage() {
   const [showModal, setShowModal] = useState(false);
   const [successToast, setSuccessToast] = useState('');
 
-  // Sample realistic B2B Agri Pickup Data
-  const [pickups, setPickups] = useState([
-    {
-      id: 'PKP-1091',
-      farmerName: 'Dnyaneshwar Patil',
-      farmerPhone: '+91 98224 81920',
-      crop: 'Organic Soya Bean',
-      quantity: '45 MT (900 Bags)',
-      location: 'Village APMC Yard, Baramati, Pune',
-      pickupDate: '2026-08-19',
-      pickupTime: '08:30 AM',
-      vehicleNo: 'MH-12-VT-8819 (10-Wheeler Truck)',
-      driverName: 'Eknath Shinde',
-      driverPhone: '+91 94231 99011',
-      status: 'scheduled', // 'scheduled', 'en_route', 'completed', 'rescheduled'
-      notes: 'Moisture content certified below 10%. Gate pass issued.',
-    },
-    {
-      id: 'PKP-1092',
-      farmerName: 'Suresh More',
-      farmerPhone: '+91 94220 11984',
-      crop: 'Lokwan Wheat Grade-A',
-      quantity: '30 MT (600 Bags)',
-      location: 'Farm-Gate Gate #2, Shirur, Pune',
-      pickupDate: '2026-08-18',
-      pickupTime: '02:00 PM',
-      vehicleNo: 'MH-14-BT-4012 (Eicher 17ft)',
-      driverName: 'Vikas Kadam',
-      driverPhone: '+91 98902 33411',
-      status: 'en_route',
-      notes: 'Truck dispatched from Central Cold Storage Bay #2.',
-    },
-    {
-      id: 'PKP-1093',
-      farmerName: 'Balasaheb Deshmukh',
-      farmerPhone: '+91 97654 32109',
-      crop: 'Desi Chana (Bengal Gram)',
-      quantity: '60 MT (1200 Bags)',
-      location: 'Karkhana Road, Sangli, Maharashtra',
-      pickupDate: '2026-08-17',
-      pickupTime: '10:00 AM',
-      vehicleNo: 'MH-09-CV-1102 (Multi-Axle)',
-      driverName: 'Ramesh Thorat',
-      driverPhone: '+91 91580 44820',
-      status: 'completed',
-      notes: 'Weighed & unloaded at Hadapsar Silo 4. QC passed 99.2%.',
-    },
-    {
-      id: 'PKP-1094',
-      farmerName: 'Anandrao Gaikwad',
-      farmerPhone: '+91 98230 44512',
-      crop: 'Nashik Red Onion Grade-1',
-      quantity: '25 MT (500 Crates)',
-      location: 'Lasalgaon Mandi Yard, Nashik',
-      pickupDate: '2026-08-20',
-      pickupTime: '06:00 AM',
-      vehicleNo: 'MH-15-ET-9021 (Eicher 14ft)',
-      driverName: 'Pravin Jadhav',
-      driverPhone: '+91 99221 88402',
-      status: 'scheduled',
-      notes: 'Requires ventilated tarpaulin cover.',
-    },
-  ]);
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
+
+  const [pickups, setPickups] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vendor_scheduled_pickups');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vendor_scheduled_pickups', JSON.stringify(pickups));
+    } catch (e) { }
+  }, [pickups]);
+
+  useEffect(() => {
+    // Also check backend shipments if local list is empty
+    const fetchShipments = async () => {
+      try {
+        const res = await fetch(`${API_BASE}api/vendor/logistics/shipments`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.shipments && json.shipments.length > 0) {
+            const mapped = json.shipments.map(s => ({
+              id: s.shipment_code || `SHP-${s.id}`,
+              farmerName: s.driver_name || 'Farmer Collective',
+              farmerPhone: s.driver_phone || 'N/A',
+              crop: 'Agricultural Produce',
+              quantity: '40 MT',
+              location: s.pickup_address || 'Village Farm-Gate',
+              pickupDate: s.created_at ? s.created_at.substring(0, 10) : new Date().toISOString().substring(0, 10),
+              pickupTime: '10:00 AM',
+              vehicleNo: s.vehicle_number || 'MH-12-TRUCK',
+              driverName: s.driver_name || 'Assigned Driver',
+              driverPhone: s.driver_phone || 'N/A',
+              status: s.status === 'in_transit' ? 'en_route' : s.status || 'scheduled',
+              notes: `e-Way Bill: ${s.eway_bill_number || 'Generated'}`,
+            }));
+            setPickups(prev => prev.length > 0 ? prev : mapped);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to sync live shipments:', e);
+      }
+    };
+    fetchShipments();
+  }, []);
 
   // Form State for New Pickup
   const [formData, setFormData] = useState({

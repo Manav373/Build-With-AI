@@ -13,6 +13,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'));
 const TermsPage = lazy(() => import('./pages/TermsPage.jsx'));
 const SignInPage = lazy(() => import('./pages/SignInPage.jsx'));
 const SignUpPage = lazy(() => import('./pages/SignUpPage.jsx'));
+const DomainRestrictedPage = lazy(() => import('./pages/DomainRestrictedPage.jsx'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-[#0a0f0d]">
@@ -41,31 +42,6 @@ function ProtectedRoute({ children }) {
   );
 }
 
-// Cross-Domain Configuration
-const VENDOR_APP_URL = import.meta.env.VITE_VENDOR_URL || 'http://localhost:5174';
-const ADMIN_APP_URL = import.meta.env.VITE_ADMIN_URL || 'http://localhost:5175';
-
-// Cross-Domain Redirector Component
-function DomainRedirect({ to, domainName }) {
-  React.useEffect(() => {
-    window.location.replace(to);
-  }, [to]);
-
-  return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0a0f0d] text-white p-6 text-center z-50">
-      <div className="relative w-16 h-16 flex items-center justify-center mb-4">
-        <div className="absolute inset-0 border-2 border-transparent border-t-[#4ade80] rounded-full animate-spin"></div>
-        <span className="text-2xl">{domainName === 'Vendor' ? '🏪' : '🛡️'}</span>
-      </div>
-      <h2 className="text-lg font-bold text-slate-100 mb-2">Redirecting to {domainName} Domain...</h2>
-      <p className="text-slate-400 text-sm max-w-md">
-        This feature belongs to the dedicated {domainName} Portal. Redirecting to{' '}
-        <a href={to} className="text-emerald-400 underline font-medium break-all">{to}</a>
-      </p>
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -78,22 +54,22 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
 
-          {/* Cross-Domain Redirects: Vendor Domain (Port 5174) */}
-          <Route path="/vendor-dashboard/*" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-dashboard`} domainName="Vendor" />} />
-          <Route path="/vendor-dashboard" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-dashboard`} domainName="Vendor" />} />
-          <Route path="/vendor-onboarding" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-onboarding`} domainName="Vendor" />} />
-          <Route path="/vendor-type-select" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-type-select`} domainName="Vendor" />} />
-          <Route path="/vendor-sign-up/*" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-sign-up`} domainName="Vendor" />} />
-          <Route path="/vendor-sign-in/*" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-sign-in`} domainName="Vendor" />} />
-          <Route path="/vendor-sign-in" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendor-sign-in`} domainName="Vendor" />} />
-          <Route path="/vendors" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendors`} domainName="Vendor" />} />
-          <Route path="/vendor/:vendorId" element={<DomainRedirect to={`${VENDOR_APP_URL}/vendors`} domainName="Vendor" />} />
-          <Route path="/vendor/*" element={<DomainRedirect to={`${VENDOR_APP_URL}`} domainName="Vendor" />} />
-          <Route path="/vendor" element={<DomainRedirect to={`${VENDOR_APP_URL}`} domainName="Vendor" />} />
+          {/* Domain Isolation: Restrict Vendor Domain access from Farmer Portal */}
+          <Route path="/vendor-dashboard/*" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor-dashboard" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor-onboarding" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor-type-select" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor-sign-up/*" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor-sign-in/*" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor-sign-in" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendors" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor/:vendorId" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor/*" element={<DomainRestrictedPage targetDomain="Vendor" />} />
+          <Route path="/vendor" element={<DomainRestrictedPage targetDomain="Vendor" />} />
 
-          {/* Cross-Domain Redirects: Admin Domain (Port 5175) */}
-          <Route path="/admin/*" element={<DomainRedirect to={`${ADMIN_APP_URL}/admin/dashboard`} domainName="Admin" />} />
-          <Route path="/admin" element={<DomainRedirect to={`${ADMIN_APP_URL}/admin/dashboard`} domainName="Admin" />} />
+          {/* Domain Isolation: Restrict Admin Domain access from Farmer Portal */}
+          <Route path="/admin/*" element={<DomainRestrictedPage targetDomain="Admin" />} />
+          <Route path="/admin" element={<DomainRestrictedPage targetDomain="Admin" />} />
 
           {/* Auth Routes */}
           <Route path="/sign-in/*" element={isClerkEnabled ? <SignInPage /> : <Navigate to="/" />} />

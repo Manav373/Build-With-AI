@@ -15,8 +15,10 @@ const VoiceAssistantPage = lazy(() => import('../pages/VoiceAssistantPage.jsx'))
 const CallHistoryPage = lazy(() => import('../pages/CallHistoryPage.jsx'));
 const CommunityPage = lazy(() => import('../pages/CommunityPage.jsx'));
 const WhatsAppPage = lazy(() => import('../pages/WhatsAppPage.jsx'));
+const FarmerIotPage = lazy(() => import('../pages/FarmerIotPage.jsx'));
 
 export const FarmerAppRoutes = [
+  <Route key="iot" path="/iot" element={<FarmerIotPage />} />,
   <Route key="chat" path="/chat" element={<ChatPage />} />,
   <Route key="analytics" path="/analytics" element={<FarmerAnalytics />} />,
   <Route key="heatmap" path="/heatmap" element={<FarmerHeatmap />} />,

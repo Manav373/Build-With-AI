@@ -259,6 +259,7 @@ export const en = {
       disease: 'Disease',
     },
     sidebar: {
+        iot: 'IoT Smart Irrigation',
       newChat: 'New Chat',
       menu: 'Menu',
       home: 'Home',

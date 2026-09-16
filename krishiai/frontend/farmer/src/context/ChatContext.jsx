@@ -302,10 +302,13 @@ export const ChatProvider = ({ children }) => {
       addMessage(targetChatId, botMsg);
     } catch (err) {
       console.error('Chat error:', err);
+      const isTimeout = err?.code === 'ECONNABORTED' || err?.message?.toLowerCase().includes('timeout');
       const errorMsg = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
-        text: 'Network error. Please try again.',
+        text: isTimeout
+          ? '⏳ KrishiAI is taking a bit longer to query live satellite and market data. Please tap send again or refine your crop query.'
+          : 'Network error. Please check your internet connection and try again.',
         timestamp: Date.now(),
         isError: true
       };

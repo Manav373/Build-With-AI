@@ -10,9 +10,10 @@ import math
 
 from app.utils.ai_utils import fetch_structured_agri_data, clean_input
 
-async def fetch_gov_market_data(filters: dict = None, limit: int = 10, timeout: int = 10):
+async def fetch_gov_market_data(filters: dict = None, limit: int = 10, timeout: float = 2.5):
     """
     Helper function to cleanly fetch data from Data.gov.in using httpx.
+    Keeps timeout short (2.5s) so the user never experiences chat latency spikes.
     """
     api_key = os.getenv("DATA_GOV_API_KEY", "579b464db66ec23bdd0000012ede14ca626f41655742e80838da42da")
     resource_id = "9ef84268-d588-465a-a308-a864a43d0070"
@@ -326,19 +327,20 @@ async def get_market_price(crop: str, location: str) -> dict:
     crop = clean_input(crop)
     location = clean_input(location)
     
-    # Try exact district, then cleaned sub-parts (e.g. "Mhow", "Indore")
-    candidates = [location]
+    # Try best cleaned candidate (district or city)
+    best_candidate = location
     if "," in location:
-        for p in location.split(","):
-            p_clean = p.replace("Tahsil", "").replace("Tehsil", "").replace("District", "").replace("Taluka", "").strip()
-            if p_clean and p_clean not in candidates:
-                candidates.append(p_clean)
+        parts = [p.replace("Tahsil", "").replace("Tehsil", "").replace("District", "").replace("Taluka", "").strip() for p in location.split(",")]
+        # Pick the most specific clean candidate (usually second or last part like district/city)
+        clean_parts = [p for p in parts if p and len(p) > 2]
+        if len(clean_parts) >= 2:
+            best_candidate = clean_parts[-2]  # typically district
+        elif clean_parts:
+            best_candidate = clean_parts[0]
 
     records = []
-    for loc_cand in candidates:
-        records = await fetch_gov_market_data({"commodity": crop, "district": loc_cand}, limit=1)
-        if records:
-            break
+    if best_candidate:
+        records = await fetch_gov_market_data({"commodity": crop, "district": best_candidate}, limit=1, timeout=2.0)
 
     if not records:
         # Try dynamic Groq AI price estimation fallback first

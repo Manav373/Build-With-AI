@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutDashboard, Map, TrendingUp, Sparkles, HelpCircle, Settings, Plus, MessageSquare, Trash2, Edit2, Check, Home, BarChart2, Satellite, Phone, Mic, Users, Globe, ChevronDown, Sun, Moon, ShoppingBag, Store, Wheat } from 'lucide-react';
+import { LayoutDashboard, Cpu, Map, TrendingUp, Sparkles, HelpCircle, Settings, Plus, MessageSquare, Trash2, Edit2, Check, Home, BarChart2, Satellite, Phone, Mic, Users, Globe, ChevronDown, Sun, Moon, ShoppingBag, Store, Wheat } from 'lucide-react';
 import { LANGUAGES } from '../utils/translations/index';
 import { UserButton, useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
@@ -62,6 +62,7 @@ export default function DashboardSidebar({ currentPath = '/chat', onAction, onCl
   ];
 
   const intelligenceItems = [
+    { id: 'iot', icon: <Cpu size={18} />, label: t.iot || 'IoT Smart Irrigation', path: '/iot', active: currentPath === '/iot' },
     { id: 'predict', icon: <TrendingUp size={18} />, label: translations[language].chat.intelligence.predict.title, path: '/predict', active: currentPath === '/predict' },
     { id: 'recommend', icon: <Sparkles size={18} />, label: translations[language].chat.intelligence.recommend.title, path: '/recommend', active: currentPath === '/recommend' },
     { id: 'satellite', icon: <Satellite size={18} />, label: translations[language].chat.intelligence.satellite.title, path: '/satellite', active: currentPath === '/satellite' },

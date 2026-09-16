@@ -12,87 +12,60 @@ export default function VendorNotificationsPage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
 
-  // Pre-populated realistic agricultural vendor notifications
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'NOTIF-101',
-      title: 'New Customer Order Received',
-      message: 'Ramesh Pawar placed Order #ORD-903 for 5 packets of Hybrid Cotton Seed (Total: ₹2,250).',
-      category: 'orders',
-      type: 'order',
-      timestamp: '10 minutes ago',
-      read: false,
-      actionText: 'Fulfill Order',
-      actionPath: '/vendor-dashboard/orders',
-      badgeColor: '#60a5fa',
-      icon: ShoppingCart,
-    },
-    {
-      id: 'NOTIF-102',
-      title: 'Farmer Bid Submitted',
-      message: 'Farmer Dnyaneshwar Patil submitted an offer of 40 MT Organic Soya Bean @ ₹2,400/quintal for requirement #REQ-1001.',
-      category: 'procurement',
-      type: 'procurement',
-      timestamp: '45 minutes ago',
-      read: false,
-      actionText: 'View Applications',
-      actionPath: '/vendor-dashboard/requirements',
-      badgeColor: '#f59e0b',
-      icon: ClipboardList,
-    },
-    {
-      id: 'NOTIF-103',
-      title: 'Farm-Gate Truck Dispatched',
-      message: 'Driver Eknath Shinde (MH-12-VT-8819) has started pickup route to Baramati APMC Yard.',
-      category: 'logistics',
-      type: 'logistics',
-      timestamp: '2 hours ago',
-      read: false,
-      actionText: 'Track Pickup',
-      actionPath: '/vendor-dashboard/pickup',
-      badgeColor: '#a78bfa',
-      icon: Truck,
-    },
-    {
-      id: 'NOTIF-104',
-      title: 'Bank Payout Credited',
-      message: 'Weekly vendor settlement payout of ₹45,800 credited to HDFC Bank A/c ending 8901 (Ref: TXN-908129).',
-      category: 'payments',
-      type: 'payment',
-      timestamp: '5 hours ago',
-      read: true,
-      actionText: 'View Payouts',
-      actionPath: '/vendor-dashboard/analytics',
-      badgeColor: '#4ade80',
-      icon: CreditCard,
-    },
-    {
-      id: 'NOTIF-105',
-      title: 'Low Stock Warning',
-      message: 'Organic Bio-Fertilizer 50kg is running low (only 3 units left in Hadapsar Cold Storage).',
-      category: 'inventory',
-      type: 'warning',
-      timestamp: '1 day ago',
-      read: true,
-      actionText: 'Update Stock',
-      actionPath: '/vendor-dashboard/inventory',
-      badgeColor: '#ef4444',
-      icon: AlertTriangle,
-    },
-    {
-      id: 'NOTIF-106',
-      title: 'KYC & GST Profile Verified',
-      message: 'Your vendor compliance documents & APMC trading license have been verified by KrishiAI Admin.',
-      category: 'system',
-      type: 'system',
-      timestamp: '2 days ago',
-      read: true,
-      actionText: 'View Profile',
-      actionPath: '/vendor-dashboard/company-profile',
-      badgeColor: '#34d399',
-      icon: ShieldCheck,
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const rawApi = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+  const API_BASE = (rawApi.startsWith('http') ? rawApi : `https://${rawApi}`).replace(/\/+$/, '') + '/';
+
+  const getCategoryIcon = (cat) => {
+    switch (cat) {
+      case 'orders': return ShoppingCart;
+      case 'procurement': return ClipboardList;
+      case 'logistics': return Truck;
+      case 'payments': return CreditCard;
+      case 'inventory': return AlertTriangle;
+      default: return Bell;
+    }
+  };
+
+  const getBadgeColor = (cat) => {
+    switch (cat) {
+      case 'orders': return '#60a5fa';
+      case 'procurement': return '#f59e0b';
+      case 'logistics': return '#a78bfa';
+      case 'payments': return '#4ade80';
+      case 'inventory': return '#ef4444';
+      default: return '#34d399';
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}api/vendor/notifications`);
+      if (res.ok) {
+        const json = await res.json();
+        const mapped = (json.notifications || []).map(n => ({
+          ...n,
+          icon: getCategoryIcon(n.category),
+          badgeColor: getBadgeColor(n.category)
+        }));
+        setNotifications(mapped);
+      } else {
+        setNotifications([]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch notifications:', e);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleReadStatus = (id) => {
     setNotifications(prev =>

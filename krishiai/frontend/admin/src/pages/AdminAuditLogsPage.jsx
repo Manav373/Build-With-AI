@@ -11,47 +11,11 @@ export default function AdminAuditLogsPage() {
     setLoading(true);
     try {
       const res = await adminApi.getAuditLogs();
-      setLogs(res.data?.logs || res.data || []);
-    } catch {
-      // Mock audit logs
-      setLogs([
-        {
-          id: 'LOG-891',
-          action: 'VENDOR_KYC_APPROVED',
-          actor: 'priya.sharma@krishiai.gov',
-          target: 'Kisan Agro Kendra (vnd_01)',
-          ip: '103.21.244.18',
-          status: 'SUCCESS',
-          timestamp: '2026-03-08 12:45:22 UTC',
-        },
-        {
-          id: 'LOG-890',
-          action: 'ESCROW_PAYOUT_RELEASED',
-          actor: 'SYSTEM_AUTOPAY',
-          target: 'Order #ORD-9918 (₹34,800)',
-          ip: '127.0.0.1',
-          status: 'SUCCESS',
-          timestamp: '2026-03-08 11:20:10 UTC',
-        },
-        {
-          id: 'LOG-889',
-          action: 'USER_SUSPENDED',
-          actor: 'admin@krishiai.gov',
-          target: 'GreenEarth Fertilizers (usr_4)',
-          ip: '103.21.244.18',
-          status: 'SUCCESS',
-          timestamp: '2026-03-07 16:15:00 UTC',
-        },
-        {
-          id: 'LOG-888',
-          action: 'SATELLITE_TILES_CACHE_PURGE',
-          actor: 'cron.worker',
-          target: 'GEE Tile Layer NDRE/NDWI',
-          ip: '10.0.4.12',
-          status: 'SUCCESS',
-          timestamp: '2026-03-07 00:00:00 UTC',
-        },
-      ]);
+      const list = res.data?.data?.logs || res.data?.logs || res.data || [];
+      setLogs(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('[AdminAuditLogsPage] Error fetching audit logs:', err);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -102,7 +66,14 @@ export default function AdminAuditLogsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-500/10">
-                {logs.map((log) => (
+                {logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-emerald-200/50 font-sans text-xs">
+                      No security audit records logged yet.
+                    </td>
+                  </tr>
+                ) : (
+                  logs.map((log) => (
                   <tr key={log.id} className="hover:bg-[#07190c]/60 transition-colors">
                     <td className="py-3 px-4 font-bold text-emerald-400">{log.id}</td>
                     <td className="py-3 px-4">
@@ -115,7 +86,7 @@ export default function AdminAuditLogsPage() {
                     <td className="py-3 px-4 text-emerald-200/60">{log.ip}</td>
                     <td className="py-3 px-4 text-emerald-200/60">{log.timestamp}</td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
