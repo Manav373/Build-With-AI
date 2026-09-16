@@ -106,6 +106,7 @@ default_origins = [
     "http://127.0.0.1:8081",
     "https://krishiai-bot.vercel.app",
     "https://krishiai.vercel.app",
+    "https://krishiai-backend-21jz.onrender.com",
     "https://dashboard.vapi.ai",
     "https://vapi.ai",
     "https://krishiai-frontend-118806637740.us-central1.run.app"
@@ -118,7 +119,7 @@ for origin in default_origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.vercel\.app|https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -140,7 +141,7 @@ async def add_security_and_ngrok_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://clerk.needed-mastodon-98.accounts.dev; "
-        "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 http://127.0.0.1:8000 https://clerk.needed-mastodon-98.accounts.dev https://nominatim.openstreetmap.org; "
+        "connect-src 'self' http://localhost:5173 http://127.0.0.1:5173 http://localhost:8000 http://127.0.0.1:8000 https://krishiai-backend-21jz.onrender.com https://*.onrender.com https://*.vercel.app https://clerk.needed-mastodon-98.accounts.dev https://nominatim.openstreetmap.org; "
         "img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com;"
