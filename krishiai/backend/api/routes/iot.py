@@ -26,8 +26,8 @@ device_store: Dict[str, Any] = {
             "autoMaxDurationMinutes": 15,
             "manualMaxDurationMinutes": 30,
             "rainInterlock": True,
-            "soilDryAdc": 3200,
-            "soilWetAdc": 1400
+            "soilDryAdc": 2300,
+            "soilWetAdc": 1200
         }
     }
 }

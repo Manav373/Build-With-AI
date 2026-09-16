@@ -46,8 +46,8 @@ export const INITIAL_DEVICE = {
     autoMaxDurationMinutes: 15,
     manualMaxDurationMinutes: 30,
     rainInterlock: true,
-    soilDryAdc: 3200,
-    soilWetAdc: 1400
+    soilDryAdc: 2300,
+    soilWetAdc: 1200
   }
 };
 
@@ -245,12 +245,22 @@ export function parseFirebasePayload(incoming) {
         ? Number(incoming.soilMoisture) 
         : (incoming.moisture !== undefined ? Number(incoming.moisture) : undefined));
 
-  // If moisture is not provided in payload, derive from raw ADC:
-  if (soilMoisture === undefined && soilRaw !== undefined && soilRaw > 0) {
-    const dryLimit = 3200;
-    const wetLimit = 1500;
-    const calibrated = Math.round(((dryLimit - soilRaw) / (dryLimit - wetLimit)) * 100);
-    soilMoisture = Math.max(0, Math.min(100, calibrated));
+  // Calibrate moisture from raw ADC if available:
+  // Capacitive Soil Moisture Sensor v1.2 on ESP32 (3.3V logic):
+  // Dry Air / Dry Soil = ~2300 ADC (0-10% moisture, CRITICAL DRY)
+  // Wet Soil / Water = ~1200 ADC (100% moisture)
+  if (soilRaw !== undefined && soilRaw > 0) {
+    const dryLimit = 2300;
+    const wetLimit = 1200;
+    if (soilRaw >= dryLimit) {
+      soilMoisture = 0;
+    } else if (soilRaw <= wetLimit) {
+      soilMoisture = 100;
+    } else {
+      soilMoisture = Math.round(((dryLimit - soilRaw) / (dryLimit - wetLimit)) * 100);
+    }
+  } else if (soilMoisture !== undefined) {
+    soilMoisture = Math.round(soilMoisture);
   }
 
   const result = {};

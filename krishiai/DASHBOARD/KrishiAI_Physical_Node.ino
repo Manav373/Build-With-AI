@@ -39,9 +39,11 @@ FirebaseConfig config;
 #define LCD_ADDRESS 0x27
 
 // ================= SETTINGS =================
-
-#define DRY_VALUE 3200
-#define WET_VALUE 1500
+// Calibration for Capacitive Soil Moisture Sensor V1.2 on ESP32 (3.3V logic)
+// In Dry Air: ~2250 - 2350 ADC (0% Moisture, CRITICAL DRY)
+// In Wet Soil / Water: ~1100 - 1300 ADC (100% Moisture, SATURATED)
+#define DRY_VALUE 2300
+#define WET_VALUE 1200
 
 #define MOTOR_ON_PERCENT 65
 #define MOTOR_OFF_PERCENT 47
@@ -118,17 +120,17 @@ void motorOFF() {
 // ================= SOIL =================
 
 float calculateMoisture(int raw) {
+  if (raw >= DRY_VALUE)
+    return 0.0;
+
+  if (raw <= WET_VALUE)
+    return 100.0;
+
   float moisture =
     ((float)(DRY_VALUE - raw) * 100.0) /
     ((float)(DRY_VALUE - WET_VALUE));
 
-  if (moisture < 0)
-    moisture = 0;
-
-  if (moisture > 100)
-    moisture = 100;
-
-  return moisture;
+  return round(moisture);
 }
 
 // ================= SENSORS =================

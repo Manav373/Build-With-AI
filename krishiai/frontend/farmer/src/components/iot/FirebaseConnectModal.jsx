@@ -109,7 +109,7 @@ void setup() {
 
 void loop() {
   int soilRaw = analogRead(SOIL_PIN);
-  int moisture = map(soilRaw, 3200, 1400, 0, 100);
+  int moisture = map(soilRaw, 2300, 1200, 0, 100);
   moisture = constrain(moisture, 0, 100);
   float temp = dht.readTemperature();
   float hum = dht.readHumidity();

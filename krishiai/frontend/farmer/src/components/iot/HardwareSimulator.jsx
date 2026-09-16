@@ -31,8 +31,8 @@ export default function HardwareSimulator({
   const isOnline = device?.status === 'online';
 
   // Calculate simulated raw ADC from percent
-  const dryAdc = device?.settings?.soilDryAdc || 3200;
-  const wetAdc = device?.settings?.soilWetAdc || 1400;
+  const dryAdc = device?.settings?.soilDryAdc || 2300;
+  const wetAdc = device?.settings?.soilWetAdc || 1200;
   const calculatedAdc = Math.round(dryAdc - ((dryAdc - wetAdc) * (moisture / 100)));
 
   // Presets
@@ -41,8 +41,8 @@ export default function HardwareSimulator({
       case 'DRY':
         onUpdateTelemetry({
           ...telemetry,
-          soilMoisture: 18,
-          soilRaw: 2876,
+          soilMoisture: 10,
+          soilRaw: 2200,
           rain: false,
           temperature: 32.5,
           humidity: 42
@@ -60,7 +60,7 @@ export default function HardwareSimulator({
         onUpdateTelemetry({
           ...telemetry,
           soilMoisture: 55,
-          soilRaw: 2210,
+          soilRaw: 1695,
           rain: false,
           temperature: 27.5,
           humidity: 62
@@ -70,7 +70,7 @@ export default function HardwareSimulator({
         onUpdateTelemetry({
           ...telemetry,
           soilMoisture: 85,
-          soilRaw: 1670,
+          soilRaw: 1365,
           rain: false,
           humidity: 78
         });

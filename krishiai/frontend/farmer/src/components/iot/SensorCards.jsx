@@ -16,7 +16,7 @@ import {
 
 export default function SensorCards({ telemetry, device, onOpenPumpModal, onStartPump, onEmergencyStop }) {
   const isOffline = device?.status === 'offline' || (!telemetry?.timestamp && telemetry?.soilMoisture === 0 && telemetry?.temperature === 0);
-  const moisture = telemetry?.soilMoisture ?? 0;
+  const moisture = typeof telemetry?.soilMoisture === 'number' ? Math.round(telemetry.soilMoisture) : (telemetry?.soilMoisture ?? 0);
   const rawAdc = telemetry?.soilRaw ?? 0;
   const tempC = telemetry?.temperature ?? 0;
   const tempF = tempC > 0 ? Number(((tempC * 9) / 5 + 32).toFixed(1)) : 0;
@@ -95,9 +95,9 @@ export default function SensorCards({ telemetry, device, onOpenPumpModal, onStar
         </div>
 
         <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Dry Air: ~4000</span>
+          <span>Dry Air: ~2300</span>
           <span>Target: 65%</span>
-          <span>Wet Soil: ~1400</span>
+          <span>Wet Soil: ~1200</span>
         </div>
       </div>
 
