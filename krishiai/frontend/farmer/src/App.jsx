@@ -28,6 +28,9 @@ const VoiceAssistantPage = lazy(() => import('./pages/VoiceAssistantPage.jsx'));
 const CallHistoryPage = lazy(() => import('./pages/CallHistoryPage.jsx'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage.jsx'));
 const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage.jsx'));
+const IoTPage = lazy(() => import('./pages/IoTPage.jsx'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'));
+const HelpPage = lazy(() => import('./pages/HelpPage.jsx'));
 
 const PageLoader = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center z-50 bg-[#0a0f0d]">
@@ -130,6 +133,9 @@ export default function App() {
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/call-history" element={<CallHistoryPage />} />
             <Route path="/voice-assistant" element={<VoiceAssistantPage />} />
+            <Route path="/iot" element={<IoTPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/help" element={<HelpPage />} />
           </Route>
 
           {/* Root fallbacks */}

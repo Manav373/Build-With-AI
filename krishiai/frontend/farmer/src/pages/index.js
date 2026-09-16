@@ -19,3 +19,4 @@ export { default as HelpPage } from './HelpPage';
 export { default as SettingsPage } from './SettingsPage';
 export { default as PrivacyPage } from './PrivacyPage';
 export { default as TermsPage } from './TermsPage';
+export { default as IoTPage } from './IoTPage';
