@@ -68,6 +68,14 @@ export function evaluateDecision(telemetry, device = INITIAL_DEVICE, cropConfig 
   const cropDef = CROP_PROFILES[cropId] || CROP_PROFILES.wheat;
   const currentStage = cropDef.stages.find(s => s.id === activeCropConfig.stageId) || cropDef.stages[0];
 
+  // Dynamic Crop Thresholds
+  const critical = cropDef.criticalMoisture;
+  const target = cropDef.targetMoisture;
+
+  // Multi-day rain history check
+  const rainHistory = checkRecentRain(2);
+  const yesterdayRained = rainHistory.yesterdayRained;
+
   const isOffline = device?.status === 'offline' || (!telemetry?.timestamp && telemetry?.soilMoisture === 0 && telemetry?.temperature === 0);
   if (isOffline) {
     return {
@@ -109,14 +117,6 @@ export function evaluateDecision(telemetry, device = INITIAL_DEVICE, cropConfig 
   const temp = telemetry?.temperature ?? 0;
   const humidity = telemetry?.humidity ?? 0;
   const pump = Boolean(telemetry?.pump);
-
-  // Dynamic Crop Thresholds
-  const critical = cropDef.criticalMoisture;
-  const target = cropDef.targetMoisture;
-
-  // Multi-day rain history check
-  const rainHistory = checkRecentRain(2);
-  const yesterdayRained = rainHistory.yesterdayRained;
 
   // 1. SENSE
   const sense = `Crop: ${cropDef.name} (${currentStage.name}) | Moisture: ${moisture}%, Rain: ${rain ? 'ACTIVE PRECIPITATION' : yesterdayRained ? 'Rain Recorded Yesterday (' + rainHistory.totalRainMm + 'mm)' : 'Dry'} | Sky: ${light ? 'Daylight' : 'Night'}`;
