@@ -28,9 +28,8 @@ function Root() {
     <div className="relative w-full h-full min-h-screen bg-[#050e07]">
       {appMounted && (
         <div
-          className={`transition-opacity duration-700 ease-in-out ${
-            loading ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}
+          className={`transition-opacity duration-700 ease-in-out ${loading ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
         >
           {PUBLISHABLE_KEY && PUBLISHABLE_KEY !== 'pk_test_placeholder_key' ? (
             <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/vendor-sign-in">
