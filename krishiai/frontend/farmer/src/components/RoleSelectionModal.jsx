@@ -330,17 +330,6 @@ export default function RoleSelectionModal({ isOpen, onClose }) {
                 <p
                   style={{
                     textAlign: 'center',
-                    color: 'rgba(134,239,172,0.3)',
-                    fontSize: '0.75rem',
-                    marginTop: '1.1rem',
-                    marginBottom: 0,
-                    position: 'relative',
-                    zIndex: 1,
-                  }}
-                >
-                <p
-                  style={{
-                    textAlign: 'center',
                     color: 'rgba(134,239,172,0.5)',
                     fontSize: '0.8rem',
                     marginTop: '1.2rem',
