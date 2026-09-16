@@ -99,7 +99,7 @@ export default function SettingsPage() {
           <SectionHeader icon={<Globe size={14} />} title="Language" />
           <div className={`border rounded-2xl p-4 sm:p-5 transition-colors ${theme === 'light' ? 'bg-white border-gray-100 shadow-sm' : 'bg-[var(--card-bg)] border-[var(--glass-border)]'}`}>
             <p className={`text-[0.7rem] mb-3 transition-colors ${theme === 'light' ? 'text-slate-400' : 'text-[var(--mut)]'}`}>Choose your preferred language for the entire app</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
               {LANGUAGES.map(lang => (
                 <button key={lang.code} onClick={() => handleLanguageChange(lang.code)}
                   className={`px-4 py-3 rounded-xl text-sm font-bold transition-all border flex flex-col items-center gap-1 ${language === lang.code

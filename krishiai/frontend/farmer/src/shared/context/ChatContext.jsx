@@ -25,6 +25,7 @@ const LANG_INSTRUCTIONS = {
   hi: ' Please respond in Hindi (हिंदी में जवाब दें).',
   gu: ' Please respond in Gujarati (ગુજરાતીમાં જવાબ આપો).',
   mr: ' Please respond in Marathi (मराठीत उत्तर द्या).',
+  ta: ' Please respond in Tamil (தமிழில் பதில் அளிக்கவும்).',
 };
 
 function createNewChat(language = 'en') {
@@ -300,7 +301,10 @@ export const ChatProvider = ({ children }) => {
           locState,
           token,
           locVillage,
-          locTaluka
+          locTaluka,
+          null,
+          'web',
+          language
         );
       }
 

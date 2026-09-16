@@ -146,10 +146,11 @@ async def chat_endpoint(payload: dict, request: Request, db: Session = Depends(g
             # For voice assistant, if no location was resolved, default to Delhi, India so weather/mandi tools immediately provide direct answers
             message = f"[Farmer's Location: District/City: Delhi, State: India]\n{message}"
 
-        logger.info(f"Frontend ({channel}) query from {user_data.get('sub', 'unknown')} (masked len: {len(message)})")
+        language = payload.get("language")
+        logger.info(f"Frontend ({channel}) query from {user_data.get('sub', 'unknown')} (masked len: {len(message)}, lang_pref: {language})")
         
-        # Process the masked query with channel-appropriate prompt
-        ai_reply = await process_web_query(message, history=history, channel=channel)
+        # Process the masked query with channel-appropriate prompt and auto-language mirroring
+        ai_reply = await process_web_query(message, history=history, channel=channel, language_preference=language)
         
         # --- STEP 3: Detokenize Reply (Restore Context) ---
         final_reply = pii_service.unmask(ai_reply, token_map)

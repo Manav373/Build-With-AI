@@ -262,3 +262,41 @@ def export_locations_csv(db: Session = Depends(get_db), user_data: dict = Depend
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=krishiai_farmers.csv"},
     )
+
+
+# ---------------------------------------------------------------------------
+# KVK & Agricultural Scientist Intelligence Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/kvk/nearest")
+async def get_nearest_kvk_endpoint(lat: float, lon: float, limit: int = 3):
+    """
+    Returns the nearest Krishi Vigyan Kendra (KVK) and specialized agricultural scientists
+    to the farmer's GPS coordinates, including full contact and advisory details.
+    """
+    from app.services.kvk_service import kvk_service
+    try:
+        return kvk_service.get_nearest_kvk(lat=lat, lon=lon, limit=limit)
+    except Exception as e:
+        logger.error(f"[KVK] Failed to fetch nearest KVK for ({lat},{lon}): {e}")
+        raise HTTPException(status_code=500, detail="Error fetching nearest KVK.")
+
+
+@router.get("/kvk/state-stats")
+async def get_kvk_state_stats_endpoint():
+    """
+    Returns the official State/UT-wise Number of Krishi Vigyan Kendras (KVKs)
+    in the Country as on 31-01-2025 (731 KVKs total across 34 States/UTs).
+    """
+    from app.services.kvk_service import kvk_service
+    return kvk_service.get_state_statistics()
+
+
+@router.get("/kvk/directory")
+async def get_kvk_directory_endpoint(state: Optional[str] = None):
+    """
+    Returns verified KVK center and scientist directory, optionally filtered by state.
+    """
+    from app.services.kvk_service import kvk_service
+    return {"kvks": kvk_service.get_all_kvks(state=state)}
+

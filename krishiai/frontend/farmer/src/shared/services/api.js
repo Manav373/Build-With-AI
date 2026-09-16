@@ -19,7 +19,7 @@ export const apiClient = axios.create({
 });
 
 // 1. Chat Text & GPS Weather Endpoint
-export const sendChatQuery = async (phoneId, message, lat = null, lon = null, history = [], city = null, state = null, token = null, village = null, taluka = null, district = null, channel = null) => {
+export const sendChatQuery = async (phoneId, message, lat = null, lon = null, history = [], city = null, state = null, token = null, village = null, taluka = null, district = null, channel = null, language = null) => {
   try {
     const headers = { 'ngrok-skip-browser-warning': 'true' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -28,6 +28,7 @@ export const sendChatQuery = async (phoneId, message, lat = null, lon = null, hi
       phone_id: phoneId, 
       message: message,
       channel: channel || (phoneId === 'voice_user' ? 'voice' : 'web'),
+      language: language || undefined,
       history: history.slice(-10).map(m => ({
         role: m.sender === 'user' ? 'user' : 'assistant',
         content: m.text || ''

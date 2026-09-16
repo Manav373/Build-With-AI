@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Satellite, MapPin, Info, RefreshCw, Layers, Navigation, Droplets, Leaf, AlertTriangle, CheckCircle, Crosshair, Sprout, Sun, CloudRain, CloudLightning, Map as MapIcon, Eye, Mountain, Globe, ExternalLink, Zap, Wind, Thermometer, Waves, Compass, Activity, Maximize2, Minimize2, Clock, Loader2, Menu, ChevronRight, X, ChevronDown } from 'lucide-react';
+import { Satellite, MapPin, Info, RefreshCw, Layers, Navigation, Droplets, Leaf, AlertTriangle, CheckCircle, Crosshair, Sprout, Sun, CloudRain, CloudLightning, Map as MapIcon, Eye, Mountain, Globe, ExternalLink, Zap, Wind, Thermometer, Waves, Compass, Activity, Maximize2, Minimize2, Clock, Loader2, Menu, ChevronRight, X, ChevronDown, Award, Building2 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { translations } from '../utils/translations/index';
 import { useMobileMenu } from '../context/MobileMenuContext';
 import { useTheme } from '../context/ThemeContext';
 import WeatherAnalysisModal from '../components/feature/WeatherAnalysisModal';
+import KvkScientistCard from '../components/feature/KvkScientistCard';
+import KvkStateStatsModal from '../components/feature/KvkStateStatsModal';
 
 const TILE_LAYERS = {
   roadmap_light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -30,6 +32,19 @@ const blueIcon = L.divIcon({
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
+
+const scientistIcon = L.divIcon({
+  html: `
+    <div style="background: #059669; color: white; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.7); border: 2.5px solid #ffffff; font-size: 16px; cursor: pointer;">
+      🔬
+    </div>
+  `,
+  className: 'custom-marker-pin-scientist',
+  iconSize: [34, 34],
+  iconAnchor: [17, 17],
+  popupAnchor: [0, -18]
+});
+
 
 function MapController({ center, zoom, onClick, onViewStateChange, recenterCount }) {
   const map = useMap();
@@ -287,6 +302,51 @@ export default function SatellitePage() {
   const [userCoords, setUserCoords] = useState(userLocation?.lat && userLocation?.lon ? { lat: userLocation.lat, lng: userLocation.lon } : null);
   const [isOffline, setIsOffline] = useState(false);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
+  const [kvkData, setKvkData] = useState(null);
+  const [isKvkStatsModalOpen, setIsKvkStatsModalOpen] = useState(false);
+  const [kvkStateStats, setKvkStateStats] = useState(null);
+  const [loadingKvk, setLoadingKvk] = useState(false);
+
+  const fetchNearestKvk = useCallback(async (lat, lon) => {
+    try {
+      setLoadingKvk(true);
+      const backendUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+      const res = await fetch(`${backendUrl}/api/kvk/nearest?lat=${lat}&lon=${lon}`);
+      if (res.ok) {
+        const data = await res.json();
+        setKvkData(data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch nearest KVK:', err);
+    } finally {
+      setLoadingKvk(false);
+    }
+  }, []);
+
+  const handleOpenKvkStats = useCallback(async () => {
+    setIsKvkStatsModalOpen(true);
+    if (!kvkStateStats) {
+      try {
+        const backendUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+        const res = await fetch(`${backendUrl}/api/kvk/state-stats`);
+        if (res.ok) {
+          const stats = await res.json();
+          setKvkStateStats(stats);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch KVK state stats:', err);
+      }
+    }
+  }, [kvkStateStats]);
+
+  // Preload nearest KVK on mount
+  useEffect(() => {
+    const initialLat = userCoords?.lat || center.lat;
+    const initialLng = userCoords?.lng || center.lng;
+    if (initialLat && initialLng && !kvkData) {
+      fetchNearestKvk(initialLat, initialLng);
+    }
+  }, [userCoords, center.lat, center.lng, fetchNearestKvk, kvkData]);
 
   const handleDragStart = (e) => {
     const target = e.currentTarget;
@@ -360,6 +420,9 @@ export default function SatellitePage() {
     setLoading(true);
     setSatelliteData(null);
     setIsOffline(false);
+
+    // Fetch nearest KVK and agricultural scientists
+    fetchNearestKvk(coords.lat, coords.lng);
 
     // 1. Get high-precision land type first
     const detectedLandType = await reverseGeocode(coords.lat, coords.lng);
@@ -626,6 +689,69 @@ export default function SatellitePage() {
                     icon={selected.lat === userCoords?.lat && selected.lng === userCoords?.lng ? redIcon : blueIcon}
                   />
                 )}
+
+                {/* Nearest Krishi Vigyan Kendra (KVK) & Scientist Marker */}
+                {kvkData?.nearest_kvk && (
+                  <>
+                    <Marker
+                      position={[kvkData.nearest_kvk.lat, kvkData.nearest_kvk.lon]}
+                      icon={scientistIcon}
+                    >
+                      <Popup>
+                        <div className="p-1.5 max-w-[240px]">
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-black text-xs mb-1">
+                            <span>🔬</span>
+                            <span>{kvkData.nearest_kvk.name}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-800 font-bold mb-0.5">
+                            {kvkData.nearest_kvk.senior_scientist?.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500 mb-1">
+                            {kvkData.nearest_kvk.senior_scientist?.designation} • {kvkData.nearest_kvk.senior_scientist?.qualification}
+                          </p>
+                          <div className="text-[10px] text-emerald-600 font-black mb-2">
+                            📍 {kvkData.nearest_kvk.distance_km} km from your farm
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {kvkData.nearest_kvk.senior_scientist?.phone && (
+                              <a
+                                href={`tel:${kvkData.nearest_kvk.senior_scientist.phone}`}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black no-underline"
+                              >
+                                📞 Call
+                              </a>
+                            )}
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${kvkData.nearest_kvk.lat},${kvkData.nearest_kvk.lon}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black no-underline"
+                            >
+                              🧭 Directions
+                            </a>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+
+                    {/* Connecting Polyline from Farmer Field to KVK Center */}
+                    {(selected || userCoords) && (
+                      <Polyline
+                        positions={[
+                          [(selected || userCoords).lat, (selected || userCoords).lng],
+                          [kvkData.nearest_kvk.lat, kvkData.nearest_kvk.lon]
+                        ]}
+                        pathOptions={{
+                          color: '#10b981',
+                          weight: 2.5,
+                          dashArray: '6, 8',
+                          opacity: 0.85
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+
 
                 {/* Street View Fallback Warning Overlay */}
                 {activeLayer === 'streetview' && (
@@ -1066,9 +1192,20 @@ export default function SatellitePage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Nearest KVK & Agricultural Scientist Advisory Card */}
+                    {kvkData?.nearest_kvk && (
+                      <div className="mt-4">
+                        <KvkScientistCard
+                          kvkData={kvkData}
+                          farmerCoords={selected || userCoords || center}
+                          onOpenStatsModal={handleOpenKvkStats}
+                        />
+                      </div>
+                    )}
                   </motion.div>
                 ) : (
-                  <div className="py-16 flex flex-col items-center text-center space-y-6">
+                  <div className="py-12 flex flex-col items-center text-center space-y-6">
                     <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${theme === 'light' ? 'bg-blue-50 border-blue-100' : 'bg-blue-500/10 border-blue-500/10'}`}><Satellite size={36} className={`${theme === 'light' ? 'text-blue-500/30' : 'text-blue-400/30'}`} /></div>
                     <div className="space-y-2">
                       <p className={`font-bold text-base ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>Crop Health Intelligence</p>
@@ -1085,6 +1222,17 @@ export default function SatellitePage() {
                         {locating ? <RefreshCw size={14} className="animate-spin" /> : <Satellite size={14} />}
                         {locating ? 'Scanning...' : 'Detect My Fields'}
                     </button>
+
+                    {/* Nearest KVK & Agricultural Scientist (Preloaded for Farm Area) */}
+                    {kvkData?.nearest_kvk && (
+                      <div className="w-full text-left mt-4">
+                        <KvkScientistCard
+                          kvkData={kvkData}
+                          farmerCoords={userCoords || center}
+                          onOpenStatsModal={handleOpenKvkStats}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1098,7 +1246,13 @@ export default function SatellitePage() {
         data={satelliteData}
         locationName={locationName}
       />
+      <KvkStateStatsModal
+        isOpen={isKvkStatsModalOpen}
+        onClose={() => setIsKvkStatsModalOpen(false)}
+        statsData={kvkStateStats}
+      />
     </div >
+
   );
 }
 

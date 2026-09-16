@@ -52,7 +52,7 @@ export default function IrrigationScreen() {
 
   // Firebase Config State
   const [firebaseUrl, setFirebaseUrl] = useState('https://krishiai-iot-default-rtdb.firebaseio.com');
-  const [firebasePath, setFirebasePath] = useState('/devices/krishiai-node-01');
+  const [firebasePath, setFirebasePath] = useState('/krishiAI');
   const [firebaseEnabled, setFirebaseEnabled] = useState(false);
   const [firebaseConnected, setFirebaseConnected] = useState(false);
   const [firebaseStatusText, setFirebaseStatusText] = useState('');
@@ -91,7 +91,8 @@ export default function IrrigationScreen() {
       reason = `Mild moisture deficit (${moisture}%). Scheduled watering top-up recommended.`;
     }
 
-    const dryingRate = (1.8 + (temp - 25) * 0.1 - (hum - 50) * 0.02).toFixed(1);
+    const baseDrying = telem.light ? 1.5 : 0.35;
+    const dryingRate = Math.max(0.1, Number((baseDrying + (temp - 25) * (telem.light ? 0.08 : 0.02) - (hum - 50) * 0.01).toFixed(2)));
     const hoursUntilDry = moisture > critical ? Math.max(0, Number(((moisture - critical) / Number(dryingRate)).toFixed(1))) : 0;
 
     return {
@@ -144,16 +145,28 @@ export default function IrrigationScreen() {
         setFirebaseConnected(true);
         setFirebaseStatusText('✅ Connected! Telemetry streaming.');
         if (data && typeof data === 'object') {
+          const sensors = data.sensors || {};
+          const status = data.status || {};
+          const control = data.control || {};
+          const raw = sensors.soilRaw !== undefined ? Number(sensors.soilRaw) : (data.soilRaw !== undefined ? Number(data.soilRaw) : 0);
+          let moistureVal = sensors.moisture !== undefined ? Number(sensors.moisture) : (data.soilMoisture !== undefined ? Number(data.soilMoisture) : null);
+          if ((moistureVal === null || moistureVal === 0) && raw > 0) {
+            moistureVal = Math.max(0, Math.min(100, Math.round(((4000 - raw) / (4000 - 1400)) * 100)));
+          }
+
           setTelemetry(prev => ({
             ...prev,
-            soilMoisture: data.soilMoisture ?? data.moisture ?? prev.soilMoisture,
-            soilRaw: data.soilRaw ?? prev.soilRaw,
-            temperature: data.temperature ?? data.temp ?? prev.temperature,
-            humidity: data.humidity ?? data.hum ?? prev.humidity,
-            rain: data.rain !== undefined ? data.rain : prev.rain,
-            light: data.light !== undefined ? data.light : prev.light,
-            pump: data.pump !== undefined ? data.pump : prev.pump,
+            soilMoisture: moistureVal ?? prev.soilMoisture,
+            soilRaw: raw > 0 ? raw : prev.soilRaw,
+            temperature: sensors.temperature ?? data.temperature ?? data.temp ?? prev.temperature,
+            humidity: sensors.humidity ?? data.humidity ?? data.hum ?? prev.humidity,
+            rain: sensors.rain !== undefined ? Boolean(sensors.rain) : (data.rain !== undefined ? Boolean(data.rain) : prev.rain),
+            light: sensors.light !== undefined ? Boolean(sensors.light) : (data.light !== undefined ? Boolean(data.light) : prev.light),
+            pump: status.motor !== undefined ? Boolean(status.motor) : (data.pump !== undefined ? Boolean(data.pump) : prev.pump),
           }));
+          if (control.mode) {
+            setMode(control.mode);
+          }
         }
       } else {
         setFirebaseConnected(false);
@@ -210,10 +223,13 @@ export default function IrrigationScreen() {
         let cleanUrl = firebaseUrl.trim().replace(/\/+$/, '');
         let cleanPath = firebasePath.trim();
         if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`;
-        fetch(`${cleanUrl}${cleanPath}.json`, {
+        const isKrishiAI = cleanPath === '/krishiAI' || cleanPath.startsWith('/krishiAI');
+        const targetUrl = isKrishiAI ? `${cleanUrl}/krishiAI/control.json` : `${cleanUrl}${cleanPath}.json`;
+        const payload = isKrishiAI ? { motorCommand: true } : { pump: true, pumpCommand: true, timestamp: Date.now() };
+        fetch(targetUrl, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pump: true, pumpCommand: true, timestamp: Date.now() })
+          body: JSON.stringify(payload)
         }).catch(() => {});
       } catch (e) {}
     }
@@ -230,10 +246,13 @@ export default function IrrigationScreen() {
         let cleanUrl = firebaseUrl.trim().replace(/\/+$/, '');
         let cleanPath = firebasePath.trim();
         if (!cleanPath.startsWith('/')) cleanPath = `/${cleanPath}`;
-        fetch(`${cleanUrl}${cleanPath}.json`, {
+        const isKrishiAI = cleanPath === '/krishiAI' || cleanPath.startsWith('/krishiAI');
+        const targetUrl = isKrishiAI ? `${cleanUrl}/krishiAI/control.json` : `${cleanUrl}${cleanPath}.json`;
+        const payload = isKrishiAI ? { motorCommand: false } : { pump: false, pumpCommand: false, timestamp: Date.now() };
+        fetch(targetUrl, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pump: false, pumpCommand: false, timestamp: Date.now() })
+          body: JSON.stringify(payload)
         }).catch(() => {});
       } catch (e) {}
     }
