@@ -384,10 +384,10 @@ export default function MarketPricePage() {
                         <div className="text-[0.65rem] text-[var(--mut)] font-bold mb-1">Live mandi price</div>
                         <h3 className="text-3xl font-bold text-[var(--txt)] flex items-baseline gap-1">
                           ₹{(modalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                          <span className="text-xs font-medium text-[var(--glt)]/40">/{unitLabel}</span>
+                          <span className="text-xs font-medium text-slate-500 dark:text-[var(--glt)]/40">/{unitLabel}</span>
                         </h3>
                         <div className="flex items-center gap-2 mt-2">
-                          <div className={`flex items-center px-2 py-0.5 rounded-lg border gap-0.5 text-[0.65rem] font-bold ${rec.trend < 0 ? 'text-rose-400 bg-rose-400/5 border-rose-400/10' : 'text-emerald-400 bg-emerald-400/5 border-emerald-400/10'}`}>
+                          <div className={`flex items-center px-2 py-0.5 rounded-lg border gap-0.5 text-[0.65rem] font-bold ${rec.trend < 0 ? 'text-rose-600 bg-rose-50 border-rose-200 dark:text-rose-400 dark:bg-rose-400/5 dark:border-rose-400/10' : 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-400/5 dark:border-emerald-400/10'}`}>
                             {rec.trend < 0 ? <ArrowDownRight size={12} /> : <ArrowUpRight size={12} />}
                             {Math.abs(rec.trend || 0).toFixed(1)}%
                           </div>
@@ -396,24 +396,24 @@ export default function MarketPricePage() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-[var(--dk)]/30 rounded-2xl p-3 border border-emerald-500/5 transition-colors group-hover:border-emerald-500/10 shadow-inner">
+                        <div className="bg-slate-50 dark:bg-[var(--dk)]/30 rounded-2xl p-3 border border-slate-100 dark:border-emerald-500/5 transition-colors group-hover:border-emerald-500/10 shadow-inner">
                           <span className="block text-[0.55rem] text-[var(--mut)] font-bold mb-1">Min rate</span>
                           <span className="text-[0.85rem] font-bold text-[var(--txt)]">₹{minPrice.toFixed(1)}</span>
                         </div>
-                        <div className="bg-[var(--dk)]/30 rounded-2xl p-3 border border-emerald-500/5 transition-colors group-hover:border-emerald-500/10 shadow-inner">
+                        <div className="bg-slate-50 dark:bg-[var(--dk)]/30 rounded-2xl p-3 border border-slate-100 dark:border-emerald-500/5 transition-colors group-hover:border-emerald-500/10 shadow-inner">
                           <span className="block text-[0.55rem] text-[var(--mut)] font-bold mb-1">Max rate</span>
                           <span className="text-[0.85rem] font-bold text-[var(--txt)]">₹{maxPrice.toFixed(1)}</span>
                         </div>
                       </div>
 
-                      <div className="pt-5 border-t border-emerald-500/10 space-y-3">
+                      <div className="pt-5 border-t border-slate-100 dark:border-emerald-500/10 space-y-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10">
-                            <MapPin size={14} className="text-emerald-400" />
+                            <MapPin size={14} className="text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-[0.75rem] font-bold text-[var(--txt)] truncate leading-tight">{rec.market || 'Unknown Mandi'}</p>
-                            <p className="text-[0.6rem] text-[var(--glt)]/40 font-bold truncate leading-none mt-0.5">{rec.district || 'Nearby'}, {rec.state || 'India'}</p>
+                            <p className="text-[0.6rem] text-slate-500 dark:text-[var(--glt)]/40 font-bold truncate leading-none mt-0.5">{rec.district || 'Nearby'}, {rec.state || 'India'}</p>
                           </div>
                         </div>
                       </div>
@@ -455,22 +455,22 @@ export default function MarketPricePage() {
             <button
               onClick={() => { setPage(p => Math.max(0, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               disabled={page === 0}
-              className="p-4 rounded-2xl bg-black/40 border border-emerald-300/10 text-emerald-400 disabled:opacity-20 hover:bg-emerald-500/10 transition-all group active:scale-90"
+              className="p-4 rounded-2xl bg-white dark:bg-black/40 border border-slate-200 dark:border-emerald-300/10 text-emerald-600 dark:text-emerald-400 disabled:opacity-20 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 shadow-sm dark:shadow-none transition-all group active:scale-90"
             >
               <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
             </button>
-            <div className="bg-gradient-to-b from-[#166534]/30 to-[#052c16]/30 border border-emerald-500/20 px-8 py-4 rounded-3xl shadow-xl flex flex-col items-center">
-              <span className="text-[0.6rem] font-bold text-emerald-300/50 mb-1">Intelligence batch</span>
+            <div className="bg-white dark:bg-gradient-to-b dark:from-[#166534]/30 dark:to-[#052c16]/30 border border-slate-200 dark:border-emerald-500/20 px-8 py-4 rounded-3xl shadow-lg dark:shadow-xl flex flex-col items-center">
+              <span className="text-[0.6rem] font-bold text-slate-500 dark:text-emerald-300/50 mb-1">Intelligence batch</span>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-white">{page + 1}</span>
-                <span className="text-emerald-500/30 font-bold">/</span>
-                <span className="text-xl font-bold text-emerald-500/30">{Math.ceil(total / limit)}</span>
+                <span className="text-xl font-bold text-slate-800 dark:text-white">{page + 1}</span>
+                <span className="text-slate-300 dark:text-emerald-500/30 font-bold">/</span>
+                <span className="text-xl font-bold text-slate-400 dark:text-emerald-500/30">{Math.ceil(total / limit)}</span>
               </div>
             </div>
             <button
               onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               disabled={(page + 1) * limit >= total}
-              className="p-4 rounded-2xl bg-black/40 border border-emerald-300/10 text-emerald-400 disabled:opacity-20 hover:bg-emerald-500/10 transition-all group active:scale-90"
+              className="p-4 rounded-2xl bg-white dark:bg-black/40 border border-slate-200 dark:border-emerald-300/10 text-emerald-600 dark:text-emerald-400 disabled:opacity-20 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 shadow-sm dark:shadow-none transition-all group active:scale-90"
             >
               <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
             </button>
@@ -485,7 +485,7 @@ export default function MarketPricePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-3xl bg-black/80"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-md bg-black/40 dark:bg-black/80"
             onClick={() => setSelectedCrop(null)}
           >
             <motion.div
@@ -493,26 +493,28 @@ export default function MarketPricePage() {
               animate={{ scale: 1, y: 0, rotateX: 0 }}
               exit={{ scale: 0.9, y: 50 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-4xl bg-[var(--dk)] border border-emerald-500/20 rounded-3xl sm:rounded-[3rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[80vh] h-full sm:h-auto"
+              className="w-full max-w-4xl bg-white dark:bg-[#08180c] border border-slate-200 dark:border-emerald-500/20 rounded-3xl sm:rounded-[3rem] overflow-hidden shadow-2xl dark:shadow-[0_50px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[80vh] h-full sm:h-auto transition-colors"
             >
               {/* Modal Header */}
-              <div className="px-5 py-5 md:px-10 md:py-8 bg-gradient-to-r from-emerald-950/50 to-transparent border-b border-emerald-500/10 flex items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-5">
-                  <div className="p-4 bg-emerald-500/20 rounded-[1.5rem] border border-emerald-500/30">
-                    <TrendingUp className="text-emerald-400" size={32} />
+              <div className="px-5 py-5 md:px-10 md:py-8 bg-gradient-to-r from-emerald-500/10 dark:from-emerald-950/50 to-transparent border-b border-slate-200 dark:border-emerald-500/10 flex items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4 sm:gap-5">
+                  <div className="p-3.5 sm:p-4 bg-emerald-500/15 dark:bg-emerald-500/20 rounded-2xl sm:rounded-[1.5rem] border border-emerald-500/20 dark:border-emerald-500/30 shrink-0">
+                    <TrendingUp className="text-emerald-600 dark:text-emerald-400 w-6 h-6 sm:w-8 sm:h-8" />
                   </div>
                   <div>
-                    <h2 className="text-xl sm:text-3xl font-bold text-[var(--txt)]">{selectedCrop.commodity} <span className="text-emerald-500/50 block sm:inline">Analytics</span></h2>
-                    <p className="text-[var(--glt)]/40 text-[0.65rem] sm:text-xs font-bold mt-1">
+                    <h2 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-[var(--txt)]">
+                      {selectedCrop.commodity} <span className="text-emerald-600 dark:text-emerald-400 block sm:inline font-bold">Analytics</span>
+                    </h2>
+                    <p className="text-slate-500 dark:text-[var(--glt)]/40 text-[0.65rem] sm:text-xs font-bold mt-1">
                       {selectedCrop.market}, {selectedCrop.district} · 7-day market trajectory
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedCrop(null)}
-                  className="p-3 bg-[var(--card-bg)] hover:bg-[var(--glass-bg)] rounded-2xl transition-all text-[var(--mut)] hover:text-[var(--txt)]"
+                  className="p-2.5 sm:p-3 bg-slate-100 hover:bg-slate-200 dark:bg-[var(--card-bg)] dark:hover:bg-[var(--glass-bg)] rounded-2xl transition-all text-slate-500 hover:text-slate-800 dark:text-[var(--mut)] dark:hover:text-[var(--txt)] shrink-0"
                 >
-                  <X size={24} />
+                  <X size={22} className="sm:w-6 sm:h-6" />
                 </button>
               </div>
 
@@ -543,42 +545,50 @@ export default function MarketPricePage() {
                   return (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 mb-6 sm:mb-10">
-                        <div className={`rounded-[1.5rem] sm:rounded-3xl p-5 sm:p-6 transition-all border ${isUp ? 'bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10 hover:border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/20'}`}>
-                          <span className={`block text-[0.6rem] font-bold mb-2 ${isUp ? 'text-emerald-500/40' : 'text-rose-500/40'}`}>7-day price trend</span>
+                        <div className={`rounded-[1.5rem] sm:rounded-3xl p-5 sm:p-6 transition-all border ${
+                          isUp 
+                            ? 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-50 dark:bg-emerald-500/5 dark:border-emerald-500/10 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-500/20' 
+                            : 'bg-rose-50/70 border-rose-200 hover:bg-rose-50 dark:bg-rose-500/5 dark:border-rose-500/10 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/20'
+                        }`}>
+                          <span className={`block text-[0.65rem] font-bold mb-2 ${isUp ? 'text-emerald-700 dark:text-emerald-400/80' : 'text-rose-700 dark:text-rose-400/80'}`}>7-day price trend</span>
                           <div className="flex items-center gap-3">
-                            <span className={`text-3xl font-bold leading-none ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>{Math.abs(parseFloat(trendPerc))}%</span>
-                            {isUp ? <TrendingUp className="text-emerald-400/50" size={24} /> : <TrendingDown className="text-rose-400/50" size={24} />}
+                            <span className={`text-3xl font-bold leading-none ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{Math.abs(parseFloat(trendPerc))}%</span>
+                            {isUp ? <TrendingUp className="text-emerald-600 dark:text-emerald-400/50" size={24} /> : <TrendingDown className="text-rose-600 dark:text-rose-400/50" size={24} />}
                           </div>
-                          <p className="text-[0.6rem] text-[#86efac]/40 mt-2 sm:mt-3 font-medium">Market trajectory is currently {sentimentText}.</p>
+                          <p className="text-[0.65rem] text-slate-600 dark:text-[#86efac]/40 mt-2 sm:mt-3 font-medium">Market trajectory is currently {sentimentText}.</p>
                         </div>
-                        <div className={`rounded-[1.5rem] sm:rounded-3xl p-5 sm:p-6 transition-all border ${isUp ? 'bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10 hover:border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/20'}`}>
-                          <span className={`block text-[0.6rem] font-bold mb-2 ${isUp ? 'text-emerald-500/40' : 'text-rose-500/40'}`}>Trend sentiment</span>
+                        <div className={`rounded-[1.5rem] sm:rounded-3xl p-5 sm:p-6 transition-all border ${
+                          isUp 
+                            ? 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-50 dark:bg-emerald-500/5 dark:border-emerald-500/10 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-500/20' 
+                            : 'bg-rose-50/70 border-rose-200 hover:bg-rose-50 dark:bg-rose-500/5 dark:border-rose-500/10 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/20'
+                        }`}>
+                          <span className={`block text-[0.65rem] font-bold mb-2 ${isUp ? 'text-emerald-700 dark:text-emerald-400/80' : 'text-rose-700 dark:text-rose-400/80'}`}>Trend sentiment</span>
                           <div className="flex items-center gap-3">
-                            <span className={`text-3xl font-bold leading-none ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>{sentimentText}</span>
+                            <span className={`text-3xl font-bold leading-none ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{sentimentText}</span>
                           </div>
-                          <p className="text-[0.6rem] text-[var(--mut)] mt-2 sm:mt-3 font-medium">{sentimentDesc}</p>
+                          <p className="text-[0.65rem] text-slate-600 dark:text-[var(--mut)] mt-2 sm:mt-3 font-medium">{sentimentDesc}</p>
                         </div>
                         <div className="flex flex-col gap-3 min-h-[100px]">
                           <button
                             onClick={() => handleShare(selectedCrop)}
-                            className="w-full py-4 bg-emerald-500 border border-emerald-400 rounded-2xl text-[0.65rem] font-bold text-emerald-950 hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(16,185,129,0.2)] grow active:scale-95"
+                            className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 border border-emerald-500 dark:border-emerald-400 rounded-2xl text-[0.65rem] font-bold text-white dark:text-emerald-950 transition-all flex items-center justify-center gap-2 shadow-[0_10px_40px_rgba(16,185,129,0.2)] grow active:scale-95"
                           >
                             <ArrowUpRight size={16} /> Data export
                           </button>
-                          <p className="text-[0.55rem] text-[#86efac]/20 text-center font-bold italic">Verified by KrishiAI market OS · {new Date().toLocaleDateString()}</p>
+                          <p className="text-[0.55rem] text-slate-400 dark:text-[#86efac]/20 text-center font-bold italic">Verified by KrishiAI market OS · {new Date().toLocaleDateString()}</p>
                         </div>
                       </div>
 
                       {/* High Resolution Chart with Anchored Data */}
-                      <div className="bg-[var(--dk2)] border border-emerald-500/10 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-8 h-[280px] sm:h-[400px] relative overflow-hidden group/chart mt-4 sm:mt-0">
-                        <div className="absolute top-4 left-4 flex items-center gap-2 opacity-30 group-hover/chart:opacity-100 transition-opacity">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse hidden sm:block" />
-                          <span className="text-[0.5rem] sm:text-[0.6rem] font-bold text-emerald-400 hidden sm:block">Live price feed (live anchor enabled)</span>
+                      <div className="bg-slate-50 dark:bg-[var(--dk2)] border border-slate-200 dark:border-emerald-500/10 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-8 h-[280px] sm:h-[400px] relative overflow-hidden group/chart mt-4 sm:mt-0">
+                        <div className="absolute top-4 left-4 flex items-center gap-2 opacity-70 group-hover/chart:opacity-100 transition-opacity">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse hidden sm:block" />
+                          <span className="text-[0.5rem] sm:text-[0.6rem] font-bold text-emerald-700 dark:text-emerald-400 hidden sm:block">Live price feed (live anchor enabled)</span>
                         </div>
                         {loadingTrend ? (
                           <div className="h-full flex flex-col items-center justify-center gap-4">
-                            <Loader2 className="animate-spin text-emerald-400" size={40} />
-                            <span className="text-xs font-bold text-emerald-500/40">Generating projection...</span>
+                            <Loader2 className="animate-spin text-emerald-600 dark:text-emerald-400" size={40} />
+                            <span className="text-xs font-bold text-slate-500 dark:text-emerald-500/40">Generating projection...</span>
                           </div>
                         ) : (
                           <ResponsiveContainer width="100%" height="100%">

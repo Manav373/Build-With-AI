@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MapPin, Image as ImageIcon, X, MapPinOff, Mic, ExternalLink } from 'lucide-react';
+import { Send, MapPin, Image as ImageIcon, X, MapPinOff, Mic, Square, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function MessageInput({ onSendMessage, disabled, onLocationChange }) {
   const { theme } = useTheme();
@@ -10,12 +11,17 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
   const [previewUrl, setPreviewUrl] = useState(null);
   const [location, setLocation] = useState(null);
   const [locating, setLocating] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+  const { language } = useLanguage();
   const [isRecording, setIsRecording] = useState(false);
   const [notification, setNotification] = useState(null);
   const [focused, setFocused] = useState(false);
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
+  const streamRef = useRef(null);
+  const accumulatedTranscriptRef = useRef('');
+  const isRecordingRef = useRef(false);
   const textareaRef = useRef(null);
 
   const showNotification = (text, type = 'error') => {
@@ -39,8 +45,30 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
     ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   }, [msg]);
 
+  // Clean up any ongoing recording on unmount
+  useEffect(() => {
+    return () => {
+      isRecordingRef.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+        recognitionRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try { mediaRecorderRef.current.stop(); } catch (e) {}
+      }
+      if (streamRef.current) {
+        try { streamRef.current.getTracks().forEach(t => t.stop()); } catch (e) {}
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
+    if (isRecordingRef.current) {
+      stopRecording();
+      return;
+    }
     if (!msg.trim() && !file) return;
     onSendMessage(msg, location, file, previewUrl);
     setMsg('');
@@ -108,35 +136,158 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
+      accumulatedTranscriptRef.current = '';
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
+      // 1. Request microphone stream with voice enhancement
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      streamRef.current = stream;
 
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        if (onSendMessage) {
-          onSendMessage("", location, null, null, audioBlob);
+      // 2. Set up SpeechRecognition if supported
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+
+          const langMap = {
+            hi: 'hi-IN',
+            gu: 'gu-IN',
+            mr: 'mr-IN',
+            en: 'en-IN',
+          };
+          recognition.lang = langMap[language] || 'en-IN';
+
+          recognition.onresult = (event) => {
+            let interim = '';
+            let final = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                final += event.results[i][0].transcript;
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+
+            if (final.trim()) {
+              accumulatedTranscriptRef.current += (accumulatedTranscriptRef.current ? ' ' : '') + final.trim();
+              setMsg(accumulatedTranscriptRef.current);
+            } else if (interim.trim()) {
+              const liveText = accumulatedTranscriptRef.current
+                ? `${accumulatedTranscriptRef.current} ${interim}`
+                : interim;
+              setMsg(liveText);
+            }
+          };
+
+          recognition.onerror = (e) => {
+            console.warn('SpeechRecognition notice:', e.error);
+            if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+              showNotification('Microphone access denied.', 'error');
+            }
+          };
+
+          recognition.onend = () => {
+            if (isRecordingRef.current && recognitionRef.current) {
+              try {
+                recognition.start();
+              } catch (err) {}
+            }
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch (recErr) {
+          console.warn('SpeechRecognition could not start:', recErr);
         }
-        stream.getTracks().forEach(track => track.stop());
-      };
+      }
 
-      recorder.start();
+      // 3. Set up MediaRecorder as audio capture fallback
+      try {
+        const recorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = recorder;
+        audioChunksRef.current = [];
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        recorder.onstop = () => {
+          const capturedText = (accumulatedTranscriptRef.current || msg).trim();
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+
+          if (streamRef.current) {
+            try {
+              streamRef.current.getTracks().forEach((track) => track.stop());
+            } catch (e) {}
+            streamRef.current = null;
+          }
+
+          if (capturedText) {
+            onSendMessage?.(capturedText, location, file, previewUrl);
+            setMsg('');
+            setFile(null);
+            showNotification('Voice message sent!', 'success');
+          } else if (audioBlob.size > 0) {
+            onSendMessage?.('', location, null, null, audioBlob);
+            setMsg('');
+            setFile(null);
+            showNotification('Voice note sent to KrishiAI!', 'success');
+          }
+        };
+
+        recorder.start();
+      } catch (mediaErr) {
+        console.warn('MediaRecorder could not start:', mediaErr);
+      }
+
+      isRecordingRef.current = true;
       setIsRecording(true);
     } catch (err) {
-      console.error("Mic error:", err);
-      showNotification('Microphone access denied or not available.', 'error');
+      console.error('Microphone error:', err);
+      showNotification('Microphone access denied or unavailable.', 'error');
+      setIsRecording(false);
+      isRecordingRef.current = false;
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    isRecordingRef.current = false;
+    setIsRecording(false);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
+    } else {
+      const capturedText = (accumulatedTranscriptRef.current || msg).trim();
+      if (capturedText) {
+        onSendMessage?.(capturedText, location, file, previewUrl);
+        setMsg('');
+        setFile(null);
+        showNotification('Voice message sent!', 'success');
+      }
+      if (streamRef.current) {
+        try {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+        } catch (e) {}
+        streamRef.current = null;
+      }
     }
   };
 
@@ -147,6 +298,22 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
       startRecording();
     }
   };
+
+  const listeningLabel = {
+    hi: 'सुन रहा हूँ... बोलिए',
+    gu: 'સાંભળી રહ્યો છું... બોલો',
+    mr: 'ऐकत आहे... बोला',
+    en: 'Listening... Speak now',
+  }[language] || 'Listening... Speak now';
+
+  const placeholderText = isRecording
+    ? listeningLabel
+    : {
+        hi: 'कृषि AI से कुछ भी पूछें या 🎤 दबाकर बोलें...',
+        gu: 'કૃષિ AI ને કંઈ પણ પૂછો અથવા 🎤 દબાવીને બોલો...',
+        mr: 'कृषी AI ला काहीही विचारा किंवा 🎤 दाबून बोला...',
+        en: 'Ask KrishiAI anything or click 🎤 to speak…',
+      }[language] || 'Ask KrishiAI anything…';
 
   const canSend = (msg.trim() || file) && !disabled;
 
@@ -238,7 +405,7 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="Ask KrishiAI anything…"
+          placeholder={placeholderText}
           disabled={disabled}
           className={`flex-1 bg-transparent border-none text-[16px] sm:text-[0.93rem] outline-none resize-none leading-relaxed min-h-[24px] py-0.5 font-[inherit] ${
             theme === 'light' ? 'text-[var(--txt)] placeholder-[var(--mut)]/60' : 'text-[#e2f0e4] placeholder-[#86efac]/40'
@@ -263,18 +430,22 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
             type="button" 
             onClick={handleMicClick} 
             disabled={disabled}
-            title={isRecording ? 'Stop recording' : 'Voice input'}
+            title={isRecording ? 'Stop recording & send' : 'Voice input'}
             aria-label={isRecording ? 'Stop voice recording' : 'Start voice input'}
-            className={`input-icon-btn h-8 w-8 sm:h-9 sm:w-9 relative ${isRecording ? 'text-red-400 bg-red-500/10' : ''} ${disabled ? 'opacity-30 pointer-events-none' : ''}`}>
+            className={`input-icon-btn h-8 w-8 sm:h-9 sm:w-9 relative ${isRecording ? 'text-red-500 bg-red-500/15 ring-2 ring-red-400/50' : ''} ${disabled ? 'opacity-30 pointer-events-none' : ''}`}>
             {isRecording && (
               <motion.div
                 layoutId="mic-pulse"
-                className="absolute inset-0 rounded-full bg-red-500/20"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0.2, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 rounded-full bg-red-500/30"
+                animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0.2, 0.6] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
               />
             )}
-            <Mic size={17} className="relative z-10 sm:w-[19px] sm:h-[19px]" />
+            {isRecording ? (
+              <Square size={14} className="relative z-10 sm:w-4 sm:h-4 fill-current text-red-500" />
+            ) : (
+              <Mic size={17} className="relative z-10 sm:w-[19px] sm:h-[19px]" />
+            )}
 
             {/* Visualizer animation when recording */}
             <AnimatePresence>
@@ -283,21 +454,23 @@ export default function MessageInput({ onSendMessage, disabled, onLocationChange
                   initial={{ opacity: 0, scale: 0.8, x: '-50%', y: 10 }}
                   animate={{ opacity: 1, scale: 1, x: '-50%', y: 0 }}
                   exit={{ opacity: 0, scale: 0.8, x: '-50%', y: 10 }}
-                  className={`absolute -top-14 sm:-top-16 left-1/2 backdrop-blur-xl border px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-1.5 shadow-2xl z-50 pointer-events-none whitespace-nowrap ${
-                    theme === 'light' ? 'bg-white/90 border-[var(--glass-border)]' : 'bg-[#0a1a0d]/95 border-white/10'
+                  className={`absolute -top-14 sm:-top-16 left-1/2 backdrop-blur-xl border px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-2 shadow-2xl z-50 pointer-events-none whitespace-nowrap ${
+                    theme === 'light' ? 'bg-white/95 border-emerald-200' : 'bg-[#0a1a0d]/95 border-emerald-500/30'
                   }`}
                 >
-                  <div className="flex gap-0.5 h-3 sm:h-4 items-center">
-                    {[1, 2, 3, 4, 1, 2, 3].map((h, i) => (
+                  <div className="flex gap-0.5 h-3.5 sm:h-4 items-center">
+                    {[1, 2, 3, 4, 3, 2, 1].map((h, i) => (
                       <motion.div
                         key={i}
-                        className="w-0.5 bg-[#4ade80]"
-                        animate={{ height: ['20%', '100%', '20%'] }}
-                        transition={{ duration: 0.5 + Math.random() * 0.5, repeat: Infinity, delay: i * 0.1 }}
+                        className="w-0.5 bg-emerald-500 rounded-full"
+                        animate={{ height: ['25%', '100%', '25%'] }}
+                        transition={{ duration: 0.6 + (i % 3) * 0.2, repeat: Infinity, delay: i * 0.08 }}
                       />
                     ))}
                   </div>
-                  <span className={`text-[0.6rem] sm:text-[0.65rem] font-bold ${theme === 'light' ? 'text-[var(--g)]' : 'text-[#86efac]'}`}>Recording...</span>
+                  <span className={`text-[0.65rem] sm:text-[0.72rem] font-bold ${theme === 'light' ? 'text-emerald-700' : 'text-[#86efac]'}`}>
+                    {listeningLabel}
+                  </span>
                 </motion.div>
               )}
             </AnimatePresence>

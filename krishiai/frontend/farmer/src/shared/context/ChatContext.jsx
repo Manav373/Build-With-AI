@@ -180,14 +180,26 @@ export const ChatProvider = ({ children }) => {
     updateChatMessages(currentChatId, [LANG_SELECTION_MESSAGE]);
   };
 
-  const processMessage = async (text, locationOrImage = null, fileOrAudio = null, previewUrl = null) => {
-    if (!text && !locationOrImage && !fileOrAudio) return;
-
-    // Detect if 2nd parameter is location or an image file/Blob
+  const processMessage = async (text, locationOrImage = null, fileOrAudio = null, previewUrl = null, extraAudio = null) => {
     let location = null;
     let image = null;
     let audioBlob = null;
 
+    // Check extraAudio (5th param from MessageInput)
+    if (extraAudio instanceof Blob) {
+      audioBlob = extraAudio;
+    }
+
+    // Check fileOrAudio (3rd param)
+    if (fileOrAudio instanceof Blob || fileOrAudio instanceof File) {
+      if (fileOrAudio.type && (fileOrAudio.type.startsWith('audio/') || fileOrAudio.type.includes('webm') || fileOrAudio.type.includes('ogg'))) {
+        audioBlob = fileOrAudio;
+      } else {
+        image = fileOrAudio;
+      }
+    }
+
+    // Check locationOrImage (2nd param)
     if (locationOrImage && typeof locationOrImage === 'object') {
       if (
         'lat' in locationOrImage ||
@@ -197,26 +209,20 @@ export const ChatProvider = ({ children }) => {
       ) {
         location = locationOrImage;
         setUserLocation(location);
-        if (fileOrAudio instanceof Blob || fileOrAudio instanceof File) {
-          image = fileOrAudio;
-        }
       } else if (locationOrImage instanceof Blob || locationOrImage instanceof File) {
-        image = locationOrImage;
-        location = userLocation;
-        if (fileOrAudio instanceof Blob && !(fileOrAudio instanceof File)) {
-          audioBlob = fileOrAudio;
+        if (locationOrImage.type && (locationOrImage.type.startsWith('audio/') || locationOrImage.type.includes('webm') || locationOrImage.type.includes('ogg'))) {
+          audioBlob = locationOrImage;
+        } else {
+          image = locationOrImage;
         }
-      }
-    } else {
-      location = userLocation;
-      if (fileOrAudio instanceof Blob || fileOrAudio instanceof File) {
-        image = fileOrAudio;
       }
     }
 
     if (!location && userLocation) {
       location = userLocation;
     }
+
+    if (!text && !image && !audioBlob) return;
 
     // Capture the target chatId for this message process
     const targetChatId = currentChatIdRef.current;
@@ -275,6 +281,14 @@ export const ChatProvider = ({ children }) => {
           locVillage,
           locTaluka
         );
+        // If backend returned transcription, update user message bubble
+        if (response?.transcription) {
+          updateChatMessages(targetChatId, (prev) =>
+            prev.map((m) =>
+              m.id === userMsg.id ? { ...m, text: `🎤 "${response.transcription}"` } : m
+            )
+          );
+        }
       } else {
         response = await sendChatQuery(
           BROWSER_PHONE_ID,

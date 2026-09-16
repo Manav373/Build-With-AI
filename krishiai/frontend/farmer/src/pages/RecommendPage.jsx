@@ -541,7 +541,7 @@ Keep it structured, bold, and strictly farmer-focused.`;
           </div>
 
           <div className="space-y-2">
-            <span className="text-[0.65rem] font-bold text-emerald-400/60">Season</span>
+            <span className={`text-[0.65rem] font-bold ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400/60'}`}>Season</span>
             <div className="flex gap-1.5">
               {['Kharif', 'Rabi', 'Whole Year'].map(s => (
                 <button
@@ -657,8 +657,8 @@ Keep it structured, bold, and strictly farmer-focused.`;
                       </div>
                     ))}
 
-                    <div className="pt-4 border-t border-white/5">
-                      <h3 className="text-[0.7rem] font-bold text-[#86efac]/60 mb-4 px-1">Soil NPK presets</h3>
+                    <div className={`pt-4 border-t ${theme === 'light' ? 'border-gray-200' : 'border-white/5'}`}>
+                      <h3 className={`text-[0.7rem] font-bold mb-4 px-1 ${theme === 'light' ? 'text-emerald-700' : 'text-[#86efac]/60'}`}>Soil NPK presets</h3>
                       <div className="grid grid-cols-2 gap-2">
                         {[
                           { label: 'Wheat', n: 80, p: 40, k: 40 },
@@ -668,10 +668,14 @@ Keep it structured, bold, and strictly farmer-focused.`;
                         ].map(preset => (
                           <button key={preset.label}
                             onClick={() => setParams(p => ({ ...p, nitrogen: preset.n, phosphorus: preset.p, potassium: preset.k }))}
-                            className="text-[0.6rem] font-bold px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all text-left"
+                            className={`text-[0.6rem] font-bold px-3 py-2 rounded-xl border transition-all text-left ${
+                              theme === 'light'
+                                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700'
+                                : 'bg-white/5 border-white/10 text-white/60 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400'
+                            }`}
                           >
                             {preset.label}<br />
-                            <span className="text-[0.55rem] text-white/30 font-mono">N:{preset.n} P:{preset.p} K:{preset.k}</span>
+                            <span className={`text-[0.55rem] font-mono ${theme === 'light' ? 'text-slate-400' : 'text-white/30'}`}>N:{preset.n} P:{preset.p} K:{preset.k}</span>
                           </button>
                         ))}
                       </div>

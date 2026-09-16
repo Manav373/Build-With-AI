@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from './LocationContext';
+import { useSafeAuth } from '../hooks/useSafeAuth';
 import { sendChatQuery } from '../services/api';
 
 const VoiceAssistantContext = createContext();
@@ -56,7 +57,8 @@ export const VoiceAssistantProvider = ({ children }) => {
   const [currentAction, setCurrentAction] = useState(null); // { name: string, status: 'calling'|'completed' }
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const { location } = useLocation();
+  const { location, refreshLocation } = useLocation();
+  const { getToken } = useSafeAuth();
 
   // Internal refs
   const recognitionRef = useRef(null);
@@ -391,15 +393,24 @@ export const VoiceAssistantProvider = ({ children }) => {
     try {
       const lat = location?.lat || null;
       const lon = location?.lon || null;
-      const city = location?.city || location?.district || 'India';
+      const city = location?.city || location?.district || '';
       const state = location?.state || '';
       const district = location?.district || '';
+      const village = location?.village || '';
+      const taluka = location?.taluka || '';
 
       // Prepare conversation history
       const historyList = messagesRef.current.slice(-6).map(m => ({
         sender: m.role === 'user' ? 'user' : 'ai',
         text: m.text
       }));
+
+      let token = null;
+      try {
+        if (getToken) token = await getToken();
+      } catch (tErr) {
+        // guest mode
+      }
 
       // Call the Groq backend chat endpoint which executes all agricultural tools
       const response = await sendChatQuery(
@@ -410,8 +421,11 @@ export const VoiceAssistantProvider = ({ children }) => {
         historyList,
         city,
         state,
-        null,
-        district
+        token,
+        village,
+        taluka,
+        district,
+        'voice'
       );
 
       const reply = response?.reply || "I'm sorry, I couldn't fetch that information right now. Please try again.";
@@ -486,6 +500,11 @@ export const VoiceAssistantProvider = ({ children }) => {
     setMessages([]);
     setTranscript('');
     setCurrentAction(null);
+
+    // Refresh location in background if not yet resolved
+    if (!location?.lat && !location?.city && refreshLocation) {
+      try { refreshLocation(); } catch (e) {}
+    }
 
     // Initial greeting in farmer's language
     let welcomeGreeting = "Namaste! I am Krishi AI, your agricultural assistant with real-time weather and mandi access. How can I help you today?";
